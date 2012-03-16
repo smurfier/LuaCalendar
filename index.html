@@ -3,30 +3,50 @@
 <title>LuaCalendar by Smurfier</title>
 <style type="text/css">
 pre {display:inline;}
-ul.none {list-style-type:none;}
-li.space {margin-bottom:20px;}
+#holiday ul {list-style-type:none;}
+#holiday li.space {margin-bottom:20px;}
 body {
-background-image:-moz-linear-gradient(90deg, #cb60b3 0%, #db36a4 100%);
+	background-image:-moz-linear-gradient(90deg, #cb60b3 0%, #db36a4 100%);
     height: 100%;
     margin: 0;
     background-repeat: no-repeat;
     background-attachment: fixed;
+	color:#ffffff;
+	font-family:arial;
 
 }
 #header {
-position:fixed;
-top:0px;
-width:100%;
-height:50px;
-background:rgb(255,0,0);
+	position:fixed;
+	top:0px;
+	width:100%;
+	height:30px;
+	background:rgb(50,50,50);
+	opacity:0.8;
+	z-index:1;
+}
+#header h2{
+margin:0px;
+}
+div.balloon {
+	width:900px;
+	margin-left:auto;
+	margin-right:auto;
+	background:rgb(50,50,50);
+	opacity:0.8;
+	border:1px solid #ffffff;
+	border-radius:10px;
+	margin-bottom:20px;
+	padding:20px;
+	z-index:0;
 }
 </style>
 </head>
 <body>
 <div id="header">
-
+<h2>LuaCalendar 3.2.1 by Smurfier</h2>
 </div>
-<h1>Calendar Settings</h1>
+<div style="height:60px;">&nbsp;</div>
+<div class="balloon"><h1>Calendar Settings</h1>
 All settings can be found in Settings.inc
 <ul>
 <li><b>StartOnMonday</b><br>
@@ -66,41 +86,43 @@ All settings can be found in Settings.inc
 <li><b>DisableBuiltInEvents</b><br>
 	Set to 1 to disable Easter which is built into the script becasue of the need for complicated formulas.</li>
 </ul>
-<h1>Using Holiday Files</h1>
-<ul class="none">
+</div>
+<div class="balloon" id="holiday"><h1>Using Holiday Files</h1>
+<ul>
 <li class="space">To use Holiday Files set HolidayFile to the full path of a text file on the calendar measure.
-<ul class="none"><li><b>Example</b>: <pre>HolidayFile=#CURRENTPATH#Holidays.hol</pre></li></ul></li>
+<ul><li><b>Example</b>: <pre>HolidayFile=#CURRENTPATH#Holidays.hol</pre></li></ul></li>
 
 <li class="space">Multiple files can be aggregated together using a pipe delimiter.
-<ul class="none"><li><b>Example</b>: <pre>HolidayFile=#CURRENTPATH#Holidays.hol|#CURRENTPATH#BDays.hol</pre></li></ul></li>
-<li class="space">The number of events in any month are only limited by the number days there are.</li>
+<ul><li><b>Example</b>: <pre>HolidayFile=#CURRENTPATH#Holidays.hol|#CURRENTPATH#BDays.hol</pre></li></ul></li>
+<li>The number of events in any month are only limited by the number days there are.</li>
 <li class="space">Events must to be listed in the following format:
-	<ul class="none"><li class="space"><pre>&lt;Event Month="Month" Day="Day" Year="Year">Event Description&lt;/Event></pre>
-		<ul class="none"><li><b>Note</b>: The quotes surrounding the parameters are required.</li></ul></li>
+	<ul><li class="space"><pre>&lt;Event Month="Month" Day="Day" Year="Year">Event Description&lt;/Event></pre>
+		<ul><li><b>Note</b>: The quotes surrounding the parameters are required.</li></ul></li>
 
 		<li class="space">The Year field is optional. Including it will cause the script to treat the event as an anniversary. Using a year in the future will display a negative number denoting how many years until that event occurs.
-			<ul class="none"><li><b>Example</b>: <pre>&lt;Event Month="1" Day="4" Year="1986">Smurfier's BDay&lt;/Event></pre></li>
-			<li>Appears as: Smurfier's BDay (25)</li></ul></li>
+			<ul><li><b>Example</b>: <pre>&lt;Event Month="1" Day="4" Year="1986">Smurfier's BDay&lt;/Event></pre></li>
+			<li>Appears as: <pre>Smurfier's BDay (25)</pre></li></ul></li>
 
 		<li class="space">The Month field must be set to a number between 1 and 12. An asterisk (*) may be used to denote that the event occurs monthly.</li>
 
 		<li class="space">The Day field must be set to either a number, Formula, or a VariableDay.
-			<ul class="none"><li class="space" style="margin-top:20px;">VariableDays are used to calculate holidays that occur on days like the Second Tuesday of the month. They are defined using the keywords and are surrounded by curly brackets.
-				<ul class="none"><li>Starts with: <pre>First, Second, Third, Fourth, Last</pre></li>
+			<ul><li class="space" style="margin-top:20px;">VariableDays are used to calculate holidays that occur on days like the Second Tuesday of the month. They are defined using the keywords and are surrounded by curly brackets.
+				<ul><li>Starts with: <pre>First, Second, Third, Fourth, Last</pre></li>
 				<li>Ends with: <pre>Sun, Mon, Tue, Wed, Thu, Fri, Sat</pre></li>
 				<li><b>Example</b>: <pre>&lt;Event Month="11" Day="{FourthThu}">Thanksgiving Day&lt;/Event></pre></li></ul></li></li>
 
 		<li class="space">Formulas are used to calculate some more complicated Holidays such as Election Day. The same !Variables may be used as with LabelText as well as VariableDays.<br>
-			<ul class="none"><li><b>Example</b>: <pre>&lt;Event Month="11" Day="({FirstMon}+1)*((!Year%2)=0)">Election Day&lt;/Event></pre></li>
+			<ul><li><b>Example</b>: <pre>&lt;Event Month="11" Day="({FirstMon}+1)*((!Year%2)=0)">Election Day&lt;/Event></pre></li>
 			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li></ul>
 					
 		</ul></ul>
-
-<h1>Changelog</h1>
+</div>
+<div class="balloon"><h1>Changelog</h1>
 
 <b>3.2.1</b> (3/12/2012)
 	<ul><li>Added support for VariableDays in Day Formulas.</li>
-	<li>Removed Formula parameter in Holiday Files, now unnecessary.</li></ul>
+	<li>Removed Formula parameter in Holiday Files, now unnecessary.</li>
+	<li>Removed !StartDay Variable.</li></ul>
 	
 <b>3.2</b> (3/11/2012)
 	<ul><li>Minor code optimizations.</li>
@@ -165,7 +187,7 @@ All settings can be found in Settings.inc
 
 <b>2.0</b> (8/8/2011)
 	<ul><li>Fixed one line of code involving included variables.</li></ul>
-
+</div>
 </body>
 </html>
 
