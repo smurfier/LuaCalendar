@@ -15,6 +15,9 @@ body {
 	font-family:arial;
 
 }
+a{
+	color:inherit;
+}
 #header {
 	position:fixed;
 	top:0px;
@@ -26,6 +29,17 @@ body {
 }
 #header h2{
 margin:0px;
+display:inline;
+}
+#header ul{
+margin:0px;
+}
+#header li{
+display:inline;
+margin-right:15px;
+}
+#header a{
+text-decoration:none;
 }
 div.balloon {
 	width:900px;
@@ -39,14 +53,26 @@ div.balloon {
 	padding:20px;
 	z-index:0;
 }
+#changelog ul{
+margin-top:0px;
+}
 </style>
 </head>
 <body>
 <div id="header">
-<h2>LuaCalendar 3.2.1 by Smurfier</h2>
+<ul><li><h2>LuaCalendar by Smurfier</h2></li>
+<li><a href="#intro">Introduction</a></li>
+<li><a href="#settings">Settings</a></li>
+<li><a href="#hol">Holiday Files</a></li>
+<li><a href="#changes">ChangeLog</a></li></ul>
 </div>
 <div style="height:60px;">&nbsp;</div>
-<div class="balloon"><h1>Calendar Settings</h1>
+<div class="balloon"><a name="intro"></a><h1>Introduction</h1>
+<p>LuaCalendar is a Calendar skin designed for use with the <a href="http://rainmeter.net">Rainmeter</a> program.
+
+</p>
+</div>
+<div class="balloon"><a name="settings"></a><h1>Calendar Settings</h1>
 All settings can be found in Settings.inc
 <ul>
 <li><b>StartOnMonday</b><br>
@@ -87,15 +113,15 @@ All settings can be found in Settings.inc
 	Set to 1 to disable Easter which is built into the script becasue of the need for complicated formulas.</li>
 </ul>
 </div>
-<div class="balloon" id="holiday"><h1>Using Holiday Files</h1>
+<div class="balloon" id="holiday"><a name="hol"></a><h1>Using Holiday Files</h1>
 <ul>
 <li class="space">To use Holiday Files set HolidayFile to the full path of a text file on the calendar measure.
 <ul><li><b>Example</b>: <pre>HolidayFile=#CURRENTPATH#Holidays.hol</pre></li></ul></li>
 
 <li class="space">Multiple files can be aggregated together using a pipe delimiter.
 <ul><li><b>Example</b>: <pre>HolidayFile=#CURRENTPATH#Holidays.hol|#CURRENTPATH#BDays.hol</pre></li></ul></li>
-<li>The number of events in any month are only limited by the number days there are.</li>
-<li class="space">Events must to be listed in the following format:
+<li class="space">The number of events in any month are only limited by the number days there are.</li>
+<li class="space">Events must be listed in the following format:
 	<ul><li class="space"><pre>&lt;Event Month="Month" Day="Day" Year="Year">Event Description&lt;/Event></pre>
 		<ul><li><b>Note</b>: The quotes surrounding the parameters are required.</li></ul></li>
 
@@ -117,7 +143,8 @@ All settings can be found in Settings.inc
 					
 		</ul></ul>
 </div>
-<div class="balloon"><h1>Changelog</h1>
+<a name="changes"></a>
+<div class="balloon" id="changelog"><h1>Changelog</h1>
 
 <b>3.2.1</b> (3/12/2012)
 	<ul><li>Added support for VariableDays in Day Formulas.</li>
