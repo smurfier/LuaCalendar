@@ -2,7 +2,6 @@
 <head>
 <title>LuaCalendar by Smurfier</title>
 <style type="text/css">
-pre {display:inline;}
 #holiday ul {list-style-type:none;}
 #holiday li.space {margin-bottom:20px;}
 body {
@@ -28,18 +27,18 @@ a{
 	z-index:1;
 }
 #header h2{
-margin:0px;
-display:inline;
+	margin:0px;
+	display:inline;
 }
 #header ul{
-margin:0px;
+	margin:0px;
 }
 #header li{
-display:inline;
-margin-right:15px;
+	display:inline;
+	margin-right:15px;
 }
 #header a{
-text-decoration:none;
+	text-decoration:none;
 }
 div.balloon {
 	width:900px;
@@ -54,7 +53,21 @@ div.balloon {
 	z-index:0;
 }
 #changelog ul{
-margin-top:0px;
+	margin-top:0px;
+}
+span.code{
+	background:#cb60b3;
+	opacity:0.8;
+	border: #ffffff solid 1px;
+	white-space:pre;
+	font-family: monospace;
+	padding:0 3px 0 3px;
+}
+#set ul ul li{
+list-style-type:none;
+}
+#styles p{
+	text-indent:20px;
 }
 </style>
 </head>
@@ -64,6 +77,7 @@ margin-top:0px;
 <li><a href="#intro">Introduction</a></li>
 <li><a href="#settings">Settings</a></li>
 <li><a href="#hol">Holiday Files</a></li>
+<li><a href="#styles">Style Sheets</a></li>
 <li><a href="#changes">ChangeLog</a></li></ul>
 </div>
 <div style="height:60px;">&nbsp;</div>
@@ -72,79 +86,99 @@ margin-top:0px;
 
 </p>
 </div>
-<div class="balloon"><a name="settings"></a><h1>Calendar Settings</h1>
+<div class="balloon" id="set"><a name="settings"></a><h1>Calendar Settings</h1>
 All settings can be found in Settings.inc
 <ul>
-<li><b>StartOnMonday</b><br>
-	Set to 1 to have the week start on Monday.</li>
+<li><b>Style</b>
+	<ul><li>Set to the name of a style sheet found in the Styles folder.</li>
+	<li><a href="#styles">More information below.</a></li></ul></li>
 <br>
-<li><b>DayLabels</b><br>
-	A pipe delimited list of custom text for Weekday labels.<br>
-	Uses the following format: <pre>Sun|Mon|Tue|Wed|Thu|Fri|Sat</pre><br>
-	<b>Note</b>: Do not adjust for StartOnMonday. This is done automatically.</li>
+<li><b>StartOnMonday</b>
+	<ul><li>Set to 1 to have the week start on Monday.</li>
+	<li>Defaults to 0</li></ul></li>
 <br>
-<li><b>MonthLabels</b><br>
-	A pipe delimited list of custom text for Month labels.<br>
-	Uses the following format: <pre>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec</pre></li>
+<li><b>DayLabels</b>
+	<ul><li>A pipe delimited list of custom text for Weekday labels.</li>
+	<li>Uses the following format: <span class="code">Sun|Mon|Tue|Wed|Thu|Fri|Sat</span></li>
+	<li><b>Note</b>: Do not adjust for StartOnMonday. This is done automatically.</li>
+	<li>Defaults to <span class="code">S|M|T|W|T|F|S</span></li></ul></li>
 <br>
-<li><b>LabelText</b><br>
-	Allows for personalized formatting of the calendar title. The following variables may be used.
-		<ul><li><pre>!MName</pre> - The name of the current displayed month. If neither UseLocalMonths or MonthLabels is used, a number is returned.</li>
-		<li><pre>!Year</pre> - The year of the current displayed month.</li>
-		<li><pre>!Today</pre> - The current day number. Note that if LeadingZeroes is used, the number returned will be double digit.</li>
-		<li><pre>!Month</pre> - The number of the current displayed month.</li></ul>
-	<b>Example</b>: <pre>LabelText=!MName of !Year</pre></li>
+<li><b>MonthLabels</b>
+	<ul><li>A pipe delimited list of custom text for Month labels.</li>
+	<li>Uses the following format: <span class="code">Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec</span></li>
+	<li> Defaults to <span class="code">1|2|3|4|5|6|7|8|9|10|11|12</span></li></ul></li>
 <br>
-<li><b>LeadingZeroes</b><br>
-	Set to 1 to add a leading zero to any number below 10.</li>
+<li><b>LabelText</b>
+	<ul><li>Allows for personalized formatting of the calendar title. The following variables may be used.
+		<ul><li><span class="code">!MName</span> - The name or number of the current displayed month.</li>
+		<li><span class="code">!Year</span> - The year of the current displayed month.</li>
+		<li><span class="code">!Today</span> - The current day number. Note that this variable follows LeadingZeroes.</li>
+		<li><span class="code">!Month</span> - The number of the current displayed month.</li></ul></li>
+	<li><b>Example</b>: <span class="code">LabelText=!MName of !Year</span></li>
+	<li>Defaults to <span class="code">!MName, !Year</span></li></ul></li>
 <br>
-<li><b>HideLastWeek</b><br>
-	Set to 1 to hide week 6 if not included in the current month.</li>
+<li><b>LeadingZeroes</b>
+	<ul><li>Set to 1 to add a leading zero to any number below 10.</li>
+	<li>Defaults to 0.</li></ul></li>
 <br>
-<li><b>UseLocalMonths</b><br>
-	Set to 1 to pull month names from the Localization Settings of your computer. Overrides Custom Month Labels.<br>
-	<b>Note</b>: This setting will affect all loaded skins that use the time measure. Use with caution.</li>
+<li><b>HideLastWeek</b>
+	<ul><li>Set to 1 to hide week 6 if not included in the current month.</li>
+	<li>Defaults to 0.</li></ul></li>
 <br>
-<li><b>HolidayFile</b><br>
-	A pipe delimited list of paths to Holiday files formatted as described below. These paths are relative to the skin folder unless a full path is specified.<br>
-	More information below.</li>
+<li><b>UseLocalMonths</b>
+	<ul><li>Set to 1 to pull month names from the Localization Settings of your computer. Overrides Custom Month Labels.</li>
+	<li><b>Note</b>: This setting will affect all loaded skins that use the time measure. Use with caution.</li>
+	<li>Defaults to 0.</li></ul></li>
 <br>
-<li><b>DisableBuiltInEvents</b><br>
-	Set to 1 to disable Easter which is built into the script becasue of the need for complicated formulas.</li>
+<li><b>HolidayFile</b>
+	<ul><li>A pipe delimited list of paths to Holiday files formatted as described below.</li>
+	<li>These paths are relative to the skin folder unless a full path is specified.</li></ul>
+<br>
+<li><b>DisableBuiltInEvents</b>
+	<ul><li>Set to 1 to disable Easter which is built into the script becasue of the need for complicated formulas.</li>
+	<li>Defaults to 0.</li></ul></li>
 </ul>
 </div>
 <div class="balloon" id="holiday"><a name="hol"></a><h1>Using Holiday Files</h1>
 <ul>
 <li class="space">To use Holiday Files set HolidayFile to the full path of a text file on the calendar measure.
-<ul><li><b>Example</b>: <pre>HolidayFile=#CURRENTPATH#Holidays.hol</pre></li></ul></li>
+<ul><li><b>Example</b>: <span class="code">HolidayFile=Holidays\Holidays.hol</span></li></ul></li>
 
 <li class="space">Multiple files can be aggregated together using a pipe delimiter.
-<ul><li><b>Example</b>: <pre>HolidayFile=#CURRENTPATH#Holidays.hol|#CURRENTPATH#BDays.hol</pre></li></ul></li>
+<ul><li><b>Example</b>: <span class="code">HolidayFile=Holidays\Holidays.hol|Holidays\BDays.hol</span></li></ul></li>
 <li class="space">The number of events in any month are only limited by the number days there are.</li>
 <li class="space">Events must be listed in the following format:
-	<ul><li class="space"><pre>&lt;Event Month="Month" Day="Day" Year="Year">Event Description&lt;/Event></pre>
+	<ul><li class="space"><span class="code">&lt;Event Month="Month" Day="Day" Year="Year">Event Description&lt;/Event></span>
 		<ul><li><b>Note</b>: The quotes surrounding the parameters are required.</li></ul></li>
 
 		<li class="space">The Year field is optional. Including it will cause the script to treat the event as an anniversary. Using a year in the future will display a negative number denoting how many years until that event occurs.
-			<ul><li><b>Example</b>: <pre>&lt;Event Month="1" Day="4" Year="1986">Smurfier's BDay&lt;/Event></pre></li>
-			<li>Appears as: <pre>Smurfier's BDay (25)</pre></li></ul></li>
+			<ul><li><b>Example</b>: <span class="code">&lt;Event Month="1" Day="4" Year="1986">Smurfier's BDay&lt;/Event></span></li>
+			<li>Appears as: <span class="code">Smurfier's BDay (26)</span></li></ul></li>
 
 		<li class="space">The Month field must be set to a number between 1 and 12. An asterisk (*) may be used to denote that the event occurs monthly.</li>
 
 		<li class="space">The Day field must be set to either a number, Formula, or a VariableDay.
-			<ul><li class="space" style="margin-top:20px;">VariableDays are used to calculate holidays that occur on days like the Second Tuesday of the month. They are defined using the keywords and are surrounded by curly brackets.
-				<ul><li>Starts with: <pre>First, Second, Third, Fourth, Last</pre></li>
-				<li>Ends with: <pre>Sun, Mon, Tue, Wed, Thu, Fri, Sat</pre></li>
-				<li><b>Example</b>: <pre>&lt;Event Month="11" Day="{FourthThu}">Thanksgiving Day&lt;/Event></pre></li></ul></li></li>
+			<ul><li class="space" style="margin-top:20px;">VariableDays are used to calculate holidays that occur on days like the Second Tuesday of the month. They are defined using the following keywords and are surrounded by curly brackets.
+				<ul><li>Starts with: <span class="code">First, Second, Third, Fourth, Last</span></li>
+				<li>Ends with: <span class="code">Sun, Mon, Tue, Wed, Thu, Fri, Sat</span></li>
+				<li><b>Example</b>: <span class="code">&lt;Event Month="11" Day="{FourthThu}">Thanksgiving Day&lt;/Event></span></li></ul></li></li>
 
 		<li class="space">Formulas are used to calculate some more complicated Holidays such as Election Day. The same !Variables may be used as with LabelText as well as VariableDays.<br>
-			<ul><li><b>Example</b>: <pre>&lt;Event Month="11" Day="({FirstMon}+1)*((!Year%2)=0)">Election Day&lt;/Event></pre></li>
+			<ul><li><b>Example</b>: <span class="code">&lt;Event Month="11" Day="({FirstMon}+1)*((!Year%2)=0)">Election Day&lt;/Event></span></li>
 			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li></ul>
 					
 		</ul></ul>
 </div>
+<a name="styles"></a>
+<div class="balloon" id="styles"><h1>Style Sheets</h1>
+<p>LuaCalendar uses style sheets in order to allow for complete customization of the look and feel of the skin. Style sheets are files with individual MeterStyles and Variables used to define the meter properties of the skin. These files in located in the Styles folder, under another folder whose name defines the name of the style sheet.</p>
+<p>There are three style sheets included with LuaCalendar. The Default style is very basic and is based on the old Enigma calendar. Default2 shows a little bit of what the style sheets can actually do. The third style sheet is made to match the Enigma 3.1 calendar.</p>
+</div>
 <a name="changes"></a>
 <div class="balloon" id="changelog"><h1>Changelog</h1>
+<b>3.2.2</b> (unreleased)
+	<ul><li>Minor code optimizations.</li>
+	</ul>
 
 <b>3.2.1</b> (3/12/2012)
 	<ul><li>Added support for VariableDays in Day Formulas.</li>
