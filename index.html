@@ -52,6 +52,9 @@ div.balloon {
 	padding:20px;
 	z-index:0;
 }
+div.balloon h1{
+margin:0;
+}
 #changelog ul{
 	margin-top:0px;
 }
@@ -68,6 +71,9 @@ list-style-type:none;
 }
 #styles p{
 	text-indent:20px;
+}
+#styles ul{
+list-style-type:none;
 }
 </style>
 </head>
@@ -173,6 +179,74 @@ All settings can be found in Settings.inc
 <div class="balloon" id="styles"><h1>Style Sheets</h1>
 <p>LuaCalendar uses style sheets in order to allow for complete customization of the look and feel of the skin. Style sheets are files with individual MeterStyles and Variables used to define the meter properties of the skin. These files in located in the Styles folder, under another folder whose name defines the name of the style sheet.</p>
 <p>There are three style sheets included with LuaCalendar. The Default style is very basic and is based on the old Enigma calendar. Default2 shows a little bit of what the style sheets can actually do. The third style sheet is made to match the Enigma 3.1 calendar.</p>
+<h1>Creating Style Sheets</h1>
+<p>There are two files used to create a style sheet. Styles.inc contains all of the meter styles required as well as any special meters. Variables.inc is used to create any variables specifically used by the style sheet.</p>
+<ul><li><b>Required Meter Styles</b><br>
+These meter styles are required and are defined in Styles.inc
+	<ul><li><b>Day Labels</b>
+		<ul><li>LblTxtSty
+			<ul><li>Used to define the main text properties of the Day Labels.</li></ul></li>
+		<li>LblTxtStart
+			<ul><li>Used to define the properties of the first day label.</li></ul></li>
+		<li>LblCurrSty
+			<ul><li>Used to define the current day of the week.</li></ul></li></ul></li>
+	<li><b>Main Text Styles</b>
+		<ul><li>TextStyle
+			<ul><li>Defines the main text properties for the calendar days.</li></ul></li>
+		<li>FirstDay
+			<ul><li>Defines the properties of the first calendar day.</li></ul></li>
+		<li>NewWk
+			<ul><li>Defines the first day of each week.</li></ul></li>
+		<li>CurrentDay
+		<ul><li>Defines the current day of the month.</li></ul></li>
+		<li>LastWeek
+			<ul><li>Defines the last week of the month when the current month does not extend to week 6.</li>
+			<li>Only applies when HideLastWeek is set to 1.</li></ul></li>
+		<li>PreviousMonth
+			<ul><li>Defines the days in the previous month.</li></ul></li>
+		<li>NextMonth
+			<ul><li>Defines the days in the next month.</li></ul></li>
+		<li>HolidayStyle
+			<ul><li>Defines the days on which a holiday occurs.</li>
+			<li>This style is added onto other styles.</li></ul></li>
+		<li>WeekendStyle
+			<ul><li>Defines weekends in the current month.</li></ul></li>
+		</ul></li></ul></li>
+<li><b>Script Defined Variables</b><br>
+These variable are created and updated by the script.
+	<ul><li>ThisWeek
+		<ul><li>Defines the week in which the current day occurs.</li>
+		<li>Returns a number in the range 1-6.</li></ul></li>
+	<li>Week
+		<ul><li>Defines the weekday.</li>
+		<li>Returns a number in the range 0-6.</li></ul></li>
+	<li>Today
+		<ul><li>Defines the current day number.</li>
+		<li>Follows LeadingZeroes.</li></ul></li>
+	<li>Month
+		<ul><li>The current name of the month.</li></ul></li>
+	<li>Year
+		<ul><li>The current year.</li></ul></li>
+	<li>MonthLabel
+		<ul><li>The month label as defined by the LabelText setting.</li></ul></li>
+	<li>NotCurrentMonth
+		<ul><li>Set to 1 when browsing outside the current month, else 0.</li></ul></li>
+	<li>LastWkHidden
+		<ul><li>Set to 1 if week 6 is hidden.</li></ul></li>
+</ul></li>
+
+<li><b>Script Functions</b><br>
+These functions can be used with <span class="code">!CommandMeasure "ScriptMeasure" "Command()"</span> to control the calendar.
+	<ul><li>Forward()
+			<ul><li>Used to browse forward in the calendar.</li></ul></li>
+		<li>Back()
+			<ul><li>Used to browse back in the calendar.</li></ul></li>
+		<li>Home()
+			<ul><li>Used to return to the current month.</li></ul></li>
+	</ul>
+</li>
+
+</ul>
 </div>
 <a name="changes"></a>
 <div class="balloon" id="changelog"><h1>Changelog</h1>
