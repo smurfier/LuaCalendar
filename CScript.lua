@@ -4,10 +4,10 @@
 function Initialize()
 	Set={ -- Retrieve Measure Settings
 		DPrefix=SELF:GetOption('DayPrefix','l');
-		HLWeek=SELF:GetNumberOption('HideLastWeek',0);
-		LZer=SELF:GetNumberOption('LeadingZeroes',0);
+		HLWeek=GetBool('HideLastWeek');
+		LZer=GetBool('LeadingZeroes');
 		MPref=SELF:GetOption('MeterPrefix','mDay');
-		SMon=SELF:GetNumberOption('StartOnMonday',0);
+		SMon=GetBool('StartOnMonday');
 	}
 	OldDay,OldMonth,OldYear,StartDay,Month,Year,InMonth=0,0,0,0,0,0,1 -- Initialize Variables.
 	cMonth={31;28;31;30;31;30;31;31;30;31;30;31;} -- Length of the months.
@@ -17,11 +17,11 @@ function Initialize()
 		table.insert(Labels,a)
 	end
 	for a=1,#Labels do -- Set DayLabels text.
-		SetOption(Set.DPrefix..a,'Text',Labels[Set.SMon==1 and a%#Labels+1 or a])
+		SetOption(Set.DPrefix..a,'Text',Labels[Set.SMon and a%#Labels+1 or a])
 	end
 --	========== Localization ==========
 	MLabels={}
-	if SELF:GetNumberOption('UseLocalMonths',0)==1 then
+	if GetBool('UseLocalMonths') then
 		os.setlocale('','time') -- Set current locale. This affects all skins and scripts.
 		for a=1,12 do -- Pull each month name.
 			table.insert(MLabels,os.date('%B',os.time({year=2000,month=a,day=1})))
@@ -69,10 +69,9 @@ function Update()
 	if Month~=OldMonth or Year~=OldYear then -- Recalculate and Redraw if Month and/or Year changes.
 		OldMonth,OldYear=Month,Year
 		StartDay=rotate(os.date('%w',os.time({year=Year,month=Month,day=1})))
-		cMonth[2]=28+((((Year%4)==0 and (Year%100)~=0) or (Year%400)==0) and 1 or 0) --Check for Leap Year.
-		if Set.HLWeek==1 then --Set LastWkHidden skin variable.
-			SetVariable('LastWkHidden',math.ceil((StartDay+cMonth[Month])/7)<6 and 1 or 0)
-		end
+		cMonth[2]=28+((((Year%4)==0 and (Year%100)~=0) or (Year%400)==0) and 1 or 0) -- Check for Leap Year.
+		-- Set LastWkHidden skin variable.
+		SetVariable('LastWkHidden',(Set.HLWeek and math.ceil((StartDay+cMonth[Month])/7)<6) and 1 or 0)
 		Holidays()
 		Draw()
 	end
@@ -83,15 +82,15 @@ function Update()
 	return 'Success!' --Return a value to Rainmeter.
 end -- function Update
 
-function Holidays() --Parse Holidays table.
-	Hol={} --Initialize Holiday Table.
-	if SELF:GetNumberOption('DisableBuiltInEvents',0)==0 then Easter() end -- Add Easter.
-	for i=1,#hFile[1] do --For each holiday in the main table.
-		local Dy=0 --Reset Dy to zero just to be sure.
-		if tonumber(hFile[1][i])==Month or hFile[1][i]=='*' then --If Holiday exists in current month or *.
+function Holidays() -- Parse Holidays table.
+	Hol={} -- Initialize Holiday Table.
+	if not GetBool('DisableBuiltInEvents') then Easter() end -- Add Easter.
+	for i=1,#hFile[1] do -- For each holiday in the main table.
+		local Dy=0 -- Reset Dy to zero just to be sure.
+		if tonumber(hFile[1][i])==Month or hFile[1][i]=='*' then -- If Holiday exists in current month or *.
 			Dy=SKIN:ParseFormula(Replace(VarDay(hFile[2][i]))) -- Calculate Day.
-			local An=tonumber(hFile[3][i]) and ' ('..(Year-tonumber(hFile[3][i]))..')' or '' --Calculate Anniversary.
-			Hol[Dy]=(Hol[Dy] and Hol[Dy]..'\n' or '')..hFile[4][i]..An..hFile[5][i] --Add to Holiday Table.
+			local An=tonumber(hFile[3][i]) and ' ('..(Year-tonumber(hFile[3][i]))..')' or '' -- Calculate Anniversary.
+			Hol[Dy]=(Hol[Dy] and Hol[Dy]..'\n' or '')..hFile[4][i]..An..hFile[5][i] -- Add to Holiday Table.
 		end
 	end
 end -- function Holidays
@@ -114,7 +113,7 @@ function Draw() --Sets all meter properties and calculates days.
 		end
 		if (Time.day+StartDay)==a and InMonth==1 then --If in current month and year, set Current Day Style.
 			table.insert(Styles,'CurrentDay')
-		elseif a>35 and math.ceil((StartDay+cMonth[Month])/7)<6 and Set.HLWeek==1 then --LastWeek of the month.
+		elseif a>35 and math.ceil((StartDay+cMonth[Month])/7)<6 and Set.HLWeek then --LastWeek of the month.
 			table.insert(Styles,'LastWeek')
 		elseif Par[1]<1 then --Days in the previous month.
 			Par[1]=Par[1]+cMonth[Month==1 and 12 or Month-1]
@@ -122,7 +121,7 @@ function Draw() --Sets all meter properties and calculates days.
 		elseif Par[1]>cMonth[Month] then --Days in the following month.
 			Par[1]=Par[1]-cMonth[Month]
 			table.insert(Styles,'NextMonth')
-		elseif a%7==0 or a%7==(Set.SMon==0 and 1 or 6) then --Weekends in the current month.
+		elseif a%7==0 or a%7==(Set.SMon and 6 or 1) then --Weekends in the current month.
 			table.insert(Styles,'WeekendStyle')
 		end
 		local tbl={ --Use this table to define meter properties.
@@ -139,7 +138,7 @@ function Draw() --Sets all meter properties and calculates days.
 		Today=LZero(Time.day);
 		Month=MLabels[Month];
 		Year=Year;
-		MonthLabel=Replace(SELF:GetOption('LabelText',MLabels[Month]..', '..Year));
+		MonthLabel=Replace(SELF:GetOption('LabelText','!MName, !Year'));
 	}
 	for i,v in pairs(var) do SetVariable(i,v) end --Reads var and sets skin variables.
 end -- function Draw
@@ -163,14 +162,17 @@ end -- function Home
 
 --===== These Functions are used to make life easier =====
 
-function Easter() -- Calculates Easter.
+function Easter() -- Calculates Easter and Good Friday.
 	local a,b,c,g,h,L,m=Year%19,math.floor(Year/100),Year%100,0,0,0,0
 	local d,e,f,i,k=math.floor(b/4),b%4,math.floor((b+8)/25),math.floor(c/4),c%4
 	g=math.floor((b-f+1)/3)
 	h=(19*a+b-d-g+15)%30
 	L=(32+2*e+2*i-h-k)%7
 	m=math.floor((a+11*h+22*L)/451)
-	if Month==math.floor((h+L-7*m+114)/31) then Hol[(h+L-7*m+114)%31+1]='Easter' end
+	local EM,ED=math.floor((h+L-7*m+114)/31),(h+L-7*m+114)%31+1
+	local GF=(ED-2)+((ED-2)<1 and cMonth[EM-1] or 0)
+	if Month==EM then Hol[ED]='Easter' end
+	if Month==(EM-((ED-2)<1 and 1 or 0)) then Hol[GF]='Good Friday' end
 end -- function Easter
 
 function VarDay(a) -- Makes allowance for VariableDays
@@ -197,7 +199,7 @@ end -- function Replace
 
 function rotate(a) -- Used to make allowance for StartOnMonday.
 	a=tonumber(a)
-	return Set.SMon==1 and (a-1+7)%7 or a
+	return Set.SMon and (a-1+7)%7 or a
 end -- function rotate
 
 function SetVariable(a,b) -- Used to easily set Skin Variables
@@ -214,5 +216,9 @@ function Strip(a,b,c) -- Used to simplify some string matching
 end -- function Strip
 
 function LZero(a) -- Used to make allowance for LeadingZeroes
-	return Set.LZer==1 and string.format('%02d',a) or a
+	return Set.LZer and string.format('%02d',a) or a
 end -- function LZero
+
+function GetBool(a,b) -- Used to retrieve Boolean measure options
+	return SELF:GetNumberOption(a,b or 0)>0
+end -- function GetBool
