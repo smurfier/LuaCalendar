@@ -67,13 +67,18 @@ span.code{
 	padding:0 3px 0 3px;
 }
 #set ul ul li{
-list-style-type:none;
-}
-#styles p{
-	text-indent:20px;
+	list-style-type:none;
 }
 #styles ul{
-list-style-type:none;
+	list-style-type:none;
+}
+#vars ul ul{
+	list-style-type:none;
+	padding-left:20px;
+}
+p{
+	margin-top:0px;
+	text-indent:20px;
 }
 </style>
 </head>
@@ -115,13 +120,9 @@ All settings can be found in Settings.inc
 	<li> Defaults to <span class="code">1|2|3|4|5|6|7|8|9|10|11|12</span></li></ul></li>
 <br>
 <li><b>LabelText</b>
-	<ul><li>Allows for personalized formatting of the calendar title. The following variables may be used.
-		<ul><li><span class="code">!MName</span> - The name or number of the current displayed month.</li>
-		<li><span class="code">!Year</span> - The year of the current displayed month.</li>
-		<li><span class="code">!Today</span> - The current day number. Note that this variable follows LeadingZeroes.</li>
-		<li><span class="code">!Month</span> - The number of the current displayed month.</li></ul></li>
-	<li><b>Example</b>: <span class="code">LabelText=!MName of !Year</span></li>
-	<li>Defaults to <span class="code">!MName, !Year</span></li></ul></li>
+	<ul><li>Allows for personalized formatting of the calendar title. A list of available variables can be found <a href="#vars">here.</a></li>
+	<li><b>Example</b>: <span class="code">LabelText={MName} of {Year}</span></li>
+	<li>Defaults to <span class="code">{MName}, {Year}</span></li></ul></li>
 <br>
 <li><b>LeadingZeroes</b>
 	<ul><li>Set to 1 to add a leading zero to any number below 10.</li>
@@ -163,17 +164,33 @@ All settings can be found in Settings.inc
 
 		<li class="space">The Month field must be set to a number between 1 and 12. An asterisk (*) may be used to denote that the event occurs monthly.</li>
 
-		<li class="space">The Day field must be set to either a number, Formula, or a VariableDay.
-			<ul><li class="space" style="margin-top:20px;">VariableDays are used to calculate holidays that occur on days like the Second Tuesday of the month. They are defined using the following keywords and are surrounded by curly brackets.
-				<ul><li>Starts with: <span class="code">First, Second, Third, Fourth, Last</span></li>
-				<li>Ends with: <span class="code">Sun, Mon, Tue, Wed, Thu, Fri, Sat</span></li>
-				<li><b>Example</b>: <span class="code">&lt;Event Month="11" Day="{FourthThu}">Thanksgiving Day&lt;/Event></span></li></ul></li></li>
+		<li class="space">The Day field must be set to either a number, Formula, or a Variable. More information on Variables can be found below.
 
-		<li class="space">Formulas are used to calculate some more complicated Holidays such as Election Day. The same !Variables may be used as with LabelText as well as VariableDays.<br>
+		<li class="space">Formulas are used to calculate some more complicated Holidays such as Election Day.<br>
 			<ul><li><b>Example</b>: <span class="code">&lt;Event Month="11" Day="({FirstMon}+1)*((!Year%2)=0)">Election Day&lt;/Event></span></li>
 			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li></ul>
 					
 		</ul></ul>
+</div>
+<a name="vars"></a>
+<div class="balloon" id="vars"><h1>Variables</h1>
+<p>There are two instances when certain Variables can be used with LuaCalendar settings. The first being LabelText and the other being in the Day parameter of Holiday Files. Variables are surrounded by {Curly Brackets} and are case insensitive.</p>
+<b>Static Variables</b>
+<ul style="margin-top:0px;"><li>MName
+<ul><li>The name of the current month. If a name is not provided the month number is used.</li></ul></li>
+<li>Year
+<ul><li>The current year.</li></ul></li>
+<li>Today
+<ul><li>The current day number. This variable follows the LeadingZeroes setting.</li></ul></li>
+<li>Month
+<ul><li>The current month number.</li></ul></li></ul>
+
+<b>Variable Days</b>
+<p>Variable Days are used to calculate holidays that occur on days like the Second Tuesday of the month. They are defined using the following keywords.</p>
+<ul style="list-style-type:none;"><li>Starts with: <span class="code">First, Second, Third, Fourth, Last</span></li>
+<li>Ends with: <span class="code">Sun, Mon, Tue, Wed, Thu, Fri, Sat</span></li>
+<li><b>Example</b>: <span class="code">&lt;Event Month="11" Day="{FourthThu}">Thanksgiving Day&lt;/Event></span></li></ul>
+
 </div>
 <a name="styles"></a>
 <div class="balloon" id="styles"><h1>Style Sheets</h1>
