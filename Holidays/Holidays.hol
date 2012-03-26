@@ -21,7 +21,7 @@
 <Event Month="10" Day="9">Leif Erikson Day</Event>
 <Event Month="10" Day="{SecondMon}">Columbus Day</Event>
 <Event Month="10" Day="31">Halloween</Event>
-<Event Month="11" Day="({FirstMon}+1)*((!Year%2)=0)">Election Day</Event>
+<Event Month="11" Day="({FirstMon}+1)*(({Year}%2)=0)">Election Day</Event>
 <Event Month="11" Day="11">Veterans Day</Event>
 <Event Month="11" Day="{FourthThu}">Thanksgiving Day</Event>
 <Event Month="12" Day="7">Pearl Harbor Remembrance Day</Event>
