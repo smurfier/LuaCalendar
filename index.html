@@ -128,16 +128,17 @@ p{
 
 <h1>Release Notes</h1>
 <p>The current stable version is 3.2.2 released on 3/26/2012.</p>
-<ul>
+<table><tr><td style="width:210px;"><a href="https://github.com/smurfier/LuaCalendar/downloads" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
+Download from GitHub.<br>
+Version 3.2.2<br>
+3/26/2012</a></td>
+<td><ul style="margin-top:0;padding-left:0;">
 <li>Added Good Friday to built in events.</li>
 <li>Changed all variables to be defined by {Curly Brackets} in order to support case insensitivity.</li>
 <li>All variables and holiday parameters have been changed to be case insensitive.</li>
 <li>More progress has been made to making the script more readable.</li>
 </ul>
-<a href="https://github.com/smurfier/LuaCalendar/downloads" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
-Download from GitHub.<br>
-Version 3.2.2<br>
-3/26/2012</a>
+</td></tr></table>
 </div>
 <div class="balloon" id="set"><a name="settings"></a><h1>Calendar Settings</h1>
 All settings can be found in Settings.inc
@@ -193,7 +194,7 @@ These Script settings are specific to the skin using the script.
 </div>
 <div class="balloon" id="holiday"><a name="hol"></a><h1>Using Holiday Files</h1>
 <ul>
-<li class="space">To use Holiday Files set HolidayFile to the full path of a text file on the calendar measure.
+<li class="space">To use Holiday Files set HolidayFile to the path of a text file on the calendar measure.
 <ul><li><b>Example</b>: <span class="code">HolidayFile=Holidays\Holidays.hol</span></li></ul></li>
 
 <li class="space">Multiple files can be aggregated together using a pipe delimiter.
@@ -220,7 +221,7 @@ These Script settings are specific to the skin using the script.
 <a name="vars"></a>
 <div class="balloon" id="vars"><h1>Variables</h1>
 <p>There are two instances when certain Variables can be used with LuaCalendar settings. The first being LabelText and the other being in the Day parameter of Holiday Files. Variables are surrounded by {Curly Brackets} and are case insensitive.</p>
-<b>Static Variables</b>
+<div style="float:left;width:48%;padding-right:1%;"><b>Static Variables</b>
 <ul style="margin-top:0px;"><li><span class="code">{MName}</span>
 <ul><li>The name of the current month. If a name is not provided the month number is used.</li></ul></li>
 <li><span class="code">{Year}</span>
@@ -229,13 +230,15 @@ These Script settings are specific to the skin using the script.
 <ul><li>The current day number. This variable follows the LeadingZeroes setting.</li></ul></li>
 <li><span class="code">{Month}</span>
 <ul><li>The current month number.</li></ul></li></ul>
-
+</div>
+<div style="float:right;width:48%;padding-left:1%;border-left:1px solid #ffffff;">
 <b>Variable Days</b>
 <p>Variable Days are used to calculate holidays that occur on days like the Second Tuesday of the month. They are defined using the following keywords.</p>
-<ul style="list-style-type:none;"><li>Starts with: <span class="code">First, Second, Third, Fourth, Last</span></li>
-<li>Ends with: <span class="code">Sun, Mon, Tue, Wed, Thu, Fri, Sat</span></li>
-<li><b>Example</b>: <span class="code">&lt;Event Month="11" Day="{FourthThu}">Thanksgiving Day&lt;/Event></span></li></ul>
-
+<p style="text-indent:0;">Starts with: <span class="code">First, Second, Third, Fourth, Last</span></p>
+<p style="text-indent:0;">Ends with: <span class="code">Sun, Mon, Tue, Wed, Thu, Fri, Sat</span></p>
+<p style="text-indent:0;"><b>Example</b>:<br><span class="code">&lt;Event Month="11" Day="{FourthThu}">...&lt;/Event></span></p>
+</div>
+<div style="clear:both">&nbsp;</div>
 </div>
 <a name="styles"></a>
 <div class="balloon" id="styles"><h1>Style Sheets</h1>
