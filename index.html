@@ -3,7 +3,7 @@
 <title>LuaCalendar by Smurfier</title>
 <style type="text/css">
 #holiday ul {list-style-type:none;}
-#holiday li.space {margin-bottom:20px;}
+li.space {margin-bottom:20px;}
 body {
 	background-image:-moz-linear-gradient(90deg, #cb60b3 0%, #db36a4 100%);
     height: 100%;
@@ -123,11 +123,12 @@ p{
 </div>
 <div style="height:60px;">&nbsp;</div>
 <div class="balloon"><a name="intro"></a><h1>Introduction</h1>
-<p>LuaCalendar is a Calendar skin designed for use with the <a href="http://rainmeter.net">Rainmeter</a> program.</p>
+<p>LuaCalendar is a Calendar skin designed for use with the <a href="http://rainmeter.net">Rainmeter</a> program. By using the power of the Lua scripting language, the skin loads instantly and is exrtremely flexible. The skin itself is designed to use Style Sheets, allowing for complete customiztion of the look and feel of the skin while retaining all of the functionality of the script.</p>
+<p>One of the major features of the skin is the abiltiy to display events that are defined by the user. This was a long requested feature of the existing calendar skins. All of the easily configured settings and features are listed below.</p>
 
 <h1>Release Notes</h1>
 <p>The current stable version is 3.2.2 released on 3/26/2012.</p>
-<ul><li>Minor code optimizations.</li>
+<ul>
 <li>Added Good Friday to built in events.</li>
 <li>Changed all variables to be defined by {Curly Brackets} in order to support case insensitivity.</li>
 <li>All variables and holiday parameters have been changed to be case insensitive.</li>
@@ -141,50 +142,53 @@ Version 3.2.2<br>
 <div class="balloon" id="set"><a name="settings"></a><h1>Calendar Settings</h1>
 All settings can be found in Settings.inc
 <ul>
-<li><b>Style</b>
+<li class="space"><b>Style</b>
 	<ul><li>Set to the name of a style sheet found in the Styles folder.</li>
 	<li><a href="#styles">More information below.</a></li></ul></li>
-<br>
-<li><b>StartOnMonday</b>
+<li class="space"><b>StartOnMonday</b>
 	<ul><li>Set to 1 to have the week start on Monday.</li>
-	<li>Defaults to 0</li></ul></li>
-<br>
-<li><b>DayLabels</b>
+	<li>Defaults to <span class="code">0</span></li></ul></li>
+<li class="space"><b>DayLabels</b>
 	<ul><li>A pipe delimited list of custom text for Weekday labels.</li>
 	<li>Uses the following format: <span class="code">Sun|Mon|Tue|Wed|Thu|Fri|Sat</span></li>
 	<li><b>Note</b>: Do not adjust for StartOnMonday. This is done automatically.</li>
 	<li>Defaults to <span class="code">S|M|T|W|T|F|S</span></li></ul></li>
-<br>
-<li><b>MonthLabels</b>
+<li class="space"><b>MonthLabels</b>
 	<ul><li>A pipe delimited list of custom text for Month labels.</li>
 	<li>Uses the following format: <span class="code">Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec</span></li>
 	<li> Defaults to <span class="code">1|2|3|4|5|6|7|8|9|10|11|12</span></li></ul></li>
-<br>
-<li><b>LabelText</b>
+<li class="space"><b>LabelText</b>
 	<ul><li>Allows for personalized formatting of the calendar title. A list of available variables can be found <a href="#vars">here.</a></li>
 	<li><b>Example</b>: <span class="code">LabelText={MName} of {Year}</span></li>
 	<li>Defaults to <span class="code">{MName}, {Year}</span></li></ul></li>
-<br>
-<li><b>LeadingZeroes</b>
+<li class="space"><b>LeadingZeroes</b>
 	<ul><li>Set to 1 to add a leading zero to any number below 10.</li>
-	<li>Defaults to 0.</li></ul></li>
-<br>
-<li><b>HideLastWeek</b>
+	<li>Defaults to <span class="code">0</span>.</li></ul></li>
+<li class="space"><b>HideLastWeek</b>
 	<ul><li>Set to 1 to hide week 6 if not included in the current month.</li>
-	<li>Defaults to 0.</li></ul></li>
-<br>
-<li><b>UseLocalMonths</b>
+	<li>Defaults to <span class="code">0</span>.</li></ul></li>
+<li class="space"><b>UseLocalMonths</b>
 	<ul><li>Set to 1 to pull month names from the Localization Settings of your computer. Overrides Custom Month Labels.</li>
 	<li><b>Note</b>: This setting will affect all loaded skins that use the time measure. Use with caution.</li>
-	<li>Defaults to 0.</li></ul></li>
-<br>
-<li><b>HolidayFile</b>
+	<li>Defaults to <span class="code">0</span>.</li></ul></li>
+<li class="space"><b>HolidayFile</b>
 	<ul><li>A pipe delimited list of paths to Holiday files formatted as described below.</li>
 	<li>These paths are relative to the skin folder unless a full path is specified.</li></ul>
-<br>
-<li><b>DisableBuiltInEvents</b>
+<li class="space"><b>DisableBuiltInEvents</b>
 	<ul><li>Set to 1 to disable Easter which is built into the script becasue of the need for complicated formulas.</li>
-	<li>Defaults to 0.</li></ul></li>
+	<li>Defaults to <span class="code">0</span>.</li></ul></li>
+</ul>
+
+<h1>Skin Specific Settings</h1>
+These Script settings are specific to the skin using the script.
+<ul><li class="space"><b>DayPrefix</b>
+	<ul><li>The meter prefix used for the Day Labels. There must be seven Day Labels, numbered 1 thru 7.</li>
+	<li><b>Example</b>: Label1,Label2...</li>
+	<li>Defaults to <span class="code">l</span></li></ul></li>
+<li class="space"><b>MeterPrefix</b>
+	<ul><li>The meter prefix used for the Calendar Days. There must be fourty-two Calendar days, numbered from 1 thru 42.</li>
+	<li><b>Example</b>: Day1,Day2...</li>
+	<li>Defaults to <span class="code">mDay</span></li></ul></li>
 </ul>
 </div>
 <div class="balloon" id="holiday"><a name="hol"></a><h1>Using Holiday Files</h1>
