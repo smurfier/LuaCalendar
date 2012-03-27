@@ -53,10 +53,40 @@ div.balloon {
 	z-index:0;
 }
 div.balloon h1{
-margin:0;
+	margin:0;
+	border-bottom:1px solid #FFFFFF;
+	margin-bottom:10px;
 }
 #changelog ul{
 	margin-top:0px;
+	list-style-type:none;
+}
+#changelog li:before{
+	content:"\2022";
+	font-size:2em;
+	line-height:0.5em;
+	vertical-align:middle;
+	padding-right:3px;
+	text-shadow:
+		-1px -1px 0 #FFFFFF,
+		1px -1px 0 #FFFFFF,
+		-1px 1px 0 #FFFFFF,
+		1px 1px 0 #FFFFFF;
+}
+#changelog li.change:before {
+	color:rgb(0,255,0);
+}
+#changelog li.add:before {
+	color:rgb(0,0,255);
+}
+#changelog li.fix:before {
+	color:rgb(255,153,0);
+}
+#changelog li.remove:before {
+	color:rgb(255,0,0);
+}
+#changelog ul.key li {
+	display:inline;
 }
 span.code{
 	background:#cb60b3;
@@ -187,13 +217,13 @@ All settings can be found in Settings.inc
 <div class="balloon" id="vars"><h1>Variables</h1>
 <p>There are two instances when certain Variables can be used with LuaCalendar settings. The first being LabelText and the other being in the Day parameter of Holiday Files. Variables are surrounded by {Curly Brackets} and are case insensitive.</p>
 <b>Static Variables</b>
-<ul style="margin-top:0px;"><li>MName
+<ul style="margin-top:0px;"><li><span class="code">{MName}</span>
 <ul><li>The name of the current month. If a name is not provided the month number is used.</li></ul></li>
-<li>Year
+<li><span class="code">{Year}</span>
 <ul><li>The current year.</li></ul></li>
-<li>Today
+<li><span class="code">{Today}</span>
 <ul><li>The current day number. This variable follows the LeadingZeroes setting.</li></ul></li>
-<li>Month
+<li><span class="code">{Month}</span>
 <ul><li>The current month number.</li></ul></li></ul>
 
 <b>Variable Days</b>
@@ -278,82 +308,88 @@ These functions can be used with <span class="code">!CommandMeasure "ScriptMeasu
 </div>
 <a name="changes"></a>
 <div class="balloon" id="changelog"><h1>Changelog</h1>
+<ul class="key" style="float:right;"><li class="add">Add</li>
+<li class="change">Change</li>
+<li class="fix">Fix</li>
+<li class="remove">Remove</li></ul>
+
 <b>3.2.2</b> (3/26/2012)
-	<ul><li>Minor code optimizations.</li>
-	<li>Added Good Friday to built in events.</li>
-	<li>Changed all variables to be defined by {Curly Brackets}.</li>
-	<li>Changed all variables and holiday parameters to be case insensitive.</li>
-	<li>Made script more readable.</li>
+	<ul><li class="change">Minor code optimizations.</li>
+	<li class="add">Added Good Friday to built in events.</li>
+	<li class="change">Changed all variables to be defined by {Curly Brackets}.</li>
+	<li class="change">Changed all variables and holiday parameters to be case insensitive.</li>
+	<li class="change">Made script more readable.</li>
 	</ul>
 
 <b>3.2.1</b> (3/12/2012)
-	<ul><li>Added support for VariableDays in Day Formulas.</li>
-	<li>Removed Formula parameter in Holiday Files, now unnecessary.</li>
-	<li>Removed !StartDay Variable.</li></ul>
+	<ul><li class="add">Added support for VariableDays in Day Formulas.</li>
+	<li class="remove">Removed Formula parameter in Holiday Files, now unnecessary.</li>
+	<li class="remove">Removed !StartDay Variable.</li></ul>
 	
 <b>3.2</b> (3/11/2012)
-	<ul><li>Minor code optimizations.</li>
-	<li>Holiday File paths are now relative to the skins folder unless an absolute path is provided.</li>
-	<li>Converted to use a different method of retrieving settings.</li>
-	<li>Added support for formulas in Day parameter of Holidays.</li></ul>
+	<ul><li class="change">Minor code optimizations.</li>
+	<li class="change">Holiday File paths are now relative to the skins folder unless an absolute path is provided.</li>
+	<li class="change">Converted to use a different method of retrieving settings.</li>
+	<li class="add">Added support for formulas in Day parameter of Holidays.</li></ul>
 	
 <b>3.1.3</b> (3/1/2012)
-	<ul><li>Minor code optimizations.</li>
-	<li>Increased script readability.</li>
-	<li>Fixed a bug regarding highlighted WeekDay and Current Day styles.</li>
-	<li>Fixed a bug that prevented the calendar from switching to a new month.</li></ul>
+	<ul><li class="change">Minor code optimizations.</li>
+	<li class="change">Increased script readability.</li>
+	<li class="fix">Fixed a bug regarding highlighted WeekDay and Current Day styles.</li>
+	<li class="fix">Fixed a bug that prevented the calendar from switching to a new month.</li></ul>
 	
 <b>3.1.2</b> (2/24/2012)
-	<ul><li>Removed reference to non-existent variable.</li></ul>
+	<ul><li class="fix">Removed reference to non-existent variable.</li></ul>
 	
 <b>3.1.1</b> (2/7/2012)
-	<ul><li>Fixed Bug regarding Holidays and StartOnMonday.</li></ul>
+	<ul><li class="fix">Fixed Bug regarding Holidays and StartOnMonday.</li></ul>
 	
 <b>3.1</b> (2/5/2012)
-	<ul><li>Changed to use Style Sheets.</li>
-	<li>Minor code optimizations.</li></ul>
+	<ul><li class="change">Changed to use Style Sheets.</li>
+	<li class="change">Minor code optimizations.</li></ul>
 	
 <b>3.0.1</b> (1/2/2012)
-	<ul><li>Fixed an error regarding StartOnMonday.</li>
-	<li>Added %3 for current day with LabelText.</li></ul>
+	<ul><li class="fix">Fixed an error regarding StartOnMonday.</li>
+	<li class="add">Added %3 for current day with LabelText.</li></ul>
 	
 <b>3.0</b> (1/21/2012)
-	<ul><li>Fixed the calculation used for Leap Years.</li>
-	<li>Holiday files are now only loaded at startup.</li>
-	<li>Removed support for Google Calendars. (It was messy and never really worked properly.)</li>
-	<li>Removed the option to show only the current week.</li>
-	<li>Made several code optimizations.</li>
-	<li>Added LabelText for custom formatting of the Month Label.</li>
-	<li>Added highlighting for the current weekday and the current day of the month.</li>
-	<li>Added a different option for highlighting the current day.</li>
-	<li>Added a new variable, LastWkHidden, which is set to 1 if the last week of the month is hidden.</li></ul>
+	<ul><li class="fix">Fixed the calculation used for Leap Years.</li>
+	<li class="change">Holiday files are now only loaded at startup.</li>
+	<li class="remove">Removed support for Google Calendars. (It was messy and never really worked properly.)</li>
+	<li class="remove">Removed the option to show only the current week.</li>
+	<li class="change">Made several code optimizations.</li>
+	<li class="add">Added LabelText for custom formatting of the Month Label.</li>
+	<li class="add">Added highlighting for the current weekday and the current day of the month.</li>
+	<li class="add">Added a different option for highlighting the current day.</li>
+	<li class="add">Added a new variable, LastWkHidden, which is set to 1 if the last week of the month is hidden.</li></ul>
 	
 <b>2.2.3 (1/15/2012)</b>
-	<ul><li>Squashed a few bugs and made several code optimizations.</li></ul>
+	<ul><li class="fix">Squashed a few bugs.</li>
+	<li class="change">Made several code optimizations.</li></ul>
 	
 <b>2.2.2</b> (8/22/2011)
-	<ul><li>Fixed error with StartOnMonday where wrong day was indicated.</li>
-	<li>Added calendar names to events.</li>
-	<li>Added <Title></Title> to holiday files to comply with showing calendar names in events.</li>
-	<li>Worked to fix problem with all day events with google calendar.</li>
-	<li>Moved most calendar settings to Settings.inc and set rmskin to migrate settings on upgrade.</li></ul>
+	<ul><li class="fix">Fixed error with StartOnMonday where wrong day was indicated.</li>
+	<li class="add">Added calendar names to events.</li>
+	<li class="add">Added <span class="code">&lt;Title>&lt;/Title></span> to holiday files to comply with showing calendar names in events.</li>
+	<li class="fix">Worked to fix problem with all day events with google calendar.</li>
+	<li class="change">Moved most calendar settings to Settings.inc and set rmskin to migrate settings on upgrade.</li></ul>
 	
 <b>2.2.1</b> (8/14/2011)
-	<ul><li>Updated to fix error with dates in Holiday files.</li></ul>
+	<ul><li class="fix">Updated to fix error with dates in Holiday files.</li></ul>
 
 <b>2.2</b> (8/13/2011)
-	<ul><li>Added the ability to retrieve and show multiple Google Calendar feeds.</li>
-	<li>Added the ability to use multiple holiday files.</li>
-	<li>Added option for anniversaries.</li>
-	<li>Added option for WeekendColor.</li>
-	<li>Made many code optimizations.</li></ul>
+	<ul><li class="add">Added the ability to retrieve and show multiple Google Calendar feeds.</li>
+	<li class="add">Added the ability to use multiple holiday files.</li>
+	<li class="add">Added option for anniversaries.</li>
+	<li class="add">Added option for WeekendColor.</li>
+	<li class="change">Made many code optimizations.</li></ul>
 
 <b>2.1</b> (8/8/2011)
-	<ul><li>Fixed MonthLabels to use non-english characters.</li>
-	<li>Added UseLocalMonths and HideLastWeek.</li></ul>
+	<ul><li class="fix">Fixed MonthLabels to use non-english characters.</li>
+	<li class="add">Added UseLocalMonths and HideLastWeek.</li></ul>
 
 <b>2.0</b> (8/8/2011)
-	<ul><li>Fixed one line of code involving included variables.</li></ul>
+	<ul><li class="fix">Fixed one line of code involving included variables.</li></ul>
 </div>
 </body>
 </html>
