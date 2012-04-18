@@ -1,5 +1,4 @@
 /* ===== Main Styles ===== */
-
 body {
 	background-color:#cb60b3;
 	background-image:-moz-linear-gradient(90deg, #cb60b3 0%, #db36a4 100%);
@@ -20,12 +19,12 @@ li.space {margin-bottom:20px;}
 a{
 	color:inherit;
 }
-pre{
-	display:inline;
+code,pre{
 	background:#cb60b3;
 	opacity:0.8;
 	border: #ffffff solid 1px;
 	padding:0 3px 0 3px;
+	margin:0;
 }
 
 /* ===== Baloons ===== */
@@ -48,7 +47,13 @@ div.balloon h1{
 }
 
 /* ===== Holiday Section ===== */
-#holiday ul {list-style-type:none;}
+/*#holiday ul {list-style-type:none;}*/
+#holiday ul li {padding-bottom:10px;}
+#holiday ul li li {padding-bottom:0;list-style-type:none;}
+#holiday ul.none {
+	list-style-type:none;
+	padding-bottom:0;
+}
 
 /* ===== Header Section ===== */
 #header {
@@ -86,11 +91,6 @@ div.balloon h1{
 	line-height:0.5em;
 	vertical-align:middle;
 	padding-right:3px;
-	text-shadow:
-		-1px -1px 0 #FFFFFF,
-		1px -1px 0 #FFFFFF,
-		-1px 1px 0 #FFFFFF,
-		1px 1px 0 #FFFFFF;
 }
 #changelog li.change:before {
 	color:rgb(0,255,0);

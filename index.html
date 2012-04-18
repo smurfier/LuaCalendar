@@ -9,7 +9,7 @@
 <ul><li><h2>LuaCalendar by Smurfier</h2></li>
 <li><a href="#intro">Introduction</a></li>
 <li><a href="#settings">Settings</a></li>
-<li><a href="#hol">Holiday Files</a></li>
+<li><a href="#hol">Event Files</a></li>
 <li><a href="#styles">Style Sheets</a></li>
 <li><a href="#changes">ChangeLog</a></li></ul>
 </div>
@@ -22,13 +22,14 @@
 <p>The current stable version is 3.2.2 released on 3/26/2012.</p>
 <table><tr><td style="width:210px;"><a href="https://github.com/smurfier/LuaCalendar/downloads" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
 Download from GitHub.<br>
-Version 3.2.2<br>
+Version 3.3<br>
 3/26/2012</a></td>
 <td><ul style="margin-top:0;padding-left:0;">
-<li>Added Good Friday to built in events.</li>
-<li>Changed all variables to be defined by {Curly Brackets} in order to support case insensitivity.</li>
-<li>All variables and holiday parameters have been changed to be case insensitive.</li>
-<li>More progress has been made to making the script more readable.</li>
+<li>Changed to use proper xml formatting.</li>
+<li>Removed support for <code>&lt;Title>&lt;/Title></code> tags to support the new xml format.</li>
+<li>Added support for xml comments.</li>
+<li>Added more error checking.</li>
+<li>Changed <code>HolidayFile</code> to <code>EventFile</code></li>
 </ul>
 </td></tr></table>
 </div>
@@ -40,36 +41,36 @@ All settings can be found in Settings.inc
 	<li><a href="#styles">More information below.</a></li></ul></li>
 <li class="space"><b>StartOnMonday</b>
 	<ul><li>Set to 1 to have the week start on Monday.</li>
-	<li>Defaults to <pre>0</pre></li></ul></li>
+	<li>Defaults to <code>0</code></li></ul></li>
 <li class="space"><b>DayLabels</b>
 	<ul><li>A pipe delimited list of custom text for Weekday labels.</li>
-	<li>Uses the following format: <pre>Sun|Mon|Tue|Wed|Thu|Fri|Sat</pre></li>
+	<li>Uses the following format: <code>Sun|Mon|Tue|Wed|Thu|Fri|Sat</code></li>
 	<li><b>Note</b>: Do not adjust for StartOnMonday. This is done automatically.</li>
-	<li>Defaults to <pre>S|M|T|W|T|F|S</pre></li></ul></li>
+	<li>Defaults to <code>S|M|T|W|T|F|S</code></li></ul></li>
 <li class="space"><b>MonthLabels</b>
 	<ul><li>A pipe delimited list of custom text for Month labels.</li>
 	<li>Uses the following format: <span class="code">Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec</span></li>
-	<li> Defaults to <pre>1|2|3|4|5|6|7|8|9|10|11|12</pre></li></ul></li>
+	<li> Defaults to <code>1|2|3|4|5|6|7|8|9|10|11|12</code></li></ul></li>
 <li class="space"><b>LabelText</b>
 	<ul><li>Allows for personalized formatting of the calendar title. A list of available variables can be found <a href="#vars">here.</a></li>
-	<li><b>Example</b>: <pre>LabelText={MName} of {Year}</pre></li>
-	<li>Defaults to <pre>{MName}, {Year}</pre></li></ul></li>
+	<li><b>Example</b>: <code>LabelText={MName} of {Year}</code></li>
+	<li>Defaults to <code>{MName}, {Year}</code></li></ul></li>
 <li class="space"><b>LeadingZeroes</b>
 	<ul><li>Set to 1 to add a leading zero to any number below 10.</li>
-	<li>Defaults to <pre>0</pre>.</li></ul></li>
+	<li>Defaults to <code>0</code>.</li></ul></li>
 <li class="space"><b>HideLastWeek</b>
 	<ul><li>Set to 1 to hide week 6 if not included in the current month.</li>
-	<li>Defaults to <pre>0</pre>.</li></ul></li>
+	<li>Defaults to <code>0</code>.</li></ul></li>
 <li class="space"><b>UseLocalMonths</b>
 	<ul><li>Set to 1 to pull month names from the Localization Settings of your computer. Overrides Custom Month Labels.</li>
 	<li><b>Note</b>: This setting will affect all loaded skins that use the time measure. Use with caution.</li>
-	<li>Defaults to <pre>0</pre>.</li></ul></li>
-<li class="space"><b>HolidayFile</b>
-	<ul><li>A pipe delimited list of paths to Holiday files formatted as described below.</li>
+	<li>Defaults to <code>0</code>.</li></ul></li>
+<li class="space"><b>EventFile</b>
+	<ul><li>A pipe delimited list of paths to Event files formatted as described below.</li>
 	<li>These paths are relative to the skin folder unless a full path is specified.</li></ul>
 <li class="space"><b>DisableBuiltInEvents</b>
 	<ul><li>Set to 1 to disable Easter which is built into the script becasue of the need for complicated formulas.</li>
-	<li>Defaults to <pre>0</pre>.</li></ul></li>
+	<li>Defaults to <code>0</code>.</li></ul></li>
 </ul>
 
 <h1>Skin Specific Settings</h1>
@@ -77,58 +78,63 @@ These Script settings are specific to the skin using the script.
 <ul><li class="space"><b>DayPrefix</b>
 	<ul><li>The meter prefix used for the Day Labels. There must be seven Day Labels, numbered 1 thru 7.</li>
 	<li><b>Example</b>: Label1,Label2...</li>
-	<li>Defaults to <pre>l</pre></li></ul></li>
+	<li>Defaults to <code>l</code></li></ul></li>
 <li class="space"><b>MeterPrefix</b>
 	<ul><li>The meter prefix used for the Calendar Days. There must be fourty-two Calendar days, numbered from 1 thru 42.</li>
 	<li><b>Example</b>: Day1,Day2...</li>
-	<li>Defaults to <pre>mDay</pre></li></ul></li>
+	<li>Defaults to <code>mDay</code></li></ul></li>
 </ul>
 </div>
-<div class="balloon" id="holiday"><a name="hol"></a><h1>Using Holiday Files</h1>
-<ul>
-<li class="space">To use Holiday Files set HolidayFile to the path of a text file on the calendar measure.
-<ul><li><b>Example</b>: <pre>HolidayFile=Holidays\Holidays.hol</pre></li></ul></li>
+<div class="balloon" id="holiday"><a name="hol"></a><h1>Using Event Files</h1>
+<p>To use Event Files set EventFile to the path of a text file on the calendar measure. Multiple files can be aggregated together using a pipe delimiter.<br/>
+<b><i>Examples</i></b>
+<ul class="none"><li><code>EventFile=Holidays\Holidays.hol</code></li>
+<li><code>EventFile=Holidays\Holidays.hol|Holidays\BDays.hol</code></li></ul>
 
-<li class="space">Multiple files can be aggregated together using a pipe delimiter.
-<ul><li><b>Example</b>: <pre>HolidayFile=Holidays\Holidays.hol|Holidays\BDays.hol</pre></li></ul></li>
-<li class="space">The number of events in any month are only limited by the number days there are.</li>
-<li class="space">Events must be listed in the following format:
-	<ul><li class="space"><pre>&lt;Event Month="Month" Day="Day" Year="Year">Event Description&lt;/Event></pre>
-		<ul><li><b>Note</b>: The quotes surrounding the parameters are required.</li></ul></li>
-
-		<li class="space">The Year field is optional. Including it will cause the script to treat the event as an anniversary. Using a year in the future will display a negative number denoting how many years until that event occurs.
-			<ul><li><b>Example</b>: <pre>&lt;Event Month="1" Day="4" Year="1986">Smurfier's BDay&lt;/Event></pre></li>
-			<li>Appears as: <pre>Smurfier's BDay (26)</pre></li></ul></li>
-
-		<li class="space">The Month field must be set to a number between 1 and 12. An asterisk (*) may be used to denote that the event occurs monthly.</li>
-
-		<li class="space">The Day field must be set to either a number, Formula, or a Variable. More information on Variables can be found below.
-
-		<li class="space">Formulas are used to calculate some more complicated Holidays such as Election Day.<br>
-			<ul><li><b>Example</b>: <pre>&lt;Event Month="11" Day="({FirstMon}+1)*((!Year%2)=0)">Election Day&lt;/Event></pre></li>
-			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li></ul>
-					
-		</ul></ul>
+<p>There is no limit to the number of Events used. Event files must be formatted in the following XML style format, indents not required.</p>
+<pre>&lt;EventFile Title="Holidays">
+	&lt;Event Month="1" Day="10">Event Description&lt;/Event>
+	&lt;Set Month="2">
+		&lt;Event Day="12">Some Other Event&lt;/Event>
+	&lt;/Set>
+&lt;!--This is a comment.-->
+&lt;/EventFile>
+</pre>
+<p style="padding-top:15px;">The complete contents of the Event file must be enclosed in <code>&lt;EventFile>&lt;/EventFile></code> tags. The following settings may be set on each tag and are overridden by those nested within them.</p>
+<ul><li><b>Title</b>*<br/>
+	The title of the event which is displayed after the events.</li>
+<li><b>Month</b><br/>
+	The month in which the event occurs. Using an asterisk (*) denotes a monthly event.</li>
+<li><b>Day</b><br/>
+	The day on which the event occurs. This setting allows the use of formulas and <a href="#vars">Variables</a>.<br/>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({FirstMon}+1)*(({Year}%2)=0)">Election Day&lt;/Event></code></li>
+			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li>
+<li><b>Year</b>*<br/>
+	When the Year is included the anniversary of the event is calculated and displayed. Using a year in the future will display a number denoting the number of years until that event.<br/>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986">Smurfier's BDay&lt;/Event></code></li>
+			<li>Appears as: <code>Smurfier's BDay (26)</code></li></ul></li></li>
+</ul>
+<i style="font-size:0.8em;">*This field is optional.</i>
 </div>
 <a name="vars"></a>
 <div class="balloon" id="vars"><h1>Variables</h1>
 <p>There are two instances when certain Variables can be used with LuaCalendar settings. The first being LabelText and the other being in the Day parameter of Holiday Files. Variables are surrounded by {Curly Brackets} and are case insensitive.</p>
 <div style="float:left;width:48%;padding-right:1%;"><b>Static Variables</b>
-<ul style="margin-top:0px;"><li><pre>{MName}</pre>
+<ul style="margin-top:0px;"><li><code>{MName}</code>
 <ul><li>The name of the current month. If a name is not provided the month number is used.</li></ul></li>
-<li><pre>{Year}</pre>
+<li><code>{Year}</code>
 <ul><li>The current year.</li></ul></li>
-<li><pre>{Today}</pre>
+<li><code>{Today}</code>
 <ul><li>The current day number. This variable follows the LeadingZeroes setting.</li></ul></li>
-<li><pre>{Month}</pre>
+<li><code>{Month}</code>
 <ul><li>The current month number.</li></ul></li></ul>
 </div>
 <div style="float:right;width:48%;padding-left:1%;border-left:1px solid #ffffff;">
 <b>Variable Days</b>
 <p>Variable Days are used to calculate holidays that occur on days like the Second Tuesday of the month. They are defined using the following keywords.</p>
-<p style="text-indent:0;">Starts with: <pre>First, Second, Third, Fourth, Last</pre></p>
-<p style="text-indent:0;">Ends with: <pre>Sun, Mon, Tue, Wed, Thu, Fri, Sat</pre></p>
-<p style="text-indent:0;"><b>Example</b>:<br><pre>&lt;Event Month="11" Day="{FourthThu}">...&lt;/Event></pre></p>
+<p style="text-indent:0;">Starts with: <code>First, Second, Third, Fourth, Last</code></p>
+<p style="text-indent:0;">Ends with: <code>Sun, Mon, Tue, Wed, Thu, Fri, Sat</code></p>
+<p style="text-indent:0;"><b>Example</b>:<br><code>&lt;Event Month="11" Day="{FourthThu}">...&lt;/Event></code></p>
 </div>
 <div style="clear:both">&nbsp;</div>
 </div>
@@ -193,7 +199,7 @@ These variable are created and updated by the script.
 </ul></li>
 
 <li><b>Script Functions</b><br>
-These functions can be used with <pre>!CommandMeasure "ScriptMeasure" "Command()"</pre> to control the calendar.
+These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command()"</code> to control the calendar.
 	<ul><li>Forward()
 			<ul><li>Used to browse forward in the calendar.</li></ul></li>
 		<li>Back()
@@ -212,10 +218,12 @@ These functions can be used with <pre>!CommandMeasure "ScriptMeasure" "Command()
 <li class="fix">Fix</li>
 <li class="remove">Remove</li></ul>
 
-<b>3.3</b> (unreleased)
-	<ul><li class="remove">Removed support for <pre>&lt;Title>&lt;/Title></pre> tags.</li>
+<b>3.3</b> (4/18/2012)
+	<ul><li class="remove">Removed support for <code>&lt;Title>&lt;/Title></code> tags.</li>
 	<li class="add">Added support for xml comments.</li>
 	<li class="change">Changed to use proper xml formatting.</li>
+	<li class="add">Added more error checking.</li>
+	<li class="change">Changed <code>HolidayFile</code> to <code>EventFile</code></li>
 	</ul>
 
 <b>3.2.2</b> (3/26/2012)
@@ -275,7 +283,7 @@ These functions can be used with <pre>!CommandMeasure "ScriptMeasure" "Command()
 <b>2.2.2</b> (8/22/2011)
 	<ul><li class="fix">Fixed error with StartOnMonday where wrong day was indicated.</li>
 	<li class="add">Added calendar names to events.</li>
-	<li class="add">Added <pre>&lt;Title>&lt;/Title></pre> to holiday files to comply with showing calendar names in events.</li>
+	<li class="add">Added <code>&lt;Title>&lt;/Title></code> to holiday files to comply with showing calendar names in events.</li>
 	<li class="fix">Worked to fix problem with all day events with google calendar.</li>
 	<li class="change">Moved most calendar settings to Settings.inc and set rmskin to migrate settings on upgrade.</li></ul>
 	
