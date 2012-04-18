@@ -8,16 +8,21 @@ function Initialize()
 		LZer=SELF:GetNumberOption('LeadingZeroes',0)>0,
 		MPref=SELF:GetOption('MeterPrefix','mDay'),
 		SMon=SELF:GetNumberOption('StartOnMonday',0)>0,
+		LText=SELF:GetOption('LabelText','{MName}, {Year}'),
 	}
-	OldDay,OldMonth,OldYear,StartDay,Month,Year,InMonth=0,0,0,0,0,0,1 -- Initialize Variables.
+	Old={Day=0,Month=0,Year=0}
+	StartDay,Month,Year,InMonth,Error=0,0,0,1,false -- Initialize Variables.
 	cMonth={31,28,31,30,31,30,31,31,30,31,30,31} -- Length of the months.
 --	========== Weekday labels text ==========
 	local Labels={} -- Initialize Labels table in local context.
-	for a in string.gmatch(SELF:GetOption('DayLabels','S|M|T|W|T|F|S'),'[^%|]+') do -- Separate DayLabels by Delimiter.
-		table.insert(Labels,a)
-	end
-	for a=1,#Labels do -- Set DayLabels text.
-		SetOption(Set.DPrefix..a,'Text',Labels[Set.SMon and a%#Labels+1 or a])
+	-- Separate DayLabels by Delimiter.
+	string.gsub(SELF:GetOption('DayLabels','S|M|T|W|T|F|S'),'[^%|]+', function(a) table.insert(Labels,a) end)
+	if #Labels<7 then -- Check for Error
+		ErrMsg('Invalid DayLabels string')
+	else
+		for a=1,7 do -- Set DayLabels text.
+			SetOption(Set.DPrefix..a,'Text',Labels[Set.SMon and a%#Labels+1 or a])
+		end
 	end
 --	========== Localization ==========
 	MLabels={}
@@ -26,45 +31,41 @@ function Initialize()
 		for a=1,12 do -- Pull each month name.
 			table.insert(MLabels,os.date('%B',os.time({year=2000,month=a,day=1})))
 		end
-	else
-		for a in string.gmatch(SELF:GetOption('MonthLabels',''),'[^%|]+') do -- Pull custom month names.
-			table.insert(MLabels,a)
-		end
-		for a=#MLabels+1,12 do -- Make sure there are 12 months.
-			table.insert(MLabels,a)
-		end
+	else -- Pull custom month names.
+		string.gsub(SELF:GetOption('MonthLabels',''),'[^%|]+', function(a) table.insert(MLabels,a) end)
 	end
 --	========== Holiday File ==========
-	hFile={} -- Initialize Main Holiday table.
-	for i,v in ipairs({'month','day','year','event','title'}) do hFile[v]={} end -- Turn Holiday Table into a Matrix.
-	for file in string.gmatch(SELF:GetOption('HolidayFile',''),'[^%|]+') do -- For each holiday file.
+	hFile={} -- Initialize Main Event table.
+	for i,v in ipairs({'month','day','year','event','title'}) do hFile[v]={} end -- Turn Event Table into a Matrix.
+	local sw=switch{ -- Defines Event File tags
+		set=function(x) eSet=Keys(x) end,
+		['/set']=function(x) eSet={} end,
+		eventfile=function(x) eFile=Keys(x) end,
+		['/eventfile']=function(x) eFile={} end,
+		event=function(x) local match,ev=string.match(x,'<(.+)>(.-)</') local Tmp=Keys(match,{event=ev;})
+			for i,v in pairs(hFile) do table.insert(hFile[i],Tmp[i] or (eSet[i] or (eFile[i] or ''))) end end,
+		default=function(x,y) ErrMsg('Invalid Event Tag- '..y) end,
+	}
+	for file in string.gmatch(SELF:GetOption('EventFile',''),'[^%|]+') do -- For each event file.
 		local In=io.input(SKIN:MakePathAbsolute(file),'r') -- Open file in read only.
-		if In then -- If file is open.
-			local Set,eFile={},{}
+		if not io.type(In)=='file' then -- File could not be opened.
+			ErrMsg('File Read Error '..file)
+		else -- File is open.
 			local text=string.gsub(io.read('*all'),'<!%-%-.-%-%->','') -- Read in file contents and remove comments.
-			for line in string.gmatch(text,'[^\n]+') do -- For each file line.
-				if string.match(string.lower(line),'<eventfile.->') then
-					eFile=Keys(line)
-				elseif string.match(string.lower(line),'</eventfile>') then
-					eFile={}
-				elseif string.match(string.lower(line),'<set.+>') then
-					Set=Keys(line)
-				elseif string.match(string.lower(line),'</set>') then
-					Set={}
-				elseif string.match(string.lower(line),'<event.+>.-</event>') then
-					local match,ev=string.match(line,'<(.+)>(.-)</')
-					local Tmp=Keys(match,{event=ev;})
-					for i,v in pairs(hFile) do
-						table.insert(hFile[i],Tmp[i] or (Set[i] or (eFile[i] or '')))
-					end
+			io.close(In) -- Close the current file.
+			if not string.match(string.lower(text),'<eventfile.->.-</eventfile>') then
+				ErrMsg('Invalid Event File '..file)
+			else
+				local eFile,eSet={},{}
+				for line in string.gmatch(text,'[^\n]+') do -- For each file line.
+					local tag=string.match(line,'^.-<([^%s>]+)')
+					sw:case(string.lower(tag),line,tag)
 				end
 			end
-		else -- File could not be opened.
-			print('File Read Error: '..file)
 		end
-		io.close(In) -- Close the current file.
 	end
-end -- function Initialize
+	Update()
+end -- Initialize
 
 function Update()
 	Time=os.date('*t') -- Retrieve date values.
@@ -73,20 +74,20 @@ function Update()
 	elseif InMonth==0 and Month==Time.month and Year==Time.year then -- If browsing and Month changes to that month, set to Real Time.
 		Home()
 	end
-	if Month~=OldMonth or Year~=OldYear then -- Recalculate and Redraw if Month and/or Year changes.
-		OldMonth,OldYear,OldDay=Month,Year,Time.day
+	if Month~=Old.Month or Year~=Old.Year then -- Recalculate and Redraw if Month and/or Year changes.
+		Old.Month,Old.Year,Old.Day=Month,Year,Time.day
 		StartDay=rotate(os.date('%w',os.time({year=Year,month=Month,day=1})))
-		cMonth[2]=28+tobool((Year%4==0 and Year%100~=0) or Year%400==0) -- Check for Leap Year.
-		Holidays()
+		cMonth[2]=28+(((Year%4==0 and Year%100~=0) or Year%400==0) and 1 or 0) -- Check for Leap Year.
+		Events()
 		Draw()
-	elseif Time.day~=OldDay then --Redraw if Today changes.
-		OldDay=Time.day
+	elseif Time.day~=Old.Day then --Redraw if Today changes.
+		Old.Day=Time.day
 		Draw()
 	end
-	return 'Success!' --Return a value to Rainmeter.
-end -- function Update
+	return Error and 'Error!' or 'Success!' --Return a value to Rainmeter.
+end -- Update
 
-function Holidays() -- Parse Holidays table.
+function Events() -- Parse Events table.
 	Hol={} -- Initialize Holiday Table.
 	if not (SELF:GetNumberOption('DisableBuiltInEvents',0)>0) then -- Add Easter and Good Friday
 		local a,b,c,g,h,L,m=Year%19,math.floor(Year/100),Year%100,0,0,0,0
@@ -97,18 +98,21 @@ function Holidays() -- Parse Holidays table.
 		m=math.floor((a+11*h+22*L)/451)
 		local EM,ED=math.floor((h+L-7*m+114)/31),(h+L-7*m+114)%31+1
 		if Month==EM then Hol[ED]='Easter' end
-		if Month==(EM-tobool(ED-2<1)) then Hol[(ED-2)+(ED-2<1 and cMonth[EM-1] or 0)]='Good Friday' end
-	end -- Add built in events.
+		if Month==(EM-(ED-2<1 and 1 or 0)) then Hol[(ED-2)+(ED-2<1 and cMonth[EM-1] or 0)]='Good Friday' end
+	end
 	for i=1,#hFile.month do -- For each holiday in the main table.
-		local Dy=0 -- Reset Dy to zero just to be sure.
+		local Dy=0 -- Set Dy to zero just to be sure.
 		if tonumber(hFile.month[i])==Month or hFile.month[i]=='*' then -- If Holiday exists in current month or *.
 			Dy=SKIN:ParseFormula(Vars(hFile.day[i])) -- Calculate Day.
-			local An=tonumber(hFile.year[i]) and ' ('..(Year-tonumber(hFile.year[i]))..')' or '' -- Calculate Anniversary.
-			-- Add to Holiday Table.
-			Hol[Dy]=(Hol[Dy] and Hol[Dy]..'\n' or '')..hFile.event[i]..An..(hFile.title[i]~='' and ' -'..hFile.title[i] or '')
+			if not Dy then -- Error Checking
+				ErrMsg('Invalid Event Day '..hFile.day[i])
+			else -- Add to Holiday Table.
+				local An=tonumber(hFile.year[i]) and ' ('..math.abs(Year-tonumber(hFile.year[i]))..')' or '' -- Calculate Anniversary.
+				Hol[Dy]=(Hol[Dy] and Hol[Dy]..'\n' or '')..hFile.event[i]..An..(hFile.title[i]=='' and '' or ' -'..hFile.title[i])
+			end
 		end
 	end
-end -- function Holidays
+end -- Events
 
 function Draw() --Sets all meter properties and calculates days.
 	local LastWeek=Set.HLWeek and math.ceil((StartDay+cMonth[Month])/7)<6 -- Check if Month is less than 6 weeks.
@@ -151,72 +155,68 @@ function Draw() --Sets all meter properties and calculates days.
 		ThisWeek=math.ceil((Time.day+StartDay)/7),
 		Week=rotate(Time.wday-1),
 		Today=LZero(Time.day),
-		Month=MLabels[Month],
+		Month=MLabels[Month] or Month,
 		Year=Year,
-		MonthLabel=Vars(SELF:GetOption('LabelText','{MName}, {Year}')),
-		LastWkHidden=tobool(LastWeek),
+		MonthLabel=Vars(Set.LText),
+		LastWkHidden=LastWeek and 1 or 0,
 	}
 	for i,v in pairs(var) do SetVariable(i,v) end --Read var and sets skin variables.
-end -- function Draw
+end -- Draw
 
-function Forward() --Advance Calendar by one month.
+function Forward() -- Advance Calendar by one month.
 	Month,Year=Month%12+1,Month==12 and Year+1 or Year
-	InMonth=tobool(Month==Time.month and Year==Time.year) --Check if in the current month.
+	InMonth=(Month==Time.month and Year==Time.year) and 1 or 0 --Check if in the current month.
 	SetVariable('NotCurrentMonth',1-InMonth) --Set Skin Variable NotCurrentMonth
-end -- function Forward
+end -- Forward
 
-function Back() --Regress Calendar by one month.
+function Back() -- Regress Calendar by one month.
 	Month,Year=Month==1 and 12 or Month-1,Month==1 and Year-1 or Year
-	InMonth=tobool(Month==Time.month and Year==Time.year) --Check if in the current month.
+	InMonth=(Month==Time.month and Year==Time.year) and 1 or 0 --Check if in the current month.
 	SetVariable('NotCurrentMonth',1-InMonth) --Set Skin Variable NotCurrentMonth
-end -- function Back
+end -- Back
 
-function Home() --Returns Calendar to current month.
+function Home() -- Returns Calendar to current month.
 	Month,Year,InMonth=Time.month,Time.year,1
 	SetVariable('NotCurrentMonth',0)
-end -- function Home
+end -- Home
 
 --===== These Functions are used to make life easier =====
 
 function Vars(a) -- Makes allowance for {Variables}
 	local D,W={sun=0, mon=1, tue=2, wed=3, thu=4, fri=5, sat=6},{first=0, second=1, third=2, fourth=3, last=4}
-	local tbl={mname=MLabels[Month], year=Year, today=LZero(Time.day), month=Month}
+	local tbl={mname=MLabels[Month] or Month, year=Year, today=LZero(Time.day), month=Month}
 	for b in string.gmatch(a,'%b{}') do
 		local strip,c=string.match(string.lower(b),'{(.+)}'),nil
+		local v1,v2=string.match(strip,'(.+)(...)')
 		if tbl[strip] then -- Regular variable.
 			c=tbl[strip]
-		elseif D[string.match(strip,'.+(...)')] and W[string.match(strip,'(.+)...')] then -- Variable day.
-			local v1,v2=string.match(strip,'(.+)(...)')
+		elseif W[v1] and D[v2] then -- Variable day.
 			local L,wD=36+D[v2]-StartDay,rotate(D[v2])
 			c=W[v1]<4 and wD+1-StartDay+(StartDay>wD and 7 or 0)+7*W[v1] or L-math.ceil((L-cMonth[Month])/7)*7
 		else -- Error
-			print('LuaCalendar: Invalid Variable '..b)
+			ErrMsg('Invalid Variable '..b)
 		end
 		a=string.gsub(a,b,c or 0)
 	end
 	return a
-end -- function Vars
+end -- Vars
 
 function rotate(a) -- Used to make allowance for StartOnMonday.
 	a=tonumber(a) or 0
 	return Set.SMon and (a-1+7)%7 or a
-end -- function rotate
+end -- rotate
 
 function SetVariable(a,b) -- Used to easily set Skin Variables
 	SKIN:Bang('!SetVariable '..a..' """'..b..'"""')
-end -- function SetVariable
+end -- SetVariable
 
 function SetOption(a,b,c) -- Used to easily set Meter/Measure Options
 	SKIN:Bang('!SetOption "'..a..'" "'..b..'" """'..c..'"""')
-end -- function SetOption
+end -- SetOption
 
 function LZero(a) -- Used to make allowance for LeadingZeros
 	return Set.LZer and string.format('%02d',a) or a
-end -- function LZero
-
-function tobool(a) -- Converts Boolean to number value
-	return a and 1 or 0
-end -- function tobool
+end -- LZero
 
 function Keys(a,b) -- Converts Key="Value" sets to a table
 	local tbl=b or {}
@@ -224,4 +224,23 @@ function Keys(a,b) -- Converts Key="Value" sets to a table
 		tbl[string.lower(c)]=string.match(d,'"(.+)"')
 	end
 	return tbl
-end -- function Keys
+end -- Keys
+
+function ErrMsg(a) -- Used to display errors
+	Error=true
+	print('LuaCalendar: '..a)
+end -- ErrMsg
+
+function switch(t)
+	t.case=function(self,x,y,z)
+		local f=self[x] or self.default
+		if f then
+			if type(f)=="function" then
+				f(y,z)
+			else
+				print("case "..tostring(x).." not a function")
+			end
+		end
+	end
+	return t
+end
