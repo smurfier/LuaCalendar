@@ -1,47 +1,49 @@
 [Rainmeter]
 BackgroundMode=2
 SolidColor=0,0,0,1
-MouseOverAction=!Execute [!ToggleMeterGroup Controls][!Redraw]
-MouseLeaveAction=!Execute [!ToggleMeterGroup Controls][!Redraw]
+MouseOverAction=!Execute [!ShowMeterGroup Controls][!Redraw]
+MouseLeaveAction=!Execute [!HideMeterGroup Controls][!Redraw]
 
-[BackgroundStyle]
-H=170
-W=#cWidth#
-SolidColor=0,0,0,1
+;===== Meter Styles=====
+;All of these meter styles are required.
 
 ;Day Label Styles
 [LblTxtSty]
-X=#SpacingX#r
-Y=20
+H=#C.h#
+W=#C.w#
+X=#Space.X#R
+Y=r
 FontFace=Trebuchet MS
-FontColor=255,255,255
+FontColor=255,255,255,150
 FontSize=8
 stringAlign=center
 AntiAlias=1
-Group=Controls
 
 [LblTxtStart]
-X=(#FirstX#-10)
+X=(#Bumper.x#+#C.w#/2)
+Y=(#Bumper.top#+#C.h#+#Space.y#+2)
 
 [LblCurrSty]
 
 ;Main Calendar Styles
 [TextStyle]
-X=#SpacingX#r
+H=#C.h#
+W=#C.w#
+X=(#Space.X#+#C.w#)r
 Y=r
-FontColor=255,255,255
+FontColor=255,255,255,160
 FontFace=Trebuchet MS
-FontSize=8
-stringAlign=Right
+FontSize=10
+stringAlign=center
 AntiAlias=1
 
 [FirstDay]
-Y=#FirstY#
-X=#FirstX#
+Y=(#Space.y#/2)R
+X=(#Bumper.x#+#C.w#/2)
 
 [NewWk]
-Y=#SpacingY#r
-X=38
+Y=#Space.y#R
+X=(#Bumper.x#+#C.w#/2)
 
 [CurrentDay]
 StringStyle=Bold
@@ -50,63 +52,45 @@ StringStyle=Bold
 FontColor=0,0,0,0
 
 [PreviousMonth]
-FontColor=255,255,255,108
+FontColor=128,192,255,160
 
 [NextMonth]
-FontColor=255,255,255,108
+FontColor=128,192,255,160
 
 [HolidayStyle]
-FontColor=#Clr.Hrl#
+FontColor=170,170,170,100
 
 [WeekendStyle]
 
 ;========== METERS ==========
-[TopBorder]
-Meter=Image
-SolidColor=#Clr.Brd#
-X=10
-Y=5
-W=(#cWidth#-20)
-H=1
-Hidden=#HideBordersTop#
-
-[BorderBottom]
-Meter=IMAGE
-SolidColor=#Clr.Brd#
-X=10
-Y=165
-W=(#cWidth#-20)
-H=1
-Hidden=#HideBordersBottom#
-
+;These are not required.
 [mLabel]
 Meter=String
 Text=#MonthLabel#
-W=(112+#SpacingX#*6)
-X=(#FirstX#+FLOOR(#SpacingX#)*3-8)
-Y=18
+W=(#C.w#*7+#Space.x#*6)
+X=((#C.w#*7+#Space.x#*6)/2+#Bumper.x#)
+Y=#Bumper.top#
+H=#C.h#
 FontColor=255,255,255,160
 FontFace=Trebuchet MS
 FontSize=10
 stringAlign=Center
 AntiAlias=1
-Group=Controls
-Hidden=1
 DynamicVariables=1
 
 ;Day Label BG
 [LblBgSty]
-X=#SpacingX#r
-Y=18
-H=16
-W=16
+X=#Space.X#R
+Y=r
+H=#C.h#
+W=#C.W#
 SolidColor=255,255,255,25
-Group=Controls
 
 [lSunBG]
 Meter=image
 MeterStyle=LblBgSty
-X=(#FirstX#-18)
+X=#Bumper.x#
+Y=(#Bumper.top#+#C.h#+#Space.y#)
 
 [lMonBG]
 Meter=image
@@ -139,8 +123,8 @@ MeterStyle=TextStyle
 FontFace=Webdings
 StringAlign=Left
 Text="4"
-Y=18
-X=(#SpacingX#*6+(#FirstX#-18)-8)
+Y=#Bumper.top#
+X=((#C.w#*6+#Space.x#*6)+#Bumper.x#)
 LeftMouseUpAction=!Execute [!CommandMeasure "Lua" "Move(1)"][!Update]
 Group=Controls
 Hidden=1
@@ -149,7 +133,7 @@ Hidden=1
 Meter=String
 MeterStyle=TextStyle|ControlForward
 Text="3"
-X=(#FirstX#-18)
+X=#Bumper.x#
 LeftMouseUpAction=!Execute [!CommandMeasure "Lua" "Move(-1)"][!Update]
 
 [ControlHome]
@@ -162,10 +146,22 @@ LeftMouseUpAction=!Execute [!CommandMeasure "Lua" "Move()"][!Update]
 ;Date Indicator
 [TodayHL]
 Meter=image
-X=(#FirstX#+#Week#*FLOOR(#SpacingX#))
-Y=(#FirstY#+#SpacingY#*(#ThisWeek#-1))
-H=12
-W=2
+X=(#Bumper.x#+(#C.w#+#Space.x#)*#Week#+3)
+Y=(#Bumper.top#+(#C.h#+#Space.y#)*(#ThisWeek#+1)+#C.h#-2)
+H=2
+W=(#C.w#-6)
 SolidColor=#Clr.Hrl#
 Hidden=#NotCurrentMonth#
 DynamicVariables=1
+
+[EventsList]
+Meter=String
+MeterStyle=TextStyle
+Text=#NextEvent#
+X=(#C.w#*7+#Space.x#*6+#Bumper.x#)
+Y=0
+H=(#C.h#*7+#Space.y#*6)
+W=200
+StringAlign=Left
+DynamicVariables=1
+ClipString=1
