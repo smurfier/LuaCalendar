@@ -1,4 +1,4 @@
--- LuaCalendar v3.3 by Smurfier (smurfier20@gmail.com)
+-- LuaCalendar v3.4 by Smurfier (smurfier20@gmail.com)
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
@@ -65,10 +65,9 @@ end -- Initialize
 
 function Update()
 	Time=os.date('*t') -- Retrieve date values.
-	if InMonth==1 and Month~=Time.month then  -- If in the current month, set to Real Time.
-		Month,Year=Time.month,Time.year
-	elseif InMonth==0 and Month==Time.month and Year==Time.year then -- If browsing and Month changes to that month, set to Real Time.
-		Home()
+	-- If in the current month or if browsing and Month changes to that month, set to Real Time.
+	if (InMonth==1 and Month~=Time.month) or (InMonth==0 and Month==Time.month and Year==Time.year) then
+		Move()
 	end
 	if Month~=Old.Month or Year~=Old.Year then -- Recalculate and Redraw if Month and/or Year changes.
 		Old.Month,Old.Year,Old.Day=Month,Year,Time.day
@@ -97,11 +96,10 @@ function Events() -- Parse Events table.
 		if Month==(EM-(ED-2<1 and 1 or 0)) then Hol[(ED-2)+(ED-2<1 and cMonth[EM-1] or 0)]='Good Friday' end
 	end
 	for i=1,#hFile.month do -- For each event.
-		local Dy=0 -- Initalize Dy.
 		if tonumber(hFile.month[i])==Month or hFile.month[i]=='*' then -- If Event exists in current month or *.
-			Dy=SKIN:ParseFormula(Vars(hFile.day[i],'EventFile')) -- Calculate Day.
+			local Dy=SKIN:ParseFormula(Vars(hFile.day[i],hFile.event[i])) -- Calculate Day.
 			if not Dy then -- Error Checking
-				ErrMsg('Invalid Event Day '..hFile.day[i])
+				ErrMsg('Invalid Event Day '..hFile.day[i]..' in '..hFile.event[i])
 			else -- Add to Event Table.
 				local An=tonumber(hFile.year[i]) and ' ('..math.abs(Year-tonumber(hFile.year[i]))..')' or '' -- Calculate Anniversary.
 				Hol[Dy]=(Hol[Dy] and Hol[Dy]..'\n' or '')..hFile.event[i]..An..(hFile.title[i]=='' and '' or ' -'..hFile.title[i])
@@ -115,7 +113,7 @@ function Draw() --Sets all meter properties and calculates days.
 	for a=1,7 do --Set Weekday Labels styles.
 		local Styles={'LblTxtSty'}
 		if a==1 then table.insert(Styles,'LblTxtStart') end
-		if rotate(Time.wday-1)==a-1 and InMonth==1 then --If in current month and year, set Current Weekday style.
+		if rotate(Time.wday-1)==a-1 and InMonth==1 then --If in current month, set Current Weekday style.
 			table.insert(Styles,'LblCurrSty')
 		end
 		Bangs('SetOption',Set.DPref..a,'MeterStyle',table.concat(Styles,'|'))
@@ -159,17 +157,15 @@ function Draw() --Sets all meter properties and calculates days.
 end -- Draw
 
 function Move(a) -- Move calendar through the months.
-	local check=function()
-		InMonth=(Month==Time.month and Year==Time.year) and 1 or 0 --Check if in the current month.
-		Bangs('SetVariable','NotCurrentMonth',1-InMonth) --Set Skin Variable NotCurrentMonth
-	end
 	local sw=switch{
-		['1']=function() Month,Year=Month%12+1,Month==12 and Year+1 or Year check() end, -- Forward
-		['-1']=function() Month,Year=Month==1 and 12 or Month-1,Month==1 and Year-1 or Year check() end, -- Back
-		['0']=function() Month,Year=Time.month,Time.year check() end, -- Home
+		['1']=function() Month,Year=Month%12+1,Month==12 and Year+1 or Year end, -- Forward
+		['-1']=function() Month,Year=Month==1 and 12 or Month-1,Month==1 and Year-1 or Year end, -- Back
+		['0']=function() Month,Year=Time.month,Time.year end, -- Home
 		default=function() ErrMsg('Invalid Move parameter') end, -- Error
 	}
 	sw:case(tostring(a or 0))
+	InMonth=(Month==Time.month and Year==Time.year) and 1 or 0 --Check if in the current month.
+	Bangs('SetVariable','NotCurrentMonth',1-InMonth) --Set Skin Variable NotCurrentMonth
 end -- Move
 
 --===== These Functions are used to make life easier =====
@@ -177,8 +173,8 @@ end -- Move
 function Vars(a,source) -- Makes allowance for {Variables}
 	local D,W={sun=0, mon=1, tue=2, wed=3, thu=4, fri=5, sat=6},{first=0, second=1, third=2, fourth=3, last=4}
 	local tbl={mname=MLabels[Month] or Month, year=Year, today=LZero(Time.day), month=Month}
-	a=string.gsub(a,'%b{}',function(b)
-		local strip,c=string.match(string.lower(b),'{(.+)}'),nil
+	return string.gsub(a,'%b{}',function(b)
+		local strip=string.match(string.lower(b),'{(.+)}')
 		local v1,v2=string.match(strip,'(.+)(...)')
 		if tbl[strip] then -- Regular variable.
 			return tbl[strip]
@@ -190,7 +186,6 @@ function Vars(a,source) -- Makes allowance for {Variables}
 			return 0
 		end
 	end)
-	return a
 end -- Vars
 
 function rotate(a) -- Makes allowance for StartOnMonday.
@@ -198,7 +193,7 @@ function rotate(a) -- Makes allowance for StartOnMonday.
 end -- rotate
 
 function Bangs(...) -- Send bangs with multiple arguments
-	SKIN:Bang('!'..string.gsub(table.remove(arg,1),'!','')..' """'..table.concat(arg,'""" """')..'"""')
+	SKIN:Bang('!'..table.remove(arg,1)..' """'..table.concat(arg,'""" """')..'"""')
 end -- Bangs
 
 function LZero(a) -- Used to make allowance for LeadingZeros
