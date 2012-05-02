@@ -18,10 +18,10 @@ function Initialize()
 	local Labels=Delim(SELF:GetOption('DayLabels','S|M|T|W|T|F|S')) -- Separate DayLabels string.
 	if #Labels<7 then -- Check for Error
 		ErrMsg('Invalid DayLabels string')
-	else -- Set DayLabels text.
-		for a=1,7 do
-			Bangs('SetOption',Set.DPref..a,'Text',Labels[Set.SMon and a%#Labels+1 or a])
-		end
+		Labels={'S','M','T','W','T','F','S'}
+	end
+	for a=1,7 do -- Set DayLabels text.
+		Bangs('SetOption',Set.DPref..a,'Text',Labels[Set.SMon and a%#Labels+1 or a])
 	end
 --	========== Localization ==========
 	MLabels=Delim(SELF:GetOption('MonthLabels','')) -- Pull custom month names.
@@ -41,7 +41,7 @@ function Initialize()
 		['/eventfile']=function(x) eFile={} end,
 		event=function(x) local match,ev=string.match(x[2],'<(.+)>(.-)</') local Tmp=Keys(match,{event=ev})
 			for i,v in pairs(hFile) do table.insert(hFile[i],Tmp[i] or eSet[i] or eFile[i] or '') end end,
-		default=function(x) ErrMsg('Invalid Event Tag- '..x[1]) end,
+		default=function(x) ErrMsg('Invalid Event Tag- '..x[1]) end, -- Error
 	}
 	for _,file in ipairs(Delim(SELF:GetOption('EventFile',''))) do -- For each event file.
 		local In=io.input(SKIN:MakePathAbsolute(file),'r') -- Open file in read only.
@@ -75,25 +75,25 @@ function Update()
 		cMonth[2]=28+(((Year%4==0 and Year%100~=0) or Year%400==0) and 1 or 0) -- Check for Leap Year.
 		Events()
 		Draw()
-	elseif Time.day~=Old.Day then --Redraw if Today changes.
+	elseif Time.day~=Old.Day then -- Redraw if Today changes.
 		Old.Day=Time.day
 		Draw()
 	end
-	return Error and 'Error!' or 'Success!' --Return a value to Rainmeter.
+	return Error and 'Error!' or 'Success!' -- Return a value to Rainmeter.
 end -- Update
 
 function Events() -- Parse Events table.
 	Hol={} -- Initialize Event Table.
+	local AddEvn=function(a,b) if Hol[a] then table.insert(Hol[a],b) else Hol[a]={b} end end -- Adds new Events.
 	if not (SELF:GetNumberOption('DisableBuiltInEvents',0)>0) then -- Add Easter and Good Friday
-		local a,b,c,g,h,L,m=Year%19,math.floor(Year/100),Year%100,0,0,0,0
+		local a,b,c,h,L,m=Year%19,math.floor(Year/100),Year%100,0,0,0
 		local d,e,f,i,k=math.floor(b/4),b%4,math.floor((b+8)/25),math.floor(c/4),c%4
-		g=math.floor((b-f+1)/3)
-		h=(19*a+b-d-g+15)%30
+		h=(19*a+b-d-math.floor((b-f+1)/3)+15)%30
 		L=(32+2*e+2*i-h-k)%7
 		m=math.floor((a+11*h+22*L)/451)
 		local EM,ED=math.floor((h+L-7*m+114)/31),(h+L-7*m+114)%31+1
-		if Month==EM then Hol[ED]='Easter' end
-		if Month==(EM-(ED-2<1 and 1 or 0)) then Hol[(ED-2)+(ED-2<1 and cMonth[EM-1] or 0)]='Good Friday' end
+		if Month==EM then AddEvn(ED,'Easter') end
+		if Month==(EM-(ED-2<1 and 1 or 0)) then AddEvn((ED-2)+(ED-2<1 and cMonth[EM-1] or 0),'Good Friday') end
 	end
 	for i=1,#hFile.month do -- For each event.
 		if tonumber(hFile.month[i])==Month or hFile.month[i]=='*' then -- If Event exists in current month or *.
@@ -102,7 +102,7 @@ function Events() -- Parse Events table.
 				ErrMsg('Invalid Event Day '..hFile.day[i]..' in '..hFile.event[i])
 			else -- Add to Event Table.
 				local An=tonumber(hFile.year[i]) and ' ('..math.abs(Year-tonumber(hFile.year[i]))..')' or '' -- Calculate Anniversary.
-				Hol[Dy]=(Hol[Dy] and Hol[Dy]..'\n' or '')..hFile.event[i]..An..(hFile.title[i]=='' and '' or ' -'..hFile.title[i])
+				AddEvn(Dy,hFile.event[i]..An..(hFile.title[i]=='' and '' or ' -'..hFile.title[i]))
 			end
 		end
 	end
@@ -122,10 +122,10 @@ function Draw() --Sets all meter properties and calculates days.
 		local Par,Styles={a-StartDay, ''},{'TextStyle'} --Initialize variables.
 		if a%7==1 then table.insert(Styles,a==1 and 'FirstDay' or 'NewWk') end --First Day and New Week
 		if Par[1]>0 and Par[1]<=cMonth[Month] and Hol[Par[1]] then --Holiday ToolTip and Style
-			Par[2]=Hol[Par[1]]
+			Par[2]=table.concat(Hol[Par[1]],'\n')
 			table.insert(Styles,'HolidayStyle')
 		end
-		if Time.day+StartDay==a and InMonth==1 then --If in current month and year, set Current Day Style.
+		if Time.day+StartDay==a and InMonth==1 then --Current Day.
 			table.insert(Styles,'CurrentDay')
 		elseif a>35 and LastWeek then --LastWeek of the month.
 			table.insert(Styles,'LastWeek')
@@ -161,7 +161,7 @@ function Move(a) -- Move calendar through the months.
 		['1']=function() Month,Year=Month%12+1,Month==12 and Year+1 or Year end, -- Forward
 		['-1']=function() Month,Year=Month==1 and 12 or Month-1,Month==1 and Year-1 or Year end, -- Back
 		['0']=function() Month,Year=Time.month,Time.year end, -- Home
-		default=function() ErrMsg('Invalid Move parameter') end, -- Error
+		default=function() ErrMsg('Invalid Move parameter'..a) end, -- Error
 	}
 	sw:case(tostring(a or 0))
 	InMonth=(Month==Time.month and Year==Time.year) and 1 or 0 --Check if in the current month.
@@ -182,8 +182,7 @@ function Vars(a,source) -- Makes allowance for {Variables}
 			local L,wD=36+D[v2]-StartDay,rotate(D[v2])
 			return W[v1]<4 and wD+1-StartDay+(StartDay>wD and 7 or 0)+7*W[v1] or L-math.ceil((L-cMonth[Month])/7)*7
 		else -- Error
-			ErrMsg('Invalid Variable '..b..' in '..source)
-			return 0
+			return ErrMsg('Invalid Variable '..b..' in '..source,0)
 		end
 	end)
 end -- Vars
@@ -206,9 +205,10 @@ function Keys(a,b) -- Converts Key="Value" sets to a table
 	return tbl
 end -- Keys
 
-function ErrMsg(a) -- Used to display errors
+function ErrMsg(a,b) -- Used to display errors
 	Error=true
 	print('LuaCalendar: '..a)
+	return b or ''
 end -- ErrMsg
 
 function Delim(a) -- Separate String by Delimiter
@@ -234,12 +234,11 @@ end -- switch
 
 function NextEvn() -- Returns a list of events
 	local Evns={}
-	for a=InMonth==1 and Time.day or 1,cMonth[Month] do
+	for a=InMonth==1 and Time.day or 1,cMonth[Month] do -- Parse through month days to keep days in order.
 		if Hol[a] then
-			local tbl={day=a,desc=string.gsub(Hol[a],'\n',',')}
-			local b=string.gsub(Set.NFormat,'(%b{})',function(c)
-				local match=string.match(string.lower(c),'{(.+)}')
-				if tbl[match] then return tbl[match] end
+			local tbl={day=a,desc=table.concat(Hol[a],',')}
+			local b=string.gsub(Set.NFormat,'(%b{})',function(c) -- Parse NextFormat variables
+				return tbl[string.match(string.lower(c),'{(.+)}')] or ErrMsg('Invalid NextFormat variable '..c)
 			end)
 			table.insert(Evns,b)
 		end
