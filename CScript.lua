@@ -17,7 +17,7 @@ function Initialize()
 --	========== Weekday labels text ==========
 	local Labels=Delim(SELF:GetOption('DayLabels','S|M|T|W|T|F|S')) -- Separate DayLabels string.
 	if #Labels<7 then -- Check for Error
-		ErrMsg('Invalid DayLabels string')
+		ErrMsg(0,'Invalid DayLabels string')
 		Labels={'S','M','T','W','T','F','S'}
 	end
 	for a=1,7 do -- Set DayLabels text.
@@ -41,17 +41,17 @@ function Initialize()
 		['/eventfile']=function(x) eFile={} end,
 		event=function(x) local match,ev=string.match(x[2],'<(.+)>(.-)</') local Tmp=Keys(match,{event=ev})
 			for i,v in pairs(hFile) do table.insert(hFile[i],Tmp[i] or eSet[i] or eFile[i] or '') end end,
-		default=function(x) ErrMsg('Invalid Event Tag- '..x[1]) end, -- Error
+		default=function(x) ErrMsg(0,'Invalid Event Tag-',x[1]) end, -- Error
 	}
 	for _,file in ipairs(Delim(SELF:GetOption('EventFile',''))) do -- For each event file.
 		local In=io.input(SKIN:MakePathAbsolute(file),'r') -- Open file in read only.
 		if not io.type(In)=='file' then -- File could not be opened.
-			ErrMsg('File Read Error '..file)
+			ErrMsg(0,'File Read Error',file)
 		else -- File is open.
 			local text=string.gsub(io.read('*all'),'<!%-%-.-%-%->','') -- Read in file contents and remove comments.
 			io.close(In) -- Close the current file.
 			if not string.match(string.lower(text),'<eventfile.->.-</eventfile>') then
-				ErrMsg('Invalid Event File '..file)
+				ErrMsg(0,'Invalid Event File',file)
 			else
 				local eFile,eSet={},{}
 				for line in string.gmatch(text,'[^\n]+') do -- For each file line.
@@ -97,19 +97,17 @@ function Events() -- Parse Events table.
 	end
 	for i=1,#hFile.month do -- For each event.
 		if tonumber(hFile.month[i])==Month or hFile.month[i]=='*' then -- If Event exists in current month or *.
-			local Dy=SKIN:ParseFormula(Vars(hFile.day[i],hFile.event[i])) -- Calculate Day.
-			if not Dy then -- Error Checking
-				ErrMsg('Invalid Event Day '..hFile.day[i]..' in '..hFile.event[i])
-			else -- Add to Event Table.
-				local An=tonumber(hFile.year[i]) and ' ('..math.abs(Year-tonumber(hFile.year[i]))..')' or '' -- Calculate Anniversary.
-				AddEvn(Dy,hFile.event[i]..An..(hFile.title[i]=='' and '' or ' -'..hFile.title[i]))
-			end
+			local An=tonumber(hFile.year[i]) and ' ('..math.abs(Year-tonumber(hFile.year[i]))..')' or '' -- Calculate Anniversary.
+			AddEvn( -- Calculate Day and add to Event Table
+				SKIN:ParseFormula(Vars(hFile.day[i],hFile.event[i])) or ErrMsg(0,'Invalid Event Day',hFile.day[i],'in',hFile.event[i]),
+				hFile.event[i]..An..(hFile.title[i]=='' and '' or ' -'..hFile.title[i])
+			)
 		end
 	end
 end -- Events
 
 function Draw() --Sets all meter properties and calculates days.
-	local LastWeek=Set.HLWeek and math.ceil((StartDay+cMonth[Month])/7)<6 -- Check if Month is less than 6 weeks.
+	local LastWeek=Set.HLWeek and (StartDay+cMonth[Month])/7<6 -- Check if Month is less than 6 weeks.
 	for a=1,7 do --Set Weekday Labels styles.
 		local Styles={'LblTxtSty'}
 		if a==1 then table.insert(Styles,'LblTxtStart') end
@@ -127,7 +125,7 @@ function Draw() --Sets all meter properties and calculates days.
 		end
 		if Time.day+StartDay==a and InMonth==1 then --Current Day.
 			table.insert(Styles,'CurrentDay')
-		elseif a>35 and LastWeek then --LastWeek of the month.
+		elseif a>35 and LastWeek then --Last week of the month.
 			table.insert(Styles,'LastWeek')
 		elseif Par[1]<1 then --Previous month.
 			Par[1]=Par[1]+cMonth[Month==1 and 12 or Month-1]
@@ -156,12 +154,26 @@ function Draw() --Sets all meter properties and calculates days.
 	}) do Bangs('SetVariable',k,v) end --Set skin variables.
 end -- Draw
 
+function NextEvn() -- Returns a list of events
+	local Evns={}
+	for a=InMonth==1 and Time.day or 1,cMonth[Month] do -- Parse through month days to keep days in order.
+		if Hol[a] then
+			local tbl={day=a,desc=table.concat(Hol[a],',')}
+			local b=string.gsub(Set.NFormat,'(%b{})',function(c) -- Parse NextFormat variables
+				return tbl[string.match(string.lower(c),'{(.+)}')] or ErrMsg(0,'Invalid NextFormat variable',c)
+			end)
+			table.insert(Evns,b)
+		end
+	end
+	return table.concat(Evns,'\n')
+end -- NextEvn
+
 function Move(a) -- Move calendar through the months.
 	local sw=switch{
 		['1']=function() Month,Year=Month%12+1,Month==12 and Year+1 or Year end, -- Forward
 		['-1']=function() Month,Year=Month==1 and 12 or Month-1,Month==1 and Year-1 or Year end, -- Back
 		['0']=function() Month,Year=Time.month,Time.year end, -- Home
-		default=function() ErrMsg('Invalid Move parameter'..a) end, -- Error
+		default=function() ErrMsg(0,'Invalid Move parameter',a) end, -- Error
 	}
 	sw:case(tostring(a or 0))
 	InMonth=(Month==Time.month and Year==Time.year) and 1 or 0 --Check if in the current month.
@@ -182,7 +194,7 @@ function Vars(a,source) -- Makes allowance for {Variables}
 			local L,wD=36+D[v2]-StartDay,rotate(D[v2])
 			return W[v1]<4 and wD+1-StartDay+(StartDay>wD and 7 or 0)+7*W[v1] or L-math.ceil((L-cMonth[Month])/7)*7
 		else -- Error
-			return ErrMsg('Invalid Variable '..b..' in '..source,0)
+			return ErrMsg(0,'Invalid Variable',b,'in',source)
 		end
 	end)
 end -- Vars
@@ -205,10 +217,10 @@ function Keys(a,b) -- Converts Key="Value" sets to a table
 	return tbl
 end -- Keys
 
-function ErrMsg(a,b) -- Used to display errors
+function ErrMsg(...) -- Used to display errors
 	Error=true
-	print('LuaCalendar: '..a)
-	return b or ''
+	print('LuaCalendar: '..table.concat(arg,' ',2))
+	return arg[1]
 end -- ErrMsg
 
 function Delim(a) -- Separate String by Delimiter
@@ -231,17 +243,3 @@ function switch(tbl) -- Used to emulate a switch statement
 	end
 	return tbl
 end -- switch
-
-function NextEvn() -- Returns a list of events
-	local Evns={}
-	for a=InMonth==1 and Time.day or 1,cMonth[Month] do -- Parse through month days to keep days in order.
-		if Hol[a] then
-			local tbl={day=a,desc=table.concat(Hol[a],',')}
-			local b=string.gsub(Set.NFormat,'(%b{})',function(c) -- Parse NextFormat variables
-				return tbl[string.match(string.lower(c),'{(.+)}')] or ErrMsg('Invalid NextFormat variable '..c)
-			end)
-			table.insert(Evns,b)
-		end
-	end
-	return table.concat(Evns,'\n')
-end -- NextEvn
