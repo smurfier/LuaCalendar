@@ -160,7 +160,7 @@ function NextEvn() -- Returns a list of events
 		if Hol[a] then
 			local tbl={day=a,desc=table.concat(Hol[a],',')}
 			local b=string.gsub(Set.NFormat,'(%b{})',function(c) -- Parse NextFormat variables
-				return tbl[string.match(string.lower(c),'{(.+)}')] or ErrMsg(0,'Invalid NextFormat variable',c)
+				return tbl[string.match(string.lower(c),'{(.+)}')] or ErrMsg('','Invalid NextFormat variable',c)
 			end)
 			table.insert(Evns,b)
 		end
