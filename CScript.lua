@@ -34,15 +34,6 @@ function Initialize()
 --	========== Holiday File ==========
 	hFile={month='',day='',year='',event='',title=''} -- Initialize Event Matrix.
 	for k,v in pairs(hFile) do hFile[k]={} end
-	local sw=switch{ -- Define Event File tags
-		set=function(x) eSet=Keys(x[2]) end,
-		['/set']=function(x) eSet={} end,
-		eventfile=function(x) eFile=Keys(x[2]) end,
-		['/eventfile']=function(x) eFile={} end,
-		event=function(x) local match,ev=string.match(x[2],'<(.+)>(.-)</') local Tmp=Keys(match,{event=ev})
-			for i,v in pairs(hFile) do table.insert(hFile[i],Tmp[i] or eSet[i] or eFile[i] or '') end end,
-		default=function(x) ErrMsg(0,'Invalid Event Tag-',x[1]) end, -- Error
-	}
 	for _,file in ipairs(Delim(SELF:GetOption('EventFile',''))) do -- For each event file.
 		local In=io.input(SKIN:MakePathAbsolute(file),'r') -- Open file in read only.
 		if not io.type(In)=='file' then -- File could not be opened.
@@ -54,6 +45,15 @@ function Initialize()
 				ErrMsg(0,'Invalid Event File',file)
 			else
 				local eFile,eSet={},{}
+				local sw=switch{ -- Define Event File tags
+					set=function(x) eSet=Keys(x[2]) end,
+					['/set']=function(x) eSet={} end,
+					eventfile=function(x) eFile=Keys(x[2]) end,
+					['/eventfile']=function(x) eFile={} end,
+					event=function(x) local match,ev=string.match(x[2],'<(.+)>(.-)</') local Tmp=Keys(match,{event=ev})
+						for i,v in pairs(hFile) do table.insert(hFile[i],Tmp[i] or eSet[i] or eFile[i] or '') end end,
+					default=function(x) ErrMsg(0,'Invalid Event Tag-',x[1]) end, -- Error
+				}
 				for line in string.gmatch(text,'[^\n]+') do -- For each file line.
 					sw:case(string.match(line,'^.-<([^%s>]+)'),line)
 				end
@@ -85,6 +85,7 @@ end -- Update
 function Events() -- Parse Events table.
 	Hol={} -- Initialize Event Table.
 	local AddEvn=function(a,b) if Hol[a] then table.insert(Hol[a],b) else Hol[a]={b} end end -- Adds new Events.
+	local Test=function(c,d) return c=='' and '' or (d and d..c or nil) end
 	if not (SELF:GetNumberOption('DisableBuiltInEvents',0)>0) then -- Add Easter and Good Friday
 		local a,b,c,h,L,m=Year%19,math.floor(Year/100),Year%100,0,0,0
 		local d,e,f,i,k=math.floor(b/4),b%4,math.floor((b+8)/25),math.floor(c/4),c%4
@@ -96,11 +97,10 @@ function Events() -- Parse Events table.
 		if Month==(EM-(ED-2<1 and 1 or 0)) then AddEvn((ED-2)+(ED-2<1 and cMonth[EM-1] or 0),'Good Friday') end
 	end
 	for i=1,#hFile.month do -- For each event.
-		if tonumber(hFile.month[i])==Month or hFile.month[i]=='*' then -- If Event exists in current month or *.
-			local An=tonumber(hFile.year[i]) and ' ('..math.abs(Year-tonumber(hFile.year[i]))..')' or '' -- Calculate Anniversary.
+		if hFile.month[i]==Month or hFile.month[i]=='*' then -- If Event exists in current month or *.
 			AddEvn( -- Calculate Day and add to Event Table
 				SKIN:ParseFormula(Vars(hFile.day[i],hFile.event[i])) or ErrMsg(0,'Invalid Event Day',hFile.day[i],'in',hFile.event[i]),
-				hFile.event[i]..An..(hFile.title[i]=='' and '' or ' -'..hFile.title[i])
+				hFile.event[i]..(Test(hFile.year[i]) or ' ('..math.abs(Year-hFile.year[i])..')')..Test(hFile.title[i],' -')
 			)
 		end
 	end
@@ -213,7 +213,7 @@ end -- LZero
 
 function Keys(a,b) -- Converts Key="Value" sets to a table
 	local tbl=b or {}
-	string.gsub(a,'(%a+)=(%b"")',function(c,d) tbl[string.lower(c)]=string.match(d,'"(.+)"') end)
+	string.gsub(a,'(%a+)=(%b"")',function(c,d) local strip=string.match(d,'"(.+)"') tbl[string.lower(c)]=tonumber(strip) or strip end)
 	return tbl
 end -- Keys
 
