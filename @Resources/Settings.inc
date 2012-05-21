@@ -16,7 +16,7 @@ Style=Default
 
 ;Holidays File names
 ;Note: For Holiday file names, multiple sources can be used by uisng the pipe delimiter (|).
-EventFile=Holidays\Holidays.hol
+EventFile=#@#Holidays\Holidays.hol
 
 ;Custom Text formatting for Month Labels. See Readme for details.
 ;LabelText=

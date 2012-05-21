@@ -125,7 +125,7 @@ StringAlign=Left
 Text="4"
 Y=#Bumper.top#
 X=((#C.w#*6+#Space.x#*6)+#Bumper.x#)
-LeftMouseUpAction=!Execute [!CommandMeasure "Lua" "Move(1)"][!Update]
+LeftMouseUpAction=[!CommandMeasure "Lua" "Move(1)"][!Update]
 Group=Controls
 Hidden=1
 
@@ -134,14 +134,14 @@ Meter=String
 MeterStyle=TextStyle|ControlForward
 Text="3"
 X=#Bumper.x#
-LeftMouseUpAction=!Execute [!CommandMeasure "Lua" "Move(-1)"][!Update]
+LeftMouseUpAction=[!CommandMeasure "Lua" "Move(-1)"][!Update]
 
 [ControlHome]
 Meter=String
 MeterStyle=TextStyle|ControlForward
 Text="="
 X=R
-LeftMouseUpAction=!Execute [!CommandMeasure "Lua" "Move()"][!Update]
+LeftMouseUpAction=[!CommandMeasure "Lua" "Move()"][!Update]
 
 ;Date Indicator
 [TodayHL]

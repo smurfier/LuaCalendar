@@ -21,7 +21,7 @@ function Initialize()
 		Labels={'S','M','T','W','T','F','S'}
 	end
 	for a=1,7 do -- Set DayLabels text.
-		Bangs('SetOption',Set.DPref..a,'Text',Labels[Set.SMon and a%#Labels+1 or a])
+		SKIN:Bang('!SetOption',Set.DPref..a,'Text',Labels[Set.SMon and a%#Labels+1 or a])
 	end
 --	========== Localization ==========
 	MLabels=Delim(SELF:GetOption('MonthLabels','')) -- Pull custom month names.
@@ -114,7 +114,7 @@ function Draw() --Sets all meter properties and calculates days.
 		if rotate(Time.wday-1)==a-1 and InMonth==1 then --If in current month, set Current Weekday style.
 			table.insert(Styles,'LblCurrSty')
 		end
-		Bangs('SetOption',Set.DPref..a,'MeterStyle',table.concat(Styles,'|'))
+		SKIN:Bang('!SetOption',Set.DPref..a,'MeterStyle',table.concat(Styles,'|'))
 	end
 	for a=1,42 do --Calculate and set day meters.
 		local Par,Styles={a-StartDay, ''},{'TextStyle'} --Initialize variables.
@@ -140,7 +140,7 @@ function Draw() --Sets all meter properties and calculates days.
 			Text=LZero(Par[1]),
 			MeterStyle=table.concat(Styles,'|'),
 			ToolTipText=Par[2],
-		}) do Bangs('SetOption',Set.MPref..a,k,v) end --Set meter properties.
+		}) do SKIN:Bang('!SetOption',Set.MPref..a,k,v) end --Set meter properties.
 	end
 	for k,v in pairs({ --Define skin variables.
 		ThisWeek=math.ceil((Time.day+StartDay)/7),
@@ -151,7 +151,7 @@ function Draw() --Sets all meter properties and calculates days.
 		MonthLabel=Vars(Set.LText,'MonthLabel'),
 		LastWkHidden=LastWeek and 1 or 0,
 		NextEvent=NextEvn(),
-	}) do Bangs('SetVariable',k,v) end --Set skin variables.
+	}) do SKIN:Bang('!SetVariable',k,v) end --Set skin variables.
 end -- Draw
 
 function NextEvn() -- Returns a list of events
@@ -177,7 +177,7 @@ function Move(a) -- Move calendar through the months.
 	}
 	sw:case(tostring(a or 0))
 	InMonth=(Month==Time.month and Year==Time.year) and 1 or 0 --Check if in the current month.
-	Bangs('SetVariable','NotCurrentMonth',1-InMonth) --Set Skin Variable NotCurrentMonth
+	SKIN:Bang('!SetVariable','NotCurrentMonth',1-InMonth) --Set Skin Variable NotCurrentMonth
 end -- Move
 
 --===== These Functions are used to make life easier =====
@@ -203,17 +203,16 @@ function rotate(a) -- Makes allowance for StartOnMonday.
 	return Set.SMon and (a-1+7)%7 or a
 end -- rotate
 
-function Bangs(...) -- Send bangs with multiple arguments
-	SKIN:Bang('!'..table.remove(arg,1)..' """'..table.concat(arg,'""" """')..'"""')
-end -- Bangs
-
 function LZero(a) -- Used to make allowance for LeadingZeros
 	return Set.LZer and string.format('%02d',a) or a
 end -- LZero
 
 function Keys(a,b) -- Converts Key="Value" sets to a table
 	local tbl=b or {}
-	string.gsub(a,'(%a+)=(%b"")',function(c,d) local strip=string.match(d,'"(.+)"') tbl[string.lower(c)]=tonumber(strip) or strip end)
+	string.gsub(a,'(%a+)=(%b"")',function(c,d)
+		local strip=string.match(d,'"(.+)"')
+		tbl[string.lower(c)]=tonumber(strip) or strip
+	end)
 	return tbl
 end -- Keys
 
