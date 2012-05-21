@@ -137,3 +137,11 @@ Meter=Image
 MeterStyle=vLine1
 H=((#C.h#+#Space.y#)*(6-#LastWkHidden#-#ThisWeek#))
 Y=R
+
+[Ghost]
+Meter=Image
+SolidColor=0,0,0,1
+H=1
+W=1
+X=(#C.w#*7+#Space.x#*6+#Bumper.x#*2-1)
+Y=(#Bumper.top#+#Bumper.bottom#+(#C.h#+#Space.y#)*(7-#LastWkHidden#)+#C.h#+1)
