@@ -1,8 +1,8 @@
 [Rainmeter]
 BackgroundMode=2
 SolidColor=0,0,0,1
-MouseOverAction=!Execute [!ShowMeterGroup Controls][!Redraw]
-MouseLeaveAction=!Execute [!HideMeterGroup Controls][!Redraw]
+MouseOverAction=[!ShowMeterGroup Controls][!Redraw]
+MouseLeaveAction=[!HideMeterGroup Controls][!Redraw]
 
 ;===== Meter Styles=====
 ;All of these meter styles are required.

@@ -1,8 +1,8 @@
 [Rainmeter]
 BackgroundMode=2
 SolidColor=0,0,0,1
-MouseOverAction=!Execute [!ToggleMeterGroup Controls][!Redraw]
-MouseLeaveAction=!Execute [!ToggleMeterGroup Controls][!Redraw]
+MouseOverAction=[!ToggleMeterGroup Controls][!Redraw]
+MouseLeaveAction=[!ToggleMeterGroup Controls][!Redraw]
 
 [BackgroundStyle]
 H=170
@@ -141,7 +141,7 @@ StringAlign=Left
 Text="4"
 Y=18
 X=(#SpacingX#*6+(#FirstX#-18)-8)
-LeftMouseUpAction=!Execute [!CommandMeasure "Lua" "Move(1)"][!Update]
+LeftMouseUpAction=[!CommandMeasure "Lua" "Move(1)"][!Update]
 Group=Controls
 Hidden=1
 
@@ -150,14 +150,14 @@ Meter=String
 MeterStyle=TextStyle|ControlForward
 Text="3"
 X=(#FirstX#-18)
-LeftMouseUpAction=!Execute [!CommandMeasure "Lua" "Move(-1)"][!Update]
+LeftMouseUpAction=[!CommandMeasure "Lua" "Move(-1)"][!Update]
 
 [ControlHome]
 Meter=String
 MeterStyle=TextStyle|ControlForward
 Text="="
 X=R
-LeftMouseUpAction=!Execute [!CommandMeasure "Lua" "Move()"][!Update]
+LeftMouseUpAction=[!CommandMeasure "Lua" "Move()"][!Update]
 
 ;Date Indicator
 [TodayHL]
