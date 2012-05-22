@@ -19,17 +19,16 @@
 <p>One of the major features of the skin is the abiltiy to display events that are defined by the user. This was a long requested feature of the existing calendar skins. All of the easily configured settings and features are listed below.</p>
 
 <h1>Release Notes</h1>
-<p>The current stable version is 3.3 released on 4/18/2012.</p>
+<p>The current stable version is 3.4 released on 5/22/2012.</p>
 <table><tr><td style="width:210px;"><a href="https://github.com/smurfier/LuaCalendar/downloads" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
 Download from GitHub.<br>
-Version 3.3<br>
-3/26/2012</a></td>
+Version 3.4<br>
+5/22/2012</a></td>
 <td><ul style="margin-top:0;padding-left:0;">
-<li>Changed to use proper xml formatting.</li>
-<li>Removed support for <code>&lt;Title>&lt;/Title></code> tags to support the new xml format.</li>
-<li>Added support for xml comments.</li>
-<li>Added more error checking.</li>
-<li>Changed <code>HolidayFile</code> to <code>EventFile</code></li>
+<li>Rainmeter 2.3 beta r1398 or higher required.</li>
+<li>Added Ghost meter to Default styles to enforce skin size.</li>
+<li>Added NextEvent skin variable.</li>
+<li>Updated to use @Resources folder.</li>
 </ul>
 </td></tr></table>
 </div>
@@ -71,6 +70,9 @@ All settings can be found in Settings.inc
 <li class="space"><b>DisableBuiltInEvents</b>
 	<ul><li>Set to 1 to disable Easter which is built into the script becasue of the need for complicated formulas.</li>
 	<li>Defaults to <code>0</code>.</li></ul></li>
+<li class="space"><b>NextFormat</b>
+	<ul><li>The formatting used for the NextEvent skin variable. Use <code>{day}</code> to display the day number and <code>{desc}</code> for the comma delimited list of events.</li>
+	<li>Defaults to <code>{day}: {desc}</code>.</ul>
 </ul>
 
 <h1>Skin Specific Settings</h1>
@@ -196,6 +198,8 @@ These variable are created and updated by the script.
 		<ul><li>Set to 1 when browsing outside the current month, else 0.</li></ul></li>
 	<li>LastWkHidden
 		<ul><li>Set to 1 if week 6 is hidden.</li></ul></li>
+	<li>NextEvent
+		<ul><li>A list of upcomming events in the currently displayed month following the style defined in the NextFormat setting.</li></ul></li>
 </ul></li>
 
 <li><b>Script Functions</b><br>
@@ -217,6 +221,11 @@ These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command(
 <li class="change">Change</li>
 <li class="fix">Fix</li>
 <li class="remove">Remove</li></ul>
+
+<b>3.4</b> (5/22/2012)
+	<ul><li class="fix">Added Ghost meter to Default styles to enforce skin size.</li>
+	<li class="add">Added NextEvent skin variable.</li>
+	<li class="change">Updated to use @Resources folder.</li></ul>
 
 <b>3.3</b> (4/18/2012)
 	<ul><li class="remove">Removed support for <code>&lt;Title>&lt;/Title></code> tags.</li>
