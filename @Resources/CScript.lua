@@ -70,7 +70,7 @@ function Update()
 		Move()
 	end
 	if Month~=Old.Month or Year~=Old.Year then -- Recalculate and Redraw if Month and/or Year changes.
-		Old.Month,Old.Year,Old.Day=Month,Year,Time.day
+		Old={Month=Month,Year=Year,Day=Time.day}
 		StartDay=rotate(tonumber(os.date('%w',os.time({year=Year,month=Month,day=1}))))
 		cMonth[2]=28+(((Year%4==0 and Year%100~=0) or Year%400==0) and 1 or 0) -- Check for Leap Year.
 		Events()
