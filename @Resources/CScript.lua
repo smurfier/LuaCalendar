@@ -12,7 +12,7 @@ function Initialize()
 		NFormat=SELF:GetOption('NextFormat','{day}: {desc}'),
 	}
 	Old={Day=0,Month=0,Year=0}
-	StartDay,Month,Year,InMonth,Error=0,0,0,1,false -- Initialize Variables.
+	StartDay,Month,Year,InMonth,Error=0,0,0,true,false -- Initialize Variables.
 	cMonth={31,28,31,30,31,30,31,31,30,31,30,31} -- Length of the months.
 --	========== Weekday labels text ==========
 	local Labels=Delim(SELF:GetOption('DayLabels','S|M|T|W|T|F|S')) -- Separate DayLabels string.
@@ -21,19 +21,18 @@ function Initialize()
 		Labels={'S','M','T','W','T','F','S'}
 	end
 	for a=1,7 do -- Set DayLabels text.
-		SKIN:Bang('!SetOption',Set.DPref..a,'Text',Labels[Set.SMon and a%#Labels+1 or a])
+		SKIN:Bang('!SetOption',Set.DPref..a,'Text',Labels[Set.SMon and a%7+1 or a])
 	end
 --	========== Localization ==========
 	MLabels=Delim(SELF:GetOption('MonthLabels','')) -- Pull custom month names.
 	if SELF:GetNumberOption('UseLocalMonths',0)>0 then
 		os.setlocale('','time') -- Set current locale.
 		for a=1,12 do -- Pull each month name.
-			MLabels[a]=os.date('%B',os.time({year=2000,month=a,day=1}))
+			MLabels[a]=os.date('%B',os.time{year=2000,month=a,day=1})
 		end
 	end
 --	========== Holiday File ==========
-	hFile={month='',day='',year='',event='',title=''} -- Initialize Event Matrix.
-	for k,v in pairs(hFile) do hFile[k]={} end
+	hFile={month={},day={},year={},event={},title={},} -- Initialize Event Matrix.
 	for _,file in ipairs(Delim(SELF:GetOption('EventFile',''))) do -- For each event file.
 		local In=io.input(SKIN:MakePathAbsolute(file),'r') -- Open file in read only.
 		if not io.type(In)=='file' then -- File could not be opened.
@@ -60,18 +59,17 @@ function Initialize()
 			end
 		end
 	end
-	Update() -- Make the script load completely on initialization
 end -- Initialize
 
 function Update()
 	Time=os.date('*t') -- Retrieve date values.
 	-- If in the current month or if browsing and Month changes to that month, set to Real Time.
-	if (InMonth==1 and Month~=Time.month) or (InMonth==0 and Month==Time.month and Year==Time.year) then
+	if (InMonth and Month~=Time.month) or ((not InMonth) and Month==Time.month and Year==Time.year) then
 		Move()
 	end
 	if Month~=Old.Month or Year~=Old.Year then -- Recalculate and Redraw if Month and/or Year changes.
 		Old={Month=Month,Year=Year,Day=Time.day}
-		StartDay=rotate(tonumber(os.date('%w',os.time({year=Year,month=Month,day=1}))))
+		StartDay=rotate(tonumber(os.date('%w',os.time{year=Year,month=Month,day=1})))
 		cMonth[2]=28+(((Year%4==0 and Year%100~=0) or Year%400==0) and 1 or 0) -- Check for Leap Year.
 		Events()
 		Draw()
@@ -111,7 +109,7 @@ function Draw() --Sets all meter properties and calculates days.
 	for a=1,7 do --Set Weekday Labels styles.
 		local Styles={'LblTxtSty'}
 		if a==1 then table.insert(Styles,'LblTxtStart') end
-		if rotate(Time.wday-1)==a-1 and InMonth==1 then --If in current month, set Current Weekday style.
+		if rotate(Time.wday-1)==a-1 and InMonth then --If in current month, set Current Weekday style.
 			table.insert(Styles,'LblCurrSty')
 		end
 		SKIN:Bang('!SetOption',Set.DPref..a,'MeterStyle',table.concat(Styles,'|'))
@@ -123,7 +121,7 @@ function Draw() --Sets all meter properties and calculates days.
 			Par[2]=table.concat(Hol[Par[1]],'\n')
 			table.insert(Styles,'HolidayStyle')
 		end
-		if Time.day+StartDay==a and InMonth==1 then --Current Day.
+		if Time.day+StartDay==a and InMonth then --Current Day.
 			table.insert(Styles,'CurrentDay')
 		elseif a>35 and LastWeek then --Last week of the month.
 			table.insert(Styles,'LastWeek')
@@ -136,13 +134,13 @@ function Draw() --Sets all meter properties and calculates days.
 		elseif a%7==0 or a%7==(Set.SMon and 6 or 1) then --Weekends.
 			table.insert(Styles,'WeekendStyle')
 		end
-		for k,v in pairs({ --Define meter properties.
+		for k,v in pairs{ --Define meter properties.
 			Text=LZero(Par[1]),
 			MeterStyle=table.concat(Styles,'|'),
 			ToolTipText=Par[2],
-		}) do SKIN:Bang('!SetOption',Set.MPref..a,k,v) end --Set meter properties.
+		} do SKIN:Bang('!SetOption',Set.MPref..a,k,v) end --Set meter properties.
 	end
-	for k,v in pairs({ --Define skin variables.
+	for k,v in pairs{ --Define skin variables.
 		ThisWeek=math.ceil((Time.day+StartDay)/7),
 		Week=rotate(Time.wday-1),
 		Today=LZero(Time.day),
@@ -151,12 +149,12 @@ function Draw() --Sets all meter properties and calculates days.
 		MonthLabel=Vars(Set.LText,'MonthLabel'),
 		LastWkHidden=LastWeek and 1 or 0,
 		NextEvent=NextEvn(),
-	}) do SKIN:Bang('!SetVariable',k,v) end --Set skin variables.
+	} do SKIN:Bang('!SetVariable',k,v) end --Set skin variables.
 end -- Draw
 
 function NextEvn() -- Returns a list of events
 	local Evns={}
-	for a=InMonth==1 and Time.day or 1,cMonth[Month] do -- Parse through month days to keep days in order.
+	for a=InMonth and Time.day or 1,cMonth[Month] do -- Parse through month days to keep days in order.
 		if Hol[a] then
 			local tbl={day=a,desc=table.concat(Hol[a],',')}
 			local b=string.gsub(Set.NFormat,'(%b{})',function(c) -- Parse NextFormat variables
@@ -176,8 +174,8 @@ function Move(a) -- Move calendar through the months.
 		default=function() ErrMsg(0,'Invalid Move parameter',a) end, -- Error
 	}
 	sw:case(tostring(a or 0))
-	InMonth=(Month==Time.month and Year==Time.year) and 1 or 0 --Check if in the current month.
-	SKIN:Bang('!SetVariable','NotCurrentMonth',1-InMonth) --Set Skin Variable NotCurrentMonth
+	InMonth=Month==Time.month and Year==Time.year --Check if in the current month.
+	SKIN:Bang('!SetVariable','NotCurrentMonth',InMonth and 0 or 1) --Set Skin Variable NotCurrentMonth
 end -- Move
 
 --===== These Functions are used to make life easier =====
