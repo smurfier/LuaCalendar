@@ -32,7 +32,7 @@ function Initialize()
 		end
 	end
 --	========== Holiday File ==========
-	hFile={month={},day={},year={},event={},title={},} -- Initialize Event Matrix.
+	hFile={month={},day={},year={},event={},title={},color={},} -- Initialize Event Matrix.
 	for _,file in ipairs(Delim(SELF:GetOption('EventFile',''))) do -- For each event file.
 		local In=io.input(SKIN:MakePathAbsolute(file),'r') -- Open file in read only.
 		if not io.type(In)=='file' then -- File could not be opened.
@@ -82,7 +82,14 @@ end -- Update
 
 function Events() -- Parse Events table.
 	Hol={} -- Initialize Event Table.
-	local AddEvn=function(a,b) if Hol[a] then table.insert(Hol[a],b) else Hol[a]={b} end end -- Adds new Events.
+	local AddEvn=function(a,b,c) -- Adds new Events.
+		if Hol[a] then
+			table.insert(Hol[a]['text'],b)
+			Hol[a]['color']=''
+		else
+			Hol[a]={text={b},color=c=='' and '' or c,}
+		end
+	end
 	local Test=function(c,d) return c=='' and '' or (d and d..c or nil) end
 	if not (SELF:GetNumberOption('DisableBuiltInEvents',0)>0) then -- Add Easter and Good Friday
 		local a,b,c,h,L,m=Year%19,math.floor(Year/100),Year%100,0,0,0
@@ -98,7 +105,8 @@ function Events() -- Parse Events table.
 		if hFile.month[i]==Month or hFile.month[i]=='*' then -- If Event exists in current month or *.
 			AddEvn( -- Calculate Day and add to Event Table
 				SKIN:ParseFormula(Vars(hFile.day[i],hFile.event[i])) or ErrMsg(0,'Invalid Event Day',hFile.day[i],'in',hFile.event[i]),
-				hFile.event[i]..(Test(hFile.year[i]) or ' ('..math.abs(Year-hFile.year[i])..')')..Test(hFile.title[i],' -')
+				hFile.event[i]..(Test(hFile.year[i]) or ' ('..math.abs(Year-hFile.year[i])..')')..Test(hFile.title[i],' -'),
+				hFile.color[i]
 			)
 		end
 	end
@@ -115,11 +123,12 @@ function Draw() --Sets all meter properties and calculates days.
 		SKIN:Bang('!SetOption',Set.DPref..a,'MeterStyle',table.concat(Styles,'|'))
 	end
 	for a=1,42 do --Calculate and set day meters.
-		local Par,Styles={a-StartDay, ''},{'TextStyle'} --Initialize variables.
+		local Par,Styles={a-StartDay, '', ''},{'TextStyle'} --Initialize variables.
 		if a%7==1 then table.insert(Styles,a==1 and 'FirstDay' or 'NewWk') end --First Day and New Week
 		if Par[1]>0 and Par[1]<=cMonth[Month] and Hol[Par[1]] then --Holiday ToolTip and Style
-			Par[2]=table.concat(Hol[Par[1]],'\n')
+			Par[2]=table.concat(Hol[Par[1]]['text'],'\n')
 			table.insert(Styles,'HolidayStyle')
+			Par[3]=Hol[Par[1]]['color']
 		end
 		if Time.day+StartDay==a and InMonth then --Current Day.
 			table.insert(Styles,'CurrentDay')
@@ -138,6 +147,7 @@ function Draw() --Sets all meter properties and calculates days.
 			Text=LZero(Par[1]),
 			MeterStyle=table.concat(Styles,'|'),
 			ToolTipText=Par[2],
+			FontColor=Par[3]
 		} do SKIN:Bang('!SetOption',Set.MPref..a,k,v) end --Set meter properties.
 	end
 	for k,v in pairs{ --Define skin variables.
@@ -156,7 +166,7 @@ function NextEvn() -- Returns a list of events
 	local Evns={}
 	for a=InMonth and Time.day or 1,cMonth[Month] do -- Parse through month days to keep days in order.
 		if Hol[a] then
-			local tbl={day=a,desc=table.concat(Hol[a],',')}
+			local tbl={day=a,desc=table.concat(Hol[a]['text'],',')}
 			local b=string.gsub(Set.NFormat,'(%b{})',function(c) -- Parse NextFormat variables
 				return tbl[string.match(string.lower(c),'{(.+)}')] or ErrMsg('','Invalid NextFormat variable',c)
 			end)
