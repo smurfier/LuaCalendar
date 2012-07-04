@@ -32,7 +32,7 @@ function Initialize()
 		end
 	end
 --	========== Holiday File ==========
-	hFile={month={},day={},year={},event={},title={},color={},} -- Initialize Event Matrix.
+	hFile={month={},day={},year={},desc={},title={},color={},} -- Initialize Event Matrix.
 	for _,file in ipairs(Delim(SELF:GetOption('EventFile',''))) do -- For each event file.
 		local In=io.input(SKIN:MakePathAbsolute(file),'r') -- Open file in read only.
 		if not io.type(In)=='file' then -- File could not be opened.
@@ -49,8 +49,11 @@ function Initialize()
 					['/set']=function(x) eSet={} end,
 					eventfile=function(x) eFile=Keys(x[2]) end,
 					['/eventfile']=function(x) eFile={} end,
-					event=function(x) local match,ev=string.match(x[2],'<(.+)>(.-)</') local Tmp=Keys(match,{event=ev})
-						for i,v in pairs(hFile) do table.insert(hFile[i],Tmp[i] or eSet[i] or eFile[i] or '') end end,
+					event=function(x)
+						local match,ev=string.match(x[2],string.match(x[2],'/>') and '<(.-)/>' or '<(.-)>(.-)</')
+						local Tmp=Keys(match,{desc=ev})
+						for i,v in pairs(hFile) do table.insert(hFile[i],Tmp[i] or eSet[i] or eFile[i] or '') end
+					end,
 					default=function(x) ErrMsg(0,'Invalid Event Tag-',x[1]) end, -- Error
 				}
 				for line in string.gmatch(text,'[^\n]+') do -- For each file line.
@@ -83,11 +86,12 @@ end -- Update
 function Events() -- Parse Events table.
 	Hol={} -- Initialize Event Table.
 	local AddEvn=function(a,b,c) -- Adds new Events.
+		c=string.match(c,',') and ConvertToHex(c) or c
 		if Hol[a] then
 			table.insert(Hol[a]['text'],b)
-			Hol[a]['color']=''
+			table.insert(Hol[a]['color'],c)
 		else
-			Hol[a]={text={b},color=c=='' and '' or c,}
+			Hol[a]={text={b},color={c},}
 		end
 	end
 	local Test=function(c,d) return c=='' and '' or (d and d..c or nil) end
@@ -104,8 +108,8 @@ function Events() -- Parse Events table.
 	for i=1,#hFile.month do -- For each event.
 		if hFile.month[i]==Month or hFile.month[i]=='*' then -- If Event exists in current month or *.
 			AddEvn( -- Calculate Day and add to Event Table
-				SKIN:ParseFormula(Vars(hFile.day[i],hFile.event[i])) or ErrMsg(0,'Invalid Event Day',hFile.day[i],'in',hFile.event[i]),
-				hFile.event[i]..(Test(hFile.year[i]) or ' ('..math.abs(Year-hFile.year[i])..')')..Test(hFile.title[i],' -'),
+				SKIN:ParseFormula(Vars(hFile.day[i],hFile.desc[i])) or ErrMsg(0,'Invalid Event Day',hFile.day[i],'in',hFile.desc[i]),
+				hFile.desc[i]..(Test(hFile.year[i]) or ' ('..math.abs(Year-hFile.year[i])..')')..Test(hFile.title[i],' -'),
 				hFile.color[i]
 			)
 		end
@@ -128,7 +132,7 @@ function Draw() --Sets all meter properties and calculates days.
 		if Par[1]>0 and Par[1]<=cMonth[Month] and Hol[Par[1]] then --Holiday ToolTip and Style
 			Par[2]=table.concat(Hol[Par[1]]['text'],'\n')
 			table.insert(Styles,'HolidayStyle')
-			Par[3]=Hol[Par[1]]['color']
+			Par[3]=eColor(Hol[Par[1]]['color'])
 		end
 		if Time.day+StartDay==a and InMonth then --Current Day.
 			table.insert(Styles,'CurrentDay')
@@ -161,6 +165,21 @@ function Draw() --Sets all meter properties and calculates days.
 		NextEvent=NextEvn(),
 	} do SKIN:Bang('!SetVariable',k,v) end --Set skin variables.
 end -- Draw
+
+function eColor(tbl) -- Makes allowance for multiple custom colors.
+	local a
+	for k,v in ipairs(tbl) do if v=='' then table.remove(tbl,k) end end -- Remove Empty Colors
+	for k,v in ipairs(tbl) do
+		if a then
+			if a~=v then
+				return ''
+			end
+		else
+			a=v
+		end
+	end
+	return a
+end -- eColor
 
 function NextEvn() -- Returns a list of events
 	local Evns={}
@@ -250,3 +269,12 @@ function switch(tbl) -- Used to emulate a switch statement
 	end
 	return tbl
 end -- switch
+
+function ConvertToHex(a) -- Converts RGB colors to HEX
+	local c={}
+	a=string.gsub(a,'%s','') -- Remove spaces
+	for b in string.gmatch(a,'[^,]+') do -- Separate by commas
+		table.insert(c,string.format('%02X',tonumber(b))) -- Convert to double digit HEX
+	end
+	return table.concat(c) -- Concat into color code
+end -- ConvertToHex
