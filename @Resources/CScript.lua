@@ -217,7 +217,7 @@ function BuiltInEvents(a)
 	tbl['ashwednesdayday']=atbl.day
 	local btbl=os.date('*t',easter-47*86400)
 	tbl['mardigrasmonth']=btbl.month
-	tbl['mardigrasday']=tbl.day
+	tbl['mardigrasday']=btbl.day
 	return tbl
 end
 
