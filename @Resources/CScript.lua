@@ -208,11 +208,16 @@ function BuiltInEvents(a)
 	m=math.floor((a+11*h+22*L)/451)
 	tbl['eastermonth']=math.floor((h+L-7*m+114)/31)
 	tbl['easterday']=(h+L-7*m+114)%31+1
-	tbl['goodfridaymonth']=(tbl.eastermonth-(tbl.easterday-2<1 and 1 or 0))
-	tbl['goodfridayday']=(tbl.easterday-2)+(tbl.easterday-2<1 and cMonth[tbl.eastermonth-1] or 0)
-	local atbl=os.date('*t',os.time{month=tbl.eastermonth,day=tbl.easterday,year=Year}-46*86400)
+	local easter=os.time{month=tbl.eastermonth,day=tbl.easterday,year=Year}
+	local gtbl=os.date('*t',easter-2*86400)
+	tbl['goodfridaymonth']=gtbl.month
+	tbl['goodfridayday']=gtbl.day
+	local atbl=os.date('*t',easter-46*86400)
 	tbl['ashwednesdaymonth']=atbl.month
 	tbl['ashwednesdayday']=atbl.day
+	local btbl=os.date('*t',easter-47*86400)
+	tbl['mardigrasmonth']=btbl.month
+	tbl['mardigrasday']=tbl.day
 	return tbl
 end
 
@@ -228,7 +233,7 @@ function Vars(a,source) -- Makes allowance for {Variables}
 			local L,wD=36+D[v2]-StartDay,rotate(D[v2])
 			return W[v1]<4 and wD+1-StartDay+(StartDay>wD and 7 or 0)+7*W[v1] or L-math.ceil((L-cMonth[Month])/7)*7
 		else -- Error
-			return ErrMsg(0,'Invalid Variable',b,'in',source)
+			return ErrMsg(0,'Invalid Variable',b,source and 'in '..source or '')
 		end
 	end)
 end -- Vars
