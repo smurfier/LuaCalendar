@@ -199,27 +199,28 @@ end -- Move
 
 --===== These Functions are used to make life easier =====
 
-function BuiltInEvents(a)
-	tbl=a or {}
+function Easter() -- Returns a timestamp representing easter of the current year.
 	local a,b,c,h,L,m=Year%19,math.floor(Year/100),Year%100,0,0,0
 	local d,e,f,i,k=math.floor(b/4),b%4,math.floor((b+8)/25),math.floor(c/4),c%4
 	h=(19*a+b-d-math.floor((b-f+1)/3)+15)%30
 	L=(32+2*e+2*i-h-k)%7
 	m=math.floor((a+11*h+22*L)/451)
-	tbl['eastermonth']=math.floor((h+L-7*m+114)/31)
-	tbl['easterday']=(h+L-7*m+114)%31+1
-	local easter=os.time{month=tbl.eastermonth,day=tbl.easterday,year=Year}
-	local gtbl=os.date('*t',easter-2*86400)
-	tbl['goodfridaymonth']=gtbl.month
-	tbl['goodfridayday']=gtbl.day
-	local atbl=os.date('*t',easter-46*86400)
-	tbl['ashwednesdaymonth']=atbl.month
-	tbl['ashwednesdayday']=atbl.day
-	local btbl=os.date('*t',easter-47*86400)
-	tbl['mardigrasmonth']=btbl.month
-	tbl['mardigrasday']=btbl.day
+	return os.time{month=math.floor((h+L-7*m+114)/31),day=(h+L-7*m+114)%31+1,year=Year}
+end -- Easter
+
+function BuiltInEvents(a) -- Makes allowance for events that require calculation.
+	tbl=a or {}
+	local sEaster=Easter()
+	tbl['eastermonth']=os.date('%m',sEaster)
+	tbl['easterday']=os.date('%d',sEaster)
+	tbl['goodfridaymonth']=os.date('%m',sEaster-2*86400)
+	tbl['goodfridayday']=os.date('%d',sEaster-2*86400)
+	tbl['ashwednesdaymonth']=os.date('%m',sEaster-46*86400)
+	tbl['ashwednesdayday']=os.date('%d',sEaster-46*86400)
+	tbl['mardigrasmonth']=os.date('%m',sEaster-47*86400)
+	tbl['mardigrasday']=os.date('%d',sEaster-47*86400)
 	return tbl
-end
+end -- BuiltInEvents
 
 function Vars(a,source) -- Makes allowance for {Variables}
 	local D,W={sun=0, mon=1, tue=2, wed=3, thu=4, fri=5, sat=6},{first=0, second=1, third=2, fourth=3, last=4}
