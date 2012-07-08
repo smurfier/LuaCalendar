@@ -209,16 +209,18 @@ function Easter() -- Returns a timestamp representing easter of the current year
 end -- Easter
 
 function BuiltInEvents(a) -- Makes allowance for events that require calculation.
-	tbl=a or {}
+	local tbl=a or {}
+	local SetVar=function(name,timestamp)
+		tbl[name..'month']=os.date('%m',timestamp)
+		tbl[name..'day']=os.date('%d',timestamp)
+	end
 	local sEaster=Easter()
-	tbl['eastermonth']=os.date('%m',sEaster)
-	tbl['easterday']=os.date('%d',sEaster)
-	tbl['goodfridaymonth']=os.date('%m',sEaster-2*86400)
-	tbl['goodfridayday']=os.date('%d',sEaster-2*86400)
-	tbl['ashwednesdaymonth']=os.date('%m',sEaster-46*86400)
-	tbl['ashwednesdayday']=os.date('%d',sEaster-46*86400)
-	tbl['mardigrasmonth']=os.date('%m',sEaster-47*86400)
-	tbl['mardigrasday']=os.date('%d',sEaster-47*86400)
+	
+	SetVar('easter',sEaster)
+	SetVar('goodfriday',sEaster-2*86400)
+	SetVar('ashwednesday',sEaster-46*86400)
+	SetVar('madigras',sEaster-47*86400)
+	
 	return tbl
 end -- BuiltInEvents
 
