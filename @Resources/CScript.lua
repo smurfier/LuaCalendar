@@ -45,19 +45,18 @@ function Initialize()
 			else
 				local eFile,eSet={},{}
 				local sw=switch{ -- Define Event File tags
-					set=function(x) eSet=Keys(x[2]) end,
-					['/set']=function(x) eSet={} end,
+					set=function(x) table.insert(eSet,Keys(x[2])) end,
+					['/set']=function(x) table.remove(eSet,#eSet) end,
 					eventfile=function(x) eFile=Keys(x[2]) end,
 					['/eventfile']=function(x) eFile={} end,
-					event=function(x)
-						local match,ev=string.match(x[2],string.match(x[2],'/>') and '<(.-)/>' or '<(.-)>(.-)</')
-						local Tmp=Keys(match,{desc=ev})
-						for i,v in pairs(hFile) do table.insert(hFile[i],Tmp[i] or eSet[i] or eFile[i] or '') end
+					event=function(x) local Tmp=Keys(x[2])
+						local dSet=ParseTbl(eSet)
+						for i,v in pairs(hFile) do table.insert(hFile[i],Tmp[i] or dSet[i] or eFile[i] or '') end
 					end,
 					default=function(x) ErrMsg(0,'Invalid Event Tag-',x[1]) end, -- Error
 				}
-				for line in string.gmatch(text,'[^\n\r\t]+') do -- For each file line, skipping tabs.
-					sw:case(string.match(line,'^.-<([^%s>]+)'),line)
+				for tag in string.gmatch(text,'%b<>') do
+					sw:case(string.match(tag,'^<([^%s>]+)'),tag)
 				end
 			end
 		end
@@ -211,16 +210,14 @@ end -- Easter
 function BuiltInEvents(a) -- Makes allowance for events that require calculation.
 	local tbl=a or {}
 	local SetVar=function(name,timestamp)
-		tbl[name..'month']=os.date('%m',timestamp)
-		tbl[name..'day']=os.date('%d',timestamp)
+		tbl[string.lower(name)..'month']=os.date('%m',timestamp)
+		tbl[string.lower(name)..'day']=os.date('%d',timestamp)
 	end
 	local sEaster=Easter()
-	
 	SetVar('easter',sEaster)
 	SetVar('goodfriday',sEaster-2*86400)
 	SetVar('ashwednesday',sEaster-46*86400)
-	SetVar('madigras',sEaster-47*86400)
-	
+	SetVar('mardigras',sEaster-47*86400)
 	return tbl
 end -- BuiltInEvents
 
@@ -251,10 +248,13 @@ end -- LZero
 
 function Keys(a,b) -- Converts Key="Value" sets to a table
 	local tbl=b or {}
-	string.gsub(a,'(%a+)=(%b"")',function(c,d)
-		local strip=string.match(d,'"(.+)"')
-		tbl[string.lower(c)]=tonumber(strip) or strip
-	end)
+	local par=function(e) string.gsub(a,'(%a+)=(%b'..e..e..')',function(c,d)
+			local strip=string.match(d,e..'(.+)'..e)
+			tbl[string.lower(c)]=tonumber(strip) or strip
+		end)
+	end
+	par('"')
+	par("'")
 	return tbl
 end -- Keys
 
@@ -293,3 +293,13 @@ function ConvertToHex(a) -- Converts RGB colors to HEX
 	end
 	return table.concat(c) -- Concat into color code
 end -- ConvertToHex
+
+function ParseTbl(a) -- Compresses matrix into a single table.
+	local tbl={}
+	for k,v in ipairs(a) do
+		for b,c in pairs(v) do
+			tbl[b]=c
+		end
+	end
+	return tbl
+end -- ParseTbl
