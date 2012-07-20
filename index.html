@@ -10,29 +10,34 @@
 <li><a href="#intro">Introduction</a></li>
 <li><a href="#settings">Settings</a></li>
 <li><a href="#hol">Event Files</a></li>
+<li><a href="#vars">Variables</a></li>
 <li><a href="#styles">Style Sheets</a></li>
 <li><a href="#changes">ChangeLog</a></li></ul>
 </div>
 <div style="height:60px;">&nbsp;</div>
-<div class="balloon"><a name="intro"></a><h1>Introduction</h1>
+<a name="intro"></a>
+<div class="balloon"><h1>Introduction</h1>
 <p>LuaCalendar is a Calendar skin designed for use with the <a href="http://rainmeter.net">Rainmeter</a> program. By using the power of the Lua scripting language, the skin loads instantly and is exrtremely flexible. The skin itself is designed to use Style Sheets, allowing for complete customiztion of the look and feel of the skin while retaining all of the functionality of the script.</p>
 <p>One of the major features of the skin is the abiltiy to display events that are defined by the user. This was a long requested feature of the existing calendar skins. All of the easily configured settings and features are listed below.</p>
 
 <h1>Release Notes</h1>
 <p>The current stable version is 3.4 released on 5/22/2012.</p>
-<table><tr><td style="width:210px;"><a href="https://github.com/smurfier/LuaCalendar/downloads" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
+<table><tr><td style="width:210px;"><a href="https://github.com/downloads/smurfier/LuaCalendar/LuaCalendar_3.5.rmskin" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
 Download from GitHub.<br>
-Version 3.4<br>
-5/22/2012</a></td>
+Version 3.5<br>
+7/20/2012</a></td>
 <td><ul style="margin-top:0;padding-left:0;">
-<li>Rainmeter 2.3 beta r1398 or higher required.</li>
-<li>Added Ghost meter to Default styles to enforce skin size.</li>
-<li>Added NextEvent skin variable.</li>
-<li>Updated to use @Resources folder.</li>
+	<li>Updated Event file formatting.</li>
+	<li>Added Custom Colors to Event files.</li>
+	<li>Added support for nested Set tags in Event files.</li>
+	<li>Added support for custom built in Events.</li>
+	<li>Added support for formulas in the Month parameter.</li>
+	<li>Fixed inline tags.</li>
 </ul>
 </td></tr></table>
 </div>
-<div class="balloon" id="set"><a name="settings"></a><h1>Calendar Settings</h1>
+<a name="settings"></a>
+<div class="balloon" id="set"><h1>Calendar Settings</h1>
 All settings can be found in Settings.inc
 <ul>
 <li class="space"><b>Style</b>
@@ -67,9 +72,6 @@ All settings can be found in Settings.inc
 <li class="space"><b>EventFile</b>
 	<ul><li>A pipe delimited list of paths to Event files formatted as described below.</li>
 	<li>These paths are relative to the skin folder unless a full path is specified.</li></ul>
-<li class="space"><b>DisableBuiltInEvents</b>
-	<ul><li>Set to 1 to disable Easter which is built into the script becasue of the need for complicated formulas.</li>
-	<li>Defaults to <code>0</code>.</li></ul></li>
 <li class="space"><b>NextFormat</b>
 	<ul><li>The formatting used for the NextEvent skin variable. Use <code>{day}</code> to display the day number and <code>{desc}</code> for the comma delimited list of events.</li>
 	<li>Defaults to <code>{day}: {desc}</code>.</ul>
@@ -87,7 +89,8 @@ These Script settings are specific to the skin using the script.
 	<li>Defaults to <code>mDay</code></li></ul></li>
 </ul>
 </div>
-<div class="balloon" id="holiday"><a name="hol"></a><h1>Using Event Files</h1>
+<a name="hol"></a>
+<div class="balloon" id="holiday"><h1>Using Event Files</h1>
 <p>To use Event Files set EventFile to the path of a text file on the calendar measure. Multiple files can be aggregated together using a pipe delimiter.<br/>
 <b><i>Examples</i></b>
 <ul class="none"><li><code>EventFile=Holidays\Holidays.hol</code></li>
@@ -95,9 +98,9 @@ These Script settings are specific to the skin using the script.
 
 <p>There is no limit to the number of Events used. Event files must be formatted in the following XML style format, indents not required.</p>
 <pre>&lt;EventFile Title="Holidays">
-	&lt;Event Month="1" Day="10">Event Description&lt;/Event>
+	&lt;Event Month="1" Day="10" Desc="Event Description"/>
 	&lt;Set Month="2">
-		&lt;Event Day="12">Some Other Event&lt;/Event>
+		&lt;Event Day="12" Desc="Some Other Event"/>
 	&lt;/Set>
 &lt;!--This is a comment.-->
 &lt;/EventFile>
@@ -109,12 +112,17 @@ These Script settings are specific to the skin using the script.
 	The month in which the event occurs. Using an asterisk (*) denotes a monthly event.</li>
 <li><b>Day</b><br/>
 	The day on which the event occurs. This setting allows the use of formulas and <a href="#vars">Variables</a>.<br/>
-	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({FirstMon}+1)*(({Year}%2)=0)">Election Day&lt;/Event></code></li>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({FirstMon}+1)*(({Year}%2)=0)" Desc="Election Day"/></code></li>
 			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li>
 <li><b>Year</b>*<br/>
 	When the Year is included the anniversary of the event is calculated and displayed. Using a year in the future will display a number denoting the number of years until that event.<br/>
-	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986">Smurfier's BDay&lt;/Event></code></li>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Desc="Smurfier's BDay"/></code></li>
 			<li>Appears as: <code>Smurfier's BDay (26)</code></li></ul></li></li>
+<li><b>Desc</b><br/>
+	The description of the event.</li>
+<li><b>Color</b>*<br/>
+		The RGB or HEX color to be used for the specified event(s).<br/>
+		<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Color="255,0,0,255" Desc="Smurfier's BDay"/></code></li></ul></li>
 </ul>
 <i style="font-size:0.8em;">*This field is optional.</i>
 </div>
@@ -138,7 +146,9 @@ These Script settings are specific to the skin using the script.
 <p style="text-indent:0;">Ends with: <code>Sun, Mon, Tue, Wed, Thu, Fri, Sat</code></p>
 <p style="text-indent:0;"><b>Example</b>:<br><code>&lt;Event Month="11" Day="{FourthThu}">...&lt;/Event></code></p>
 </div>
-<div style="clear:both">&nbsp;</div>
+<div style="clear:both"><b>Built-In Event Variables</b>
+<p>In order to support events that require complex calculations, LuaCalendar supports certain Built-In events. These events create both a <code>{EventNameMonth}</code> and an <code>{EventNameDay}</code> variable. The value of these variables is recalculated for each year so that they are kept up to date.</p>
+<p>Currently the supported Built-In Events are Easter, GoodFriday, AshWednesday, and MardiGras.</p></div>
 </div>
 <a name="styles"></a>
 <div class="balloon" id="styles"><h1>Style Sheets</h1>
@@ -204,11 +214,11 @@ These variable are created and updated by the script.
 
 <li><b>Script Functions</b><br>
 These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command()"</code> to control the calendar.
-	<ul><li>Forward()
+	<ul><li>Move(1)
 			<ul><li>Used to browse forward in the calendar.</li></ul></li>
-		<li>Back()
+		<li>Move(-1)
 			<ul><li>Used to browse back in the calendar.</li></ul></li>
-		<li>Home()
+		<li>Move(0)
 			<ul><li>Used to return to the current month.</li></ul></li>
 	</ul>
 </li>
@@ -221,6 +231,14 @@ These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command(
 <li class="change">Change</li>
 <li class="fix">Fix</li>
 <li class="remove">Remove</li></ul>
+
+<b>3.5</b> (7/20/2012)
+	<ul><li class="change">Updated Event file formatting.</li>
+	<li class="add">Added Custom Colors to Event files.</li>
+	<li class="add">Added support for nested Set tags in Event files.</li>
+	<li class="add">Added support for custom built in Events.</li>
+	<li class="add">Added support for formulas in the Month parameter.</li>
+	<li class="fix">Fixed inline tags.</li></ul>
 
 <b>3.4</b> (5/22/2012)
 	<ul><li class="fix">Added Ghost meter to Default styles to enforce skin size.</li>
