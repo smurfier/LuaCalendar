@@ -103,10 +103,10 @@ These Script settings are specific to the skin using the script.
 <ul><li><b>Title</b>*<br/>
 	The title of the event which is displayed after the events.</li>
 <li><b>Month</b><br/>
-	The month in which the event occurs. Using an asterisk (*) denotes a monthly event.</li>
+	The month in which the event occurs. This setting allows the use of formulas and <a href="#vars">Variables</a>.</li>
 <li><b>Day</b><br/>
 	The day on which the event occurs. This setting allows the use of formulas and <a href="#vars">Variables</a>.<br/>
-	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({FirstMon}+1)*(({Year}%2)=0)" Description="Election Day"/></code></li>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({FirstMon}+1)*(({Year}%2)=0)" Repeat="Year" Description="Election Day"/></code></li>
 			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li>
 <li><b>Year</b>*<br/>
 	The Year the event occurs on.
@@ -114,7 +114,7 @@ These Script settings are specific to the skin using the script.
 	The description of the event.</li>
 <li><b>Color</b>*<br/>
 	The RGB or HEX color to be used for the specified event(s).<br/>
-	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Color="255,0,0,255" Desc="Smurfier's BDay"/></code></li></ul></li>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Color="255,0,0,255" Repeat="Year" Description="Smurfier's BDay"/></code></li></ul></li>
 <li><b>Repeat</b>*<br/>
 	When used, this option allows an event to repeat using a specified pattern.
 	<ul><li><b>Month</b><br/>
