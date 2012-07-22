@@ -1,4 +1,4 @@
--- LuaCalendar v3.5 by Smurfier (smurfier20@gmail.com)
+-- LuaCalendar v3.6 beta 1 by Smurfier (smurfier20@gmail.com)
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
@@ -32,7 +32,7 @@ function Initialize()
 		end
 	end
 	-- Holiday File
-	hFile = {month={}, day={}, year={}, desc={}, title={}, color={}, ['repeat']={}, multi={}, anniv={},}
+	hFile = {month={}, day={}, year={}, descri={}, title={}, color={}, ['repeat']={}, multip={}, annive={},}
 	for _,FileName in ipairs(Delim(SELF:GetOption('EventFile'))) do
 		local File=io.input(SKIN:MakePathAbsolute(FileName), 'r')
 		if not io.type(File)=='file' then -- File could not be opened.
@@ -98,31 +98,32 @@ function Events() -- Parse Events table.
 	end
 	
 	for i=1, #hFile.month do
-		local eMonth = SKIN:ParseFormula(Vars(hFile.month[i], hFile.desc[i]))
+		local eMonth = SKIN:ParseFormula(Vars(hFile.month[i], hFile.descri[i]))
 		if  eMonth == Month or hFile['repeat'][i] ~= '' then
-			local day = SKIN:ParseFormula(Vars(hFile.day[i], hFile.desc[i])) or ErrMsg(0,'Invalid Event Day',hFile.day[i],'in',hFile.desc[i])
+			local day = SKIN:ParseFormula(Vars(hFile.day[i], hFile.descri[i])) or ErrMsg(0,'Invalid Event Day',hFile.day[i],'in',hFile.descri[i])
 			local color = string.match(hFile.color[i], ',') and ConvertToHex(hFile.color[i]) or hFile.color[i]
 			local event = table.concat{
-				hFile.desc[i],
-				(hFile.year[i]~='' and hFile.anniv==1) and ' ('..math.abs(Year-hFile.year[i])..')' or '',
+				hFile.descri[i],
+				(hFile.year[i]~='' and hFile.annive==1) and ' ('..math.abs(Year-hFile.year[i])..')' or '',
 				hFile.title[i]=='' and '' or ' -'..hFile.title[i],
 			}
+			local multip=hFile.multip[i]~='' and hFile.multip[i] or 1
 			local rswitch = switch{
 				week = function()
 					local stamp = os.time{month=hFile.month[i], day=hFile.day[i], year=hFile.year[i],}
 					local mstart = os.time{month=Month, day=1, year=Year,}
-					local multi = (hFile.multi[i]~='' and hFile.multi[i] or 1) * 604800
+					local multi = multip * 604800
 					local first = mstart+((stamp-mstart)%multi)
 					for a=0,4 do
 						local rstamp = first+a*multi
-						if tonumber(os.date('%m', rstamp))==Month then
+						if tonumber(os.date('%m', rstamp)) == Month then
 							AddEvn(tonumber(os.date('%d', rstamp)), event, color)
 						end
 					end
 				end,
 				year = function()
-					local test = (hFile.year[i]~='' and hFile.multi[i]~='') and (Year-hFile.year[i])%(hFile.multi[i]~='' and hFile.multi[i] or 1) or 0
-					if eMonth==Month and test == 0 then
+					local test = (hFile.year[i] ~= '' and hFile.multip[i] ~= '') and (Year-hFile.year[i])%multip or 0
+					if eMonth == Month and test == 0 then
 						AddEvn(day, event, color)
 					end
 				end,
@@ -130,14 +131,14 @@ function Events() -- Parse Events table.
 					if hFile.month[i]~='' and hFile.year[i]~='' then
 						if Year>=hFile.year[i] then
 							local ydiff = Year-hFile.year[i]
-							if ydiff==0 then
+							if ydiff == 0 then
 								mdiff = Month-hFile.month[i]
 							else
 								mdiff = (12-hFile.month[i])+Month+ydiff*12
 							end
 							local estamp = os.time{year=hFile.year[i], month=hFile.month[i], day=1,}
 							local mstart = os.time{year=Year,month=Month, day=1,}
-							if mdiff%(hFile.multi[i]~='' and hFile.multi[i] or 1)==0 and mstart>=estamp then
+							if mdiff%multip == 0 and mstart >= estamp then
 								AddEvn(day, event, color)
 							end
 						end
@@ -146,7 +147,7 @@ function Events() -- Parse Events table.
 					end
 				end,
 				default = function()
-					if hFile.year[i]==Year then
+					if hFile.year[i] == Year then
 						AddEvn(day, event, color)
 					end
 				end,
@@ -333,7 +334,7 @@ function Keys(line,default) -- Converts Key="Value" sets to a table
 		for code,char in pairs(escape) do
 			strip=string.gsub(strip or '',code,char)
 		end
-		tbl[string.lower(key)] = tonumber(strip) or strip
+		tbl[string.lower(string.sub(key,1,6))] = tonumber(strip) or strip
 	end
 	
 	return tbl
