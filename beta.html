@@ -106,12 +106,10 @@ These Script settings are specific to the skin using the script.
 	The month in which the event occurs. Using an asterisk (*) denotes a monthly event.</li>
 <li><b>Day</b><br/>
 	The day on which the event occurs. This setting allows the use of formulas and <a href="#vars">Variables</a>.<br/>
-	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({FirstMon}+1)*(({Year}%2)=0)" Desc="Election Day"/></code></li>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({FirstMon}+1)*(({Year}%2)=0)" Description="Election Day"/></code></li>
 			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li>
 <li><b>Year</b>*<br/>
-	When the Year is included the anniversary of the event is calculated and displayed. Using a year in the future will display a number denoting the number of years until that event.<br/>
-	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Desc="Smurfier's BDay"/></code></li>
-			<li>Appears as: <code>Smurfier's BDay (26)</code></li></ul></li></li>
+	The Year the event occurs on.
 <li><b>Description</b><br/>
 	The description of the event.</li>
 <li><b>Color</b>*<br/>
@@ -130,6 +128,11 @@ These Script settings are specific to the skin using the script.
 	</li></ul></li>
 <li><b>Multiplier</b>*<br/>
 	The frequency an event repeats.
+</li>
+<li><b>Anniversary</b>*<br/>
+	When set to 1 and a Year is specified, the Anniversary of the event is shown. Using a year in the future will display a number denoting the number of years until that event.<br/>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Repeat="Year" Anniversary="1" Description="Smurfier's BDay"/></code></li>
+			<li>Appears as: <code>Smurfier's BDay (26)</code></li></ul></li></li>
 </li>
 </ul>
 <i style="font-size:0.8em;">*This field is optional.</i>
