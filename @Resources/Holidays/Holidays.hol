@@ -1,4 +1,4 @@
-<EventFile>
+<EventFile Repeat="year">
 	<!-- Built in Holidays. Comment out to disable. -->
 	<Event Month="{GoodFridayMonth}" Day="{GoodFridayDay}" Desc="Good Friday"/>
 	<Event Month="{EasterMonth}" Day="{EasterDay}" Desc="Easter Sunday"/>
