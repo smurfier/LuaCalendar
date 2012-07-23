@@ -1,4 +1,4 @@
--- LuaCalendar v3.6 beta 1 by Smurfier (smurfier20@gmail.com)
+-- LuaCalendar v3.6 beta 2 by Smurfier (smurfier20@gmail.com)
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
@@ -159,7 +159,7 @@ function Events() -- Parse Events table.
 end -- Events
 
 function Draw() -- Sets all meter properties and calculates days.
-	local LastWeek = Set.HLWeek and (StartDay+cMonth[Month])/7 < 6
+	local LastWeek = Set.HLWeek and math.ceil((StartDay+cMonth[Month])/7) < 6
 	
 	for wday = 1, 7 do -- Set Weekday Labels styles.
 		local Styles = {'LblTxtSty'}
@@ -240,8 +240,8 @@ function NextEvn() -- Returns a list of events
 	local Evns = {}
 	
 	for day = InMonth and Time.day or 1, cMonth[Month] do -- Parse through month days to keep days in order.
-		if Hol[a] then
-			local tbl = {day = day, desc = table.concat(Hol[a]['text'], ',')}
+		if Hol[day] then
+			local tbl = {day = day, desc = table.concat(Hol[day]['text'], ',')}
 			local event = string.gsub(Set.NFormat, '(%b{})', function(variable)
 				return tbl[string.match(string.lower(variable), '{(.+)}')] or ErrMsg('','Invalid NextFormat variable',variable)
 			end)
