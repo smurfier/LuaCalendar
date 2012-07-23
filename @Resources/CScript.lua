@@ -111,12 +111,13 @@ function Events() -- Parse Events table.
 			local rswitch = switch{
 				week = function()
 					local stamp = os.time{month=hFile.month[i], day=hFile.day[i], year=hFile.year[i],}
+					local test = os.time{month=Month, day=day, year=Year,}
 					local mstart = os.time{month=Month, day=1, year=Year,}
 					local multi = multip * 604800
 					local first = mstart+((stamp-mstart)%multi)
 					for a=0,4 do
 						local rstamp = first+a*multi
-						if tonumber(os.date('%m', rstamp)) == Month then
+						if tonumber(os.date('%m', rstamp)) == Month and test >= stamp then
 							AddEvn(tonumber(os.date('%d', rstamp)), event, color)
 						end
 					end
