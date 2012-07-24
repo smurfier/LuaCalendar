@@ -17,5 +17,5 @@ Bumper.x=10
 Bumper.top=3
 ;Space on bottom of calendar
 Bumper.bottom=0
-;Width of the Events List
-Events.w=200
+;Height of the Events List
+Events.h=150
