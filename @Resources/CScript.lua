@@ -110,7 +110,7 @@ function Events() -- Parse Events table.
 			local multip=hFile.multip[i]~='' and hFile.multip[i] or 1
 			local rswitch = switch{
 				week = function()
-					local stamp = os.time{month=hFile.month[i], day=hFile.day[i], year=hFile.year[i],}
+					local stamp = os.time{month=hFile.month[i], day=day, year=hFile.year[i],}
 					local test = os.time{month=Month, day=day, year=Year,} >= stamp
 					local mstart = os.time{month=Month, day=1, year=Year,}
 					local multi = multip * 604800
