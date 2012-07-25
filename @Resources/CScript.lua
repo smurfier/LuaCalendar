@@ -44,7 +44,7 @@ function Initialize()
 				ErrMsg(0,'Invalid Event File',FileName)
 			else
 				local eFile,eSet = {},{}
-				local default = {month='', day='', year=nil, descri='', title=nil, color='', ['repeat']='', multip=1, annive=0,}
+				local default = {month='', day='', year='', descri='', title='', color='', ['repeat']='', multip=1, annive=0,}
 				local sw = switch{ -- Define Event File tags
 					set = function(x) table.insert(eSet, Keys(x[2])) end,
 					['/set'] = function(x) table.remove(eSet, #eSet) end,
@@ -54,7 +54,7 @@ function Initialize()
 						local Tmp = Keys(x[2])
 						local dSet = ParseTbl(eSet)
 						local tbl = {}
-						for i,v in pairs(default) do tbl[i] = Tmp[i] or dSet[i] or eFile[i] or default[i] end
+						for i,v in pairs(default) do tbl[i] = Tmp[i] or dSet[i] or eFile[i] or v end
 						table.insert(hFile,tbl)
 					end,
 					default = function(x) ErrMsg(0,'Invalid Event Tag',x[1],'in',FileName) end,
@@ -107,8 +107,8 @@ function Events() -- Parse Events table.
 			local color = string.match(event.color, ',') and ConvertToHex(event.color) or event.color
 			local desc = table.concat{
 				event.descri,
-				(event.year and event.annive>0) and ' ('..math.abs(Year-event.year)..')' or '',
-				event.title and ' -'..event.title or '',
+				(event.year~='' and event.annive>0) and ' ('..math.abs(Year-event.year)..')' or '',
+				event.title~='' and ' -'..event.title or '',
 			}
 			local rswitch = switch{
 				week = function()
@@ -127,13 +127,13 @@ function Events() -- Parse Events table.
 					end
 				end,
 				year = function()
-					local test = (event.year and event.multip > 1) and (Year-event.year)%event.multip or 0
+					local test = (event.year~='' and event.multip > 1) and (Year-event.year)%event.multip or 0
 					if eMonth == Month and test == 0 then
 						AddEvn(day, desc, color)
 					end
 				end,
 				month = function()
-					if eMonth and event.year then
+					if eMonth and event.year~='' then
 						if Year>=event.year then
 							local ydiff = Year-event.year
 							if ydiff == 0 then
@@ -152,7 +152,7 @@ function Events() -- Parse Events table.
 					end
 				end,
 				default = function()
-					if (event.year or 0) == Year then
+					if event.year~='' == Year then
 						AddEvn(day, desc, color)
 					end
 				end,
