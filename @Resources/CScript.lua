@@ -32,7 +32,7 @@ function Initialize()
 		end
 	end
 	-- Holiday File
-	hFile = {month={}, day={}, year={}, descri={}, title={}, color={}, ['repeat']={}, multip={}, annive={},}
+	hFile = {}
 	for _,FileName in ipairs(Delim(SELF:GetOption('EventFile'))) do
 		local File=io.input(SKIN:MakePathAbsolute(FileName), 'r')
 		if not io.type(File)=='file' then -- File could not be opened.
@@ -44,6 +44,7 @@ function Initialize()
 				ErrMsg(0,'Invalid Event File',FileName)
 			else
 				local eFile,eSet = {},{}
+				local default = {month='', day='', year=nil, descri='', title=nil, color='', ['repeat']='', multip=1, annive=0,}
 				local sw = switch{ -- Define Event File tags
 					set = function(x) table.insert(eSet, Keys(x[2])) end,
 					['/set'] = function(x) table.remove(eSet, #eSet) end,
@@ -52,7 +53,9 @@ function Initialize()
 					event = function(x)
 						local Tmp = Keys(x[2])
 						local dSet = ParseTbl(eSet)
-						for i,v in pairs(hFile) do table.insert(hFile[i], Tmp[i] or dSet[i] or eFile[i] or '') end
+						local tbl = {}
+						for i,v in pairs(default) do tbl[i] = Tmp[i] or dSet[i] or eFile[i] or default[i] end
+						table.insert(hFile,tbl)
 					end,
 					default = function(x) ErrMsg(0,'Invalid Event Tag',x[1],'in',FileName) end,
 				}
@@ -88,73 +91,74 @@ end -- Update
 
 function Events() -- Parse Events table.
 	Hol={}
-	local AddEvn = function(day, event, color)
+	local AddEvn = function(day, desc, color)
 		if Hol[day] then
-			table.insert(Hol[day]['text'], event)
+			table.insert(Hol[day]['text'], desc)
 			table.insert(Hol[day]['color'], color)
 		else
-			Hol[day] = {text = {event}, color = {color},}
+			Hol[day] = {text = {desc}, color = {color},}
 		end
 	end
 	
-	for i=1, #hFile.month do
-		local eMonth = SKIN:ParseFormula(Vars(hFile.month[i], hFile.descri[i]))
-		if  eMonth == Month or hFile['repeat'][i] ~= '' then
-			local day = SKIN:ParseFormula(Vars(hFile.day[i], hFile.descri[i])) or ErrMsg(0,'Invalid Event Day',hFile.day[i],'in',hFile.descri[i])
-			local color = string.match(hFile.color[i], ',') and ConvertToHex(hFile.color[i]) or hFile.color[i]
-			local event = table.concat{
-				hFile.descri[i],
-				(hFile.year[i]~='' and hFile.annive==1) and ' ('..math.abs(Year-hFile.year[i])..')' or '',
-				hFile.title[i]=='' and '' or ' -'..hFile.title[i],
+	for _,event in ipairs(hFile) do
+		local eMonth = SKIN:ParseFormula(Vars(event.month, event.descri))
+		if  eMonth == Month or event['repeat'] ~= '' then
+			local day = SKIN:ParseFormula(Vars(event.day, event.descri)) or ErrMsg(0,'Invalid Event Day',event.day,'in',event.descri)
+			local color = string.match(event.color, ',') and ConvertToHex(event.color) or event.color
+			local desc = table.concat{
+				event.descri,
+				(event.year and event.annive>0) and ' ('..math.abs(Year-event.year)..')' or '',
+				event.title and ' -'..event.title or '',
 			}
-			local multip=hFile.multip[i]~='' and hFile.multip[i] or 1
 			local rswitch = switch{
 				week = function()
-					local stamp = os.time{month=hFile.month[i], day=day, year=hFile.year[i],}
-					local test = os.time{month=Month, day=day, year=Year,} >= stamp
-					local mstart = os.time{month=Month, day=1, year=Year,}
-					local multi = multip * 604800
-					local first = mstart+((stamp-mstart)%multi)
-					for a=0,4 do
-						local rstamp = first+a*multi
-						if tonumber(os.date('%m', rstamp)) == Month and test then
-							AddEvn(tonumber(os.date('%d', rstamp)), event, color)
+					if eMonth and event.year and day then
+						local stamp = os.time{month=eMonth, day=day, year=event.year,}
+						local test = os.time{month=Month, day=day, year=Year,} >= stamp
+						local mstart = os.time{month=Month, day=1, year=Year,}
+						local multi = event.multip * 604800
+						local first = mstart+((stamp-mstart)%multi)
+						for a=0,4 do
+							local rstamp = first+a*multi
+							if tonumber(os.date('%m', rstamp)) == Month and test then
+								AddEvn(tonumber(os.date('%d', rstamp)), desc, color)
+							end
 						end
 					end
 				end,
 				year = function()
-					local test = (hFile.year[i] ~= '' and hFile.multip[i] ~= '') and (Year-hFile.year[i])%multip or 0
+					local test = (event.year and event.multip > 1) and (Year-event.year)%event.multip or 0
 					if eMonth == Month and test == 0 then
-						AddEvn(day, event, color)
+						AddEvn(day, desc, color)
 					end
 				end,
 				month = function()
-					if hFile.month[i]~='' and hFile.year[i]~='' then
-						if Year>=hFile.year[i] then
-							local ydiff = Year-hFile.year[i]
+					if eMonth and event.year then
+						if Year>=event.year then
+							local ydiff = Year-event.year
 							if ydiff == 0 then
-								mdiff = Month-hFile.month[i]
+								mdiff = Month-eMonth
 							else
-								mdiff = (12-hFile.month[i])+Month+ydiff*12
+								mdiff = (12-eMonth)+Month+ydiff*12
 							end
-							local estamp = os.time{year=hFile.year[i], month=hFile.month[i], day=1,}
+							local estamp = os.time{year=event.year, month=eMonth, day=1,}
 							local mstart = os.time{year=Year,month=Month, day=1,}
-							if mdiff%multip == 0 and mstart >= estamp then
-								AddEvn(day, event, color)
+							if mdiff%event.multip == 0 and mstart >= estamp then
+								AddEvn(day, desc, color)
 							end
 						end
 					else
-						AddEvn(day, event, color)
+						AddEvn(day, desc, color)
 					end
 				end,
 				default = function()
-					if hFile.year[i] == Year then
-						AddEvn(day, event, color)
+					if (event.year or 0) == Year then
+						AddEvn(day, desc, color)
 					end
 				end,
 			}
 			
-			rswitch:case(string.lower(hFile['repeat'][i]))
+			rswitch:case(string.lower(event['repeat']))
 		end
 	end
 end -- Events
@@ -274,7 +278,7 @@ function Easter() -- Returns a timestamp representing easter of the current year
 	L = (32+2*e+2*i-h-k)%7
 	m = math.floor((a+11*h+22*L)/451)
 	
-	return os.time{month=math.floor((h+L-7*m+114)/31),day=(h+L-7*m+114)%31+1,year=Year}
+	return os.time{month=math.floor((h+L-7*m+114)/31), day=(h+L-7*m+114)%31+1, year=Year}
 end -- Easter
 
 function BuiltInEvents(default) -- Makes allowance for events that require calculation.
