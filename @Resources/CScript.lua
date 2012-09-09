@@ -12,7 +12,7 @@ function Initialize()
 		NFormat = SELF:GetOption('NextFormat', '{day}: {desc}'),
 	}
 	Old = {Day = 0, Month = 0, Year = 0}
-	StartDay,Month,Year,InMonth,Error = 0,0,0,true,false
+	StartDay, Month, Year, InMonth, Error = 0, 0, 0, true, false
 	cMonth = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31} -- Length of the months.
 	-- Weekday labels text
 	local Labels = Delim('DayLabels', 'S|M|T|W|T|F|S')
@@ -34,7 +34,7 @@ function Initialize()
 	-- Holiday File
 	hFile = {}
 	for _,FileName in ipairs(Delim('EventFile')) do
-		local File=io.open(SKIN:MakePathAbsolute(FileName), 'r')
+		local File = io.open(SKIN:MakePathAbsolute(FileName), 'r')
 		if not File then -- File could not be opened.
 			ErrMsg(0, 'File Read Error', FileName)
 		else -- File is open.
@@ -43,19 +43,19 @@ function Initialize()
 			if not text:lower():match('<eventfile.->.-</eventfile>') then
 				ErrMsg(0, 'Invalid Event File', FileName)
 			else
-				local eFile,eSet = {},{}
+				local eFile, eSet = {}, {}
 				local default = {month='', day='', year=false, descri='', title=false, color='', ['repeat']=false, multip=1, annive=0,}
 				local sw = switch{ -- Define Event File tags
-					set = function(x) table.insert(eSet, Keys(x[2])) end,
-					['/set'] = function(x) table.remove(eSet, #eSet) end,
-					eventfile = function(x) eFile = Keys(x[2]) end,
-					['/eventfile'] = function(x) eFile = {} end,
-					event = function(x)
-						local Tmp, dSet, tbl = Keys(x[2]), ParseTbl(eSet), {}
-						for i,v in pairs(default) do tbl[i] = Tmp[i] or dSet[i] or eFile[i] or v end
+					set = function(x, y) table.insert(eSet, Keys(y)) end,
+					['/set'] = function() table.remove(eSet, #eSet) end,
+					eventfile = function(x,y) eFile = Keys(y) end,
+					['/eventfile'] = function() eFile = {} end,
+					event = function(x, y)
+						local Tmp, dSet, tbl = Keys(y), ParseTbl(eSet), {}
+						for k, v in pairs(default) do tbl[k] = Tmp[k] or dSet[k] or eFile[k] or v end
 						table.insert(hFile, tbl)
 					end,
-					default = function(x) ErrMsg(0, 'Invalid Event Tag', x[1], 'in', FileName) end,
+					default = function(x) ErrMsg(0, 'Invalid Event Tag', x, 'in', FileName) end,
 				}
 				for tag in text:gmatch('%b<>') do
 					sw:case(tag:match('^<([^%s>]+)'), tag)
@@ -98,7 +98,7 @@ function Events() -- Parse Events table.
 		end
 	end
 	
-	for _,event in ipairs(hFile) do
+	for _, event in ipairs(hFile) do
 		local eMonth = SKIN:ParseFormula(Vars(event.month, event.descri))
 		if  eMonth == Month or event['repeat'] then
 			local day = SKIN:ParseFormula(Vars(event.day, event.descri)) or ErrMsg(0, 'Invalid Event Day', event.day, 'in', event.descri)
@@ -116,10 +116,10 @@ function Events() -- Parse Events table.
 						local mstart = os.time{month=Month, day=1, year=Year,}
 						local multi = event.multip * 604800
 						local first = mstart + ((stamp - mstart) % multi)
-						for a=0,4 do
-							local rstamp = first + a * multi
-							if tonumber(os.date('%m', rstamp)) == Month and test then
-								AddEvn(tonumber(os.date('%d', rstamp)), desc, color)
+						for a = 0, 4 do
+							local temp = os.date('*t', first + a * multi)
+							if temp.month == Month and test then
+								AddEvn(temp.day, desc, color)
 							end
 						end
 					end
@@ -133,14 +133,11 @@ function Events() -- Parse Events table.
 				month = function()
 					if eMonth and event.year then
 						if Year>=event.year then
-							local ydiff = Year-event.year
-							if ydiff == 0 then
-								mdiff = Month-eMonth
-							else
-								mdiff = (12 - eMonth) + Month + ydiff * 12
-							end
+							local ydiff = Year - event.year
+							local mdiff = ydiff == 0 and (Month - eMonth) or ((12 - eMonth) + Month + ydiff * 12)
 							local estamp = os.time{year=event.year, month=eMonth, day=1,}
-							local mstart = os.time{year=Year,month=Month, day=1,}
+							local mstart = os.time{year=Year, month=Month, day=1,}
+
 							if (mdiff % event.multip) == 0 and mstart >= estamp then
 								AddEvn(day, desc, color)
 							end
@@ -176,7 +173,7 @@ function Draw() -- Sets all meter properties and calculates days.
 	end
 	
 	for meter = 1, 42 do -- Calculate and set day meters.
-		local day, event, color, Styles = meter-StartDay, '', '', {'TextStyle'}
+		local day, event, color, Styles = (meter - StartDay), '', '', {'TextStyle'}
 		if meter == 1 then
 			table.insert(Styles, 'FirstDay')
 		elseif (meter % 7) == 1 then
@@ -272,8 +269,8 @@ end -- Move
 --===== These Functions are used to make life easier =====
 
 function Easter() -- Returns a timestamp representing easter of the current year.
-	local a,b,c,h,L,m = (Year % 19), math.floor(Year / 100), (Year % 100), 0, 0, 0
-	local d,e,f,i,k = math.floor(b/4), (b % 4), math.floor((b + 8) / 25), math.floor(c / 4), (c % 4)
+	local a, b, c, h, L, m = (Year % 19), math.floor(Year / 100), (Year % 100), 0, 0, 0
+	local d, e, f, i, k = math.floor(b/4), (b % 4), math.floor((b + 8) / 25), math.floor(c / 4), (c % 4)
 	h = (19 * a + b - d - math.floor((b - f + 1) / 3) + 15) % 30
 	L = (32 + 2 * e + 2 * i - h - k) % 7
 	m = math.floor((a + 11 * h + 22 * L) / 451)
@@ -300,12 +297,12 @@ function BuiltInEvents(default) -- Makes allowance for events that require calcu
 end -- BuiltInEvents
 
 function Vars(line,source) -- Makes allowance for {Variables}
-	local D,W={sun=0, mon=1, tue=2, wed=3, thu=4, fri=5, sat=6},{first=0, second=1, third=2, fourth=3, last=4}
-	local tbl=BuiltInEvents{mname=MLabels[Month] or Month, year=Year, today=LZero(Time.day), month=Month}
+	local D, W = {sun=0, mon=1, tue=2, wed=3, thu=4, fri=5, sat=6}, {first=0, second=1, third=2, fourth=3, last=4}
+	local tbl = BuiltInEvents{mname=MLabels[Month] or Month, year=Year, today=LZero(Time.day), month=Month}
 	
 	return tostring(line):gsub('%b{}', function(variable)
 		local strip = variable:lower():match('{(.+)}')
-		local v1,v2 = strip:match('(.+)(...)')
+		local v1, v2 = strip:match('(.+)(...)')
 		if tbl[strip] then -- Regular variable.
 			return tbl[strip]
 		elseif W[v1 or ''] and D[v2 or ''] then -- Variable day.
@@ -337,7 +334,7 @@ function Keys(line,default) -- Converts Key="Value" sets to a table
 	for key, value in line:gmatch('(%a+)=(%b"")') do
 		local strip = value:match('"(.+)"')
 		for code,char in pairs(escape) do
-			strip=string.gsub(strip or '', code, char)
+			strip = string.gsub(strip or '', code, char)
 		end
 		tbl[key:sub(1, 6):lower()] = tonumber(strip) or strip
 	end
@@ -346,7 +343,7 @@ function Keys(line,default) -- Converts Key="Value" sets to a table
 end -- Keys
 
 function ErrMsg(...) -- Used to display errors
-	Error=true
+	Error = true
 	print('LuaCalendar: '..table.concat(arg, ' ', 2))
 	return arg[1]
 end -- ErrMsg
@@ -358,12 +355,12 @@ function Delim(option, default) -- Separate String by Delimiter
 end -- Delim
 
 function switch(tbl) -- Used to emulate a switch statement
-	tbl.case=function(...)
+	tbl.case = function(...)
 		local t = table.remove(arg, 1) -- Separate case table from arguments
 		local f = t[arg[1]:lower()] or t.default
 		if f then
 			if type(f) == 'function' then
-				f(arg)
+				f(unpack(arg))
 			else
 				print('Case: '..tostring(arg[1])..' not a function')
 			end
@@ -386,8 +383,8 @@ end -- ConvertToHex
 function ParseTbl(input) -- Compresses matrix into a single table.
 	local tbl = {}
 	
-	for _,column in ipairs(input) do
-		for key,value in pairs(column) do
+	for _, column in ipairs(input) do
+		for key, value in pairs(column) do
 			tbl[key] = value
 		end
 	end
