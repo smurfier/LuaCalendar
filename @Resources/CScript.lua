@@ -33,7 +33,7 @@ function Initialize()
 	end
 	-- Holiday File
 	hFile = {}
-	for _,FileName in ipairs(Delim('EventFile')) do
+	for _, FileName in ipairs(Delim('EventFile')) do
 		local File = io.open(SKIN:MakePathAbsolute(FileName), 'r')
 		if not File then -- File could not be opened.
 			ErrMsg(0, 'File Read Error', FileName)
@@ -44,11 +44,11 @@ function Initialize()
 				ErrMsg(0, 'Invalid Event File', FileName)
 			else
 				local eFile, eSet = {}, {}
-				local default = {month='', day='', year=false, descri='', title=false, color='', ['repeat']=false, multip=1, annive=0,}
+				local default = {month = '', day = '', year = false, descri = '', title = false, color = '', ['repeat'] = false, multip = 1, annive = 0,}
 				local sw = switch{ -- Define Event File tags
 					set = function(x, y) table.insert(eSet, Keys(y)) end,
 					['/set'] = function() table.remove(eSet, #eSet) end,
-					eventfile = function(x,y) eFile = Keys(y) end,
+					eventfile = function(x, y) eFile = Keys(y) end,
 					['/eventfile'] = function() eFile = {} end,
 					event = function(x, y)
 						local Tmp, dSet, tbl = Keys(y), ParseTbl(eSet), {}
@@ -75,7 +75,7 @@ function Update()
 	
 	if Month ~= Old.Month or Year ~= Old.Year then -- Recalculate and Redraw if Month and/or Year changes.
 		Old = {Month=Month, Year=Year, Day=Time.day}
-		StartDay = rotate(tonumber(os.date('%w', os.time{year=Year, month=Month, day=1})))
+		StartDay = rotate(tonumber(os.date('%w', os.time{year = Year, month = Month, day = 1})))
 		cMonth[2] = 28 + ((((Year % 4) == 0 and (Year % 100) ~= 0) or (Year % 400) == 0) and 1 or 0) -- Check for Leap Year.
 		Events()
 		Draw()
@@ -111,9 +111,9 @@ function Events() -- Parse Events table.
 			local rswitch = switch{
 				week = function()
 					if eMonth and event.year and day then
-						local stamp = os.time{month=eMonth, day=day, year=event.year,}
-						local test = os.time{month=Month, day=day, year=Year,} >= stamp
-						local mstart = os.time{month=Month, day=1, year=Year,}
+						local stamp = os.time{month = eMonth, day = day, year = event.year,}
+						local test = os.time{month = Month, day = day, year = Year,} >= stamp
+						local mstart = os.time{month = Month, day = 1, year = Year,}
 						local multi = event.multip * 604800
 						local first = mstart + ((stamp - mstart) % multi)
 						for a = 0, 4 do
@@ -132,11 +132,11 @@ function Events() -- Parse Events table.
 				end,
 				month = function()
 					if eMonth and event.year then
-						if Year>=event.year then
+						if Year >= event.year then
 							local ydiff = Year - event.year
 							local mdiff = ydiff == 0 and (Month - eMonth) or ((12 - eMonth) + Month + ydiff * 12)
-							local estamp = os.time{year=event.year, month=eMonth, day=1,}
-							local mstart = os.time{year=Year, month=Month, day=1,}
+							local estamp = os.time{year = event.year, month = eMonth, day = 1,}
+							local mstart = os.time{year = Year, month = Month, day = 1,}
 
 							if (mdiff % event.multip) == 0 and mstart >= estamp then
 								AddEvn(day, desc, color)
@@ -208,7 +208,7 @@ function Draw() -- Sets all meter properties and calculates days.
 		} do SKIN:Bang('!SetOption', Set.MPref..meter, k, v) end
 	end
 	-- Define skin variables.
-	for k,v in pairs{
+	for k, v in pairs{
 		ThisWeek = math.ceil((Time.day + StartDay) / 7),
 		Week = rotate(Time.wday - 1),
 		Today = LZero(Time.day),
@@ -223,9 +223,9 @@ end -- Draw
 function eColor(tbl) -- Makes allowance for multiple custom colors.
 	local color
 	-- Remove Empty Colors
-	for k,v in ipairs(tbl) do if v == '' then table.remove(tbl, k) end end
+	for k, v in ipairs(tbl) do if v == '' then table.remove(tbl, k) end end
 	
-	for _,value in ipairs(tbl) do
+	for _, value in ipairs(tbl) do
 		if color then
 			if color ~= value then
 				return ''
@@ -275,15 +275,16 @@ function Easter() -- Returns a timestamp representing easter of the current year
 	L = (32 + 2 * e + 2 * i - h - k) % 7
 	m = math.floor((a + 11 * h + 22 * L) / 451)
 	
-	return os.time{month=math.floor((h + L - 7 * m + 114) / 31), day=((h + L - 7 * m + 114) % 31 + 1), year=Year}
+	return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = Year}
 end -- Easter
 
 function BuiltInEvents(default) -- Makes allowance for events that require calculation.
 	local tbl = default or {}
 	
-	local SetVar = function(name,timestamp)
-		tbl[name:lower()..'month'] = os.date('%m', timestamp)
-		tbl[name:lower()..'day'] = os.date('%d', timestamp)
+	local SetVar = function(name, timestamp)
+		local temp = os.date('*t', timestamp)
+		tbl[name:lower()..'month'] = temp.month
+		tbl[name:lower()..'day'] = temp.day
 	end
 	
 	local sEaster = Easter()
@@ -296,9 +297,9 @@ function BuiltInEvents(default) -- Makes allowance for events that require calcu
 	return tbl
 end -- BuiltInEvents
 
-function Vars(line,source) -- Makes allowance for {Variables}
-	local D, W = {sun=0, mon=1, tue=2, wed=3, thu=4, fri=5, sat=6}, {first=0, second=1, third=2, fourth=3, last=4}
-	local tbl = BuiltInEvents{mname=MLabels[Month] or Month, year=Year, today=LZero(Time.day), month=Month}
+function Vars(line, source) -- Makes allowance for {Variables}
+	local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
+	local tbl = BuiltInEvents{mname = MLabels[Month] or Month, year = Year, today = LZero(Time.day), month = Month}
 	
 	return tostring(line):gsub('%b{}', function(variable)
 		local strip = variable:lower():match('{(.+)}')
@@ -322,7 +323,7 @@ function LZero(value) -- Used to make allowance for LeadingZeros
 	return Set.LZer and string.format('%02d', value) or value
 end -- LZero
 
-function Keys(line,default) -- Converts Key="Value" sets to a table
+function Keys(line, default) -- Converts Key="Value" sets to a table
 	local tbl = default or {}
 	local escape = {
 		['&quot;']='"',
@@ -350,7 +351,7 @@ end -- ErrMsg
 
 function Delim(option, default) -- Separate String by Delimiter
 	local value, tbl = SELF:GetOption(option, default), {}
-	for word in value:gmatch('[^%|]+') do table.insert(tbl, word) end
+	for word in value:gmatch('[^|]+') do table.insert(tbl, word) end
 	return tbl
 end -- Delim
 
