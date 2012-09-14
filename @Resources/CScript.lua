@@ -36,29 +36,40 @@ function Initialize()
 	for _, FileName in ipairs(Delim('EventFile')) do
 		local File = io.open(SKIN:MakePathAbsolute(FileName), 'r')
 		if not File then -- File could not be opened.
-			ErrMsg(0, 'File Read Error', FileName)
+			ErrMsg(0, 'File Read Error', FileName:match('[^/\\]+$'))
 		else -- File is open.
 			local text = File:read('*all'):gsub('<!%-%-.-%-%->', '') -- Read in file contents and remove comments.
 			File:close()
 			if not text:lower():match('<eventfile.->.-</eventfile>') then
-				ErrMsg(0, 'Invalid Event File', FileName)
+				ErrMsg(0, 'Invalid Event File', FileName:match('[^/\\]+$'))
 			else
-				local eFile, eSet = {}, {}
+				local eFile, eSet = {}, setmetatable({}, { __call = function(input)
+					local tbl = {}
+	
+					for _, column in ipairs(input) do
+						for key, value in pairs(column) do
+							tbl[key] = value
+						end
+					end
+	
+					return tbl
+				end})
 				local default = {month = '', day = '', year = false, descri = '', title = false, color = '', ['repeat'] = false, multip = 1, annive = 0,}
-				local sw = switch{ -- Define Event File tags
-					set = function(x, y) table.insert(eSet, Keys(y)) end,
+				local sw = setmetatable({ -- Define Event File tags
+					set = function(x) table.insert(eSet, Keys(x)) end,
 					['/set'] = function() table.remove(eSet, #eSet) end,
-					eventfile = function(x, y) eFile = Keys(y) end,
+					eventfile = function(x) eFile = Keys(x) end,
 					['/eventfile'] = function() eFile = {} end,
-					event = function(x, y)
-						local Tmp, dSet, tbl = Keys(y), ParseTbl(eSet), {}
+					event = function(x)
+						local Tmp, dSet, tbl = Keys(x), eSet(), {}
 						for k, v in pairs(default) do tbl[k] = Tmp[k] or dSet[k] or eFile[k] or v end
 						table.insert(hFile, tbl)
 					end,
-					default = function(x) ErrMsg(0, 'Invalid Event Tag', x, 'in', FileName) end,
-				}
+				},
+				{ __index = function(tbl, tag) ErrMsg(0, 'Invalid Event Tag', tag, 'in', FileName:match('[^/\\]+$')) return function() end end,})
+
 				for tag in text:gmatch('%b<>') do
-					sw:case(tag:match('^<([^%s>]+)'), tag)
+					sw[tag:lower():match('^<([^%s>]+)')](tag)
 				end
 			end
 		end
@@ -88,13 +99,44 @@ function Update()
 end -- Update
 
 function Events() -- Parse Events table.
-	Hol={}
+	Hol = setmetatable({}, { __call = function(self) -- Returns a list of events
+		local Evns = {}
+	
+		for day = InMonth and Time.day or 1, cMonth[Month] do -- Parse through month days to keep days in order.
+			if self[day] then
+				local tbl = {day = day, desc = table.concat(self[day]['text'], ',')}
+				local event = Set.NFormat:gsub('(%b{})', function(variable)
+					return tbl[variable:lower():match('{(.+)}')] or ErrMsg('', 'Invalid NextFormat variable', variable)
+				end)
+				table.insert(Evns, event)
+			end
+		end
+	
+		return table.concat(Evns, '\n')
+	end})
+
 	local AddEvn = function(day, desc, color)
 		if Hol[day] then
 			table.insert(Hol[day]['text'], desc)
 			table.insert(Hol[day]['color'], color)
 		else
-			Hol[day] = {text = {desc}, color = {color},}
+			Hol[day] = {text = {desc}, color = setmetatable({color}, { __call = function(tbl)
+				local color
+				-- Remove Empty Colors
+				for k, v in ipairs(tbl) do if v == '' then table.remove(tbl, k) end end
+	
+				for _, value in ipairs(tbl) do
+					if color then
+						if color ~= value then
+							return ''
+						end
+					else
+						color = value
+					end
+				end
+	
+				return color
+			end,}),}
 		end
 	end
 	
@@ -108,7 +150,7 @@ function Events() -- Parse Events table.
 				(event.year and event.annive > 0) and ' ('..math.abs(Year - event.year)..')' or '',
 				event.title and ' -'..event.title or '',
 			}
-			local rswitch = switch{
+			local rswitch = setmetatable({
 				week = function()
 					if eMonth and event.year and day then
 						local stamp = os.time{month = eMonth, day = day, year = event.year,}
@@ -146,14 +188,10 @@ function Events() -- Parse Events table.
 						AddEvn(day, desc, color)
 					end
 				end,
-				default = function()
-					if event.year == Year then
-						AddEvn(day, desc, color)
-					end
-				end,
-			}
+				},
+				{ __index = function() if event.year == Year then AddEvn(day, desc, color) end return function() end end })
 			
-			rswitch:case(event['repeat']:lower())
+			rswitch[event['repeat']:lower()]()
 		end
 	end
 end -- Events
@@ -183,7 +221,7 @@ function Draw() -- Sets all meter properties and calculates days.
 		if day > 0 and day <= cMonth[Month] and Hol[day] then
 			event = table.concat(Hol[day]['text'], '\n')
 			table.insert(Styles, 'HolidayStyle')
-			color = eColor(Hol[day]['color'])
+			color = Hol[day]['color']()
 		end
 		
 		if (Time.day + StartDay) == meter and InMonth then -- Current Day.
@@ -216,52 +254,18 @@ function Draw() -- Sets all meter properties and calculates days.
 		Year = Year,
 		MonthLabel = Vars(Set.LText, 'MonthLabel'),
 		LastWkHidden = LastWeek and 1 or 0,
-		NextEvent = NextEvn(),
+		NextEvent = Hol(),
 	} do SKIN:Bang('!SetVariable', k, v) end
 end -- Draw
 
-function eColor(tbl) -- Makes allowance for multiple custom colors.
-	local color
-	-- Remove Empty Colors
-	for k, v in ipairs(tbl) do if v == '' then table.remove(tbl, k) end end
-	
-	for _, value in ipairs(tbl) do
-		if color then
-			if color ~= value then
-				return ''
-			end
-		else
-			color = value
-		end
-	end
-	
-	return color
-end -- eColor
-
-function NextEvn() -- Returns a list of events
-	local Evns = {}
-	
-	for day = InMonth and Time.day or 1, cMonth[Month] do -- Parse through month days to keep days in order.
-		if Hol[day] then
-			local tbl = {day = day, desc = table.concat(Hol[day]['text'], ',')}
-			local event = Set.NFormat:gsub('(%b{})', function(variable)
-				return tbl[variable:lower():match('{(.+)}')] or ErrMsg('', 'Invalid NextFormat variable', variable)
-			end)
-			table.insert(Evns, event)
-		end
-	end
-	
-	return table.concat(Evns, '\n')
-end -- NextEvn
-
 function Move(value) -- Move calendar through the months.
-	local sw = switch{
+	local sw = setmetatable({
 		['1'] = function() Month, Year = (Month % 12 + 1), Month == 12 and (Year + 1) or Year end, -- Forward
 		['-1'] = function() Month, Year = Month == 1 and 12 or (Month - 1), Month == 1 and (Year - 1) or Year end, -- Back
 		['0'] = function() Month, Year = Time.month, Time.year end, -- Home
-		default = function() ErrMsg(0, 'Invalid Move parameter', value) end, -- Error
-	}
-	sw:case(tostring(value or 0))
+	},
+	{ __index = function() ErrMsg(0, 'Invalid Move parameter', value) return function() end end, })
+	sw[tostring(value or 0)]()
 	InMonth = Month == Time.month and Year == Time.year
 	SKIN:Bang('!SetVariable', 'NotCurrentMonth', InMonth and 0 or 1)
 end -- Move
@@ -335,7 +339,7 @@ function Keys(line, default) -- Converts Key="Value" sets to a table
 	for key, value in line:gmatch('(%a+)=(%b"")') do
 		local strip = value:match('"(.+)"')
 		for code,char in pairs(escape) do
-			strip = string.gsub(strip or '', code, char)
+			strip = strip:gsub(code, char)
 		end
 		tbl[key:sub(1, 6):lower()] = tonumber(strip) or strip
 	end
@@ -355,22 +359,6 @@ function Delim(option, default) -- Separate String by Delimiter
 	return tbl
 end -- Delim
 
-function switch(tbl) -- Used to emulate a switch statement
-	tbl.case = function(...)
-		local t = table.remove(arg, 1) -- Separate case table from arguments
-		local f = t[arg[1]:lower()] or t.default
-		if f then
-			if type(f) == 'function' then
-				f(unpack(arg))
-			else
-				print('Case: '..tostring(arg[1])..' not a function')
-			end
-		end
-	end
-	
-	return tbl
-end -- switch
-
 function ConvertToHex(color) -- Converts RGB colors to HEX
 	local hex = {}
 	
@@ -380,15 +368,3 @@ function ConvertToHex(color) -- Converts RGB colors to HEX
 	
 	return table.concat(hex)
 end -- ConvertToHex
-
-function ParseTbl(input) -- Compresses matrix into a single table.
-	local tbl = {}
-	
-	for _, column in ipairs(input) do
-		for key, value in pairs(column) do
-			tbl[key] = value
-		end
-	end
-	
-	return tbl
-end -- ParseTbl
