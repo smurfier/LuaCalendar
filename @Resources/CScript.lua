@@ -54,7 +54,7 @@ function Initialize()
 	
 					return tbl
 				end})
-				local default = {month = '', day = '', year = false, descri = '', title = false, color = '', ['repeat'] = false, multip = 1, annive = 0,}
+				local default = {month = '', day = '', year = false, descri = '', title = false, color = '', ['repeat'] = false, multip = 1, annive = false,}
 				local sw = setmetatable({ -- Define Event File tags
 					set = function(x) table.insert(eSet, Keys(x)) end,
 					['/set'] = function() table.remove(eSet, #eSet) end,
@@ -115,15 +115,18 @@ function Events() -- Parse Events table.
 		return table.concat(Evns, '\n')
 	end})
 
-	local AddEvn = function(day, desc, color)
+	local AddEvn = function(day, desc, color, ann)
+		if ann then
+			desc = string.format(desc, ' (', ann, ') ')
+		else
+			desc = string.format(desc, '', '', '')
+		end
 		if Hol[day] then
 			table.insert(Hol[day]['text'], desc)
 			table.insert(Hol[day]['color'], color)
 		else
 			Hol[day] = {text = {desc}, color = setmetatable({color}, { __call = function(tbl)
 				local color
-				-- Remove Empty Colors
-				for k, v in ipairs(tbl) do if v == '' then table.remove(tbl, k) end end
 	
 				for _, value in ipairs(tbl) do
 					if color then
@@ -134,7 +137,7 @@ function Events() -- Parse Events table.
 						color = value
 					end
 				end
-	
+				
 				return color
 			end,}),}
 		end
@@ -144,12 +147,7 @@ function Events() -- Parse Events table.
 		local eMonth = SKIN:ParseFormula(Vars(event.month, event.descri))
 		if  eMonth == Month or event['repeat'] then
 			local day = SKIN:ParseFormula(Vars(event.day, event.descri)) or ErrMsg(0, 'Invalid Event Day', event.day, 'in', event.descri)
-			local color = event.color:match(',') and ConvertToHex(event.color) or event.color
-			local desc = table.concat{
-				event.descri,
-				(event.year and event.annive > 0) and ' ('..math.abs(Year - event.year)..')' or '',
-				event.title and ' -'..event.title or '',
-			}
+			local desc = event.descri .. '%s%s%s' .. (event.title and ' -'..event.title or '')
 			local rswitch = setmetatable({
 				week = function()
 					if eMonth and event.year and day then
@@ -159,9 +157,10 @@ function Events() -- Parse Events table.
 						local multi = event.multip * 604800
 						local first = mstart + ((stamp - mstart) % multi)
 						for a = 0, 4 do
-							local temp = os.date('*t', first + a * multi)
+							local tstamp = first + a * multi
+							local temp = os.date('*t', tstamp)
 							if temp.month == Month and test then
-								AddEvn(temp.day, desc, color)
+								AddEvn(temp.day, desc, event.color, event.annive and ((tstamp - stamp) / multi + 1) or false)
 							end
 						end
 					end
@@ -169,27 +168,27 @@ function Events() -- Parse Events table.
 				year = function()
 					local test = (event.year and event.multip > 1) and ((Year - event.year) % event.multip) or 0
 					if eMonth == Month and test == 0 then
-						AddEvn(day, desc, color)
+						AddEvn(day, desc, event.color, event.annive and (Year - event.year / event.multip) or false)
 					end
 				end,
 				month = function()
+					local ydiff = Year - event.year - 1
+					local mdiff = ydiff == -1 and (Month - eMonth) or ((12 - eMonth) + Month + (ydiff * 12))
 					if eMonth and event.year then
 						if Year >= event.year then
-							local ydiff = Year - event.year
-							local mdiff = ydiff == 0 and (Month - eMonth) or ((12 - eMonth) + Month + ydiff * 12)
 							local estamp = os.time{year = event.year, month = eMonth, day = 1,}
 							local mstart = os.time{year = Year, month = Month, day = 1,}
 
 							if (mdiff % event.multip) == 0 and mstart >= estamp then
-								AddEvn(day, desc, color)
+								AddEvn(day, desc, event.color, event.annive and (mdiff / event.multip + 1) or false)
 							end
 						end
 					else
-						AddEvn(day, desc, color)
+						AddEvn(day, desc, event.color, event.annive and (mdiff + 1) or false)
 					end
 				end,
 				},
-				{ __index = function() if event.year == Year then AddEvn(day, desc, color) end return function() end end })
+				{ __index = function() if event.year == Year then AddEvn(day, desc, event.color) end return function() end end })
 			
 			rswitch[event['repeat']:lower()]()
 		end
@@ -329,19 +328,38 @@ end -- LZero
 
 function Keys(line, default) -- Converts Key="Value" sets to a table
 	local tbl = default or {}
-	local escape = {
-		['&quot;']='"',
-		['&lt;']='<',
-		['&gt;']='>',
-		['&amp;']='&',
-	}
+	local number = function(input) return tonumber(input) end
+	local bool = function(input) return tonumber(input) and (tonumber(input) > 0) or nil end
+	local funcs = setmetatable({
+		color = function(input)
+			input = input:gsub('%s', '')
+			if input:len() == 0 then
+				return nil
+			elseif input:match(',') then
+				local hex = {}
+	
+				for rgb in input:gmatch('%d+') do
+					table.insert(hex, string.format('%02X', tonumber(rgb)))
+				end
+	
+				return table.concat(hex)
+			else
+				return input
+			end
+		end,
+		annive = bool, multip = number, year = number,
+	},
+	{ __index = function() return function(val) return tonumber(val) or val end end,})
 	
 	for key, value in line:gmatch('(%a+)=(%b"")') do
-		local strip = value:match('"(.+)"')
-		for code,char in pairs(escape) do
-			strip = strip:gsub(code, char)
-		end
-		tbl[key:sub(1, 6):lower()] = tonumber(strip) or strip
+		for code, char in pairs{ -- XML escape characters
+			['&quot;']='"',
+			['&lt;']='<',
+			['&gt;']='>',
+			['&amp;']='&',
+		} do value = value:gsub(code, char) end
+		local nkey = key:sub(1, 6):lower()
+		tbl[nkey] = funcs[nkey](value:match('"(.+)"'))
 	end
 	
 	return tbl
@@ -358,13 +376,3 @@ function Delim(option, default) -- Separate String by Delimiter
 	for word in value:gmatch('[^|]+') do table.insert(tbl, word) end
 	return tbl
 end -- Delim
-
-function ConvertToHex(color) -- Converts RGB colors to HEX
-	local hex = {}
-	
-	for rgb in color:gmatch('%d+') do
-		table.insert(hex, string.format('%02X', tonumber(rgb)))
-	end
-	
-	return table.concat(hex)
-end -- ConvertToHex
