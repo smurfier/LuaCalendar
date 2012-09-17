@@ -11,17 +11,15 @@ function Initialize()
 		LText = SELF:GetOption('LabelText', '{MName}, {Year}'),
 		NFormat = SELF:GetOption('NextFormat', '{day}: {desc}'),
 	}
-	Old = {Day = 0, Month = 0, Year = 0}
+	Old, cMonth = {Day = 0, Month = 0, Year = 0}, {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
 	StartDay, Month, Year, InMonth, Error = 0, 0, 0, true, false
-	cMonth = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31} -- Length of the months.
 	-- Weekday labels text
 	local Labels = Delim('DayLabels', 'S|M|T|W|T|F|S')
 	if #Labels < 7 then -- Check for Error
-		ErrMsg(0, 'Invalid DayLabels string')
-		Labels = {'S', 'M', 'T', 'W', 'T', 'F', 'S'}
+		Labels = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid DayLabels string')
 	end
 	for a = 1, 7 do
-		SKIN:Bang('!SetOption', Set.DPref..a, 'Text', Labels[Set.SMon and (a % 7 + 1) or a])
+		SKIN:Bang('!SetOption', Set.DPref .. a, 'Text', Labels[Set.SMon and (a % 7 + 1) or a])
 	end
 	-- Localization
 	MLabels = Delim('MonthLabels')
@@ -45,16 +43,14 @@ function Initialize()
 			else
 				local eFile, eSet = {}, setmetatable({}, { __call = function(input)
 					local tbl = {}
-	
 					for _, column in ipairs(input) do
 						for key, value in pairs(column) do
 							tbl[key] = value
 						end
 					end
-	
 					return tbl
 				end})
-				local default = {month = '', day = '', year = false, descri = '', title = false, color = '', ['repeat'] = false, multip = 1, annive = false,}
+				local default = {month = '', day = '', year = false, descri = '', title = false, color = false, ['repeat'] = false, multip = 1, annive = false,}
 				local sw = setmetatable({ -- Define Event File tags
 					set = function(x) table.insert(eSet, Keys(x)) end,
 					['/set'] = function() table.remove(eSet, #eSet) end,
@@ -116,11 +112,7 @@ function Events() -- Parse Events table.
 	end})
 
 	local AddEvn = function(day, desc, color, ann)
-		if ann then
-			desc = string.format(desc, ' (', ann, ') ')
-		else
-			desc = string.format(desc, '', '', '')
-		end
+		desc = string.format(desc, ann and ' (' .. ann .. ') ' or '')
 		if Hol[day] then
 			table.insert(Hol[day]['text'], desc)
 			table.insert(Hol[day]['color'], color)
@@ -147,7 +139,7 @@ function Events() -- Parse Events table.
 		local eMonth = SKIN:ParseFormula(Vars(event.month, event.descri))
 		if  eMonth == Month or event['repeat'] then
 			local day = SKIN:ParseFormula(Vars(event.day, event.descri)) or ErrMsg(0, 'Invalid Event Day', event.day, 'in', event.descri)
-			local desc = event.descri .. '%s%s%s' .. (event.title and ' -'..event.title or '')
+			local desc = event.descri .. '%s' .. (event.title and ' -' .. event.title or '')
 			local rswitch = setmetatable({
 				week = function()
 					if eMonth and event.year and day then
@@ -206,7 +198,7 @@ function Draw() -- Sets all meter properties and calculates days.
 		if rotate(Time.wday - 1) == (wday - 1) and InMonth then
 			table.insert(Styles, 'LblCurrSty')
 		end
-		SKIN:Bang('!SetOption', Set.DPref..wday, 'MeterStyle', table.concat(Styles, '|'))
+		SKIN:Bang('!SetOption', Set.DPref .. wday, 'MeterStyle', table.concat(Styles, '|'))
 	end
 	
 	for meter = 1, 42 do -- Calculate and set day meters.
@@ -242,7 +234,7 @@ function Draw() -- Sets all meter properties and calculates days.
 			MeterStyle = table.concat(Styles, '|'),
 			ToolTipText = event,
 			FontColor = color,
-		} do SKIN:Bang('!SetOption', Set.MPref..meter, k, v) end
+		} do SKIN:Bang('!SetOption', Set.MPref .. meter, k, v) end
 	end
 	-- Define skin variables.
 	for k, v in pairs{
@@ -286,8 +278,8 @@ function BuiltInEvents(default) -- Makes allowance for events that require calcu
 	
 	local SetVar = function(name, timestamp)
 		local temp = os.date('*t', timestamp)
-		tbl[name:lower()..'month'] = temp.month
-		tbl[name:lower()..'day'] = temp.day
+		tbl[name:lower() .. 'month'] = temp.month
+		tbl[name:lower() .. 'day'] = temp.day
 	end
 	
 	local sEaster = Easter()
@@ -313,7 +305,7 @@ function Vars(line, source) -- Makes allowance for {Variables}
 			local L, wD = (36 + D[v2]-StartDay), rotate(D[v2])
 			return W[v1] < 4 and (wD + 1 - StartDay + (StartDay > wD and 7 or 0) + 7 * W[v1]) or (L - math.ceil((L - cMonth[Month]) / 7) * 7)
 		else -- Error
-			return ErrMsg(0, 'Invalid Variable', variable, source and 'in '..source or '')
+			return ErrMsg(0, 'Invalid Variable', variable, source and 'in ' .. source or '')
 		end
 	end)
 end -- Vars
@@ -328,8 +320,7 @@ end -- LZero
 
 function Keys(line, default) -- Converts Key="Value" sets to a table
 	local tbl = default or {}
-	local number = function(input) return tonumber(input) end
-	local bool = function(input) return tonumber(input) and (tonumber(input) > 0) or nil end
+	
 	local funcs = setmetatable({
 		color = function(input)
 			input = input:gsub('%s', '')
@@ -347,17 +338,14 @@ function Keys(line, default) -- Converts Key="Value" sets to a table
 				return input
 			end
 		end,
-		annive = bool, multip = number, year = number,
+		multip = function(input) return tonumber(input) and tonumber(string.format('%.0f', input)) or nil end,
+		annive = function(input) return tonumber(input) and (tonumber(input) > 0) or nil end,
+		year = function(input) return tonumber(input) end,
 	},
 	{ __index = function() return function(val) return tonumber(val) or val end end,})
 	
 	for key, value in line:gmatch('(%a+)=(%b"")') do
-		for code, char in pairs{ -- XML escape characters
-			['&quot;']='"',
-			['&lt;']='<',
-			['&gt;']='>',
-			['&amp;']='&',
-		} do value = value:gsub(code, char) end
+		value = value:gsub('&([^;]+);', {quot='"', lt='<', gt='>', amp='&',}) -- XML escape characters
 		local nkey = key:sub(1, 6):lower()
 		tbl[nkey] = funcs[nkey](value:match('"(.+)"'))
 	end
@@ -367,7 +355,7 @@ end -- Keys
 
 function ErrMsg(...) -- Used to display errors
 	Error = true
-	print('LuaCalendar: '..table.concat(arg, ' ', 2))
+	print('LuaCalendar: ' .. table.concat(arg, ' ', 2))
 	return arg[1]
 end -- ErrMsg
 
