@@ -9,7 +9,7 @@ function Initialize()
 		MPref = SELF:GetOption('MeterPrefix', 'mDay'),
 		SMon = SELF:GetNumberOption('StartOnMonday', 0) > 0,
 		LText = SELF:GetOption('LabelText', '{MName}, {Year}'),
-		NFormat = SELF:GetOption('NextFormat', '{day}: {desc}'),
+		NFormat = SELF:GetOption('NextFormat', '{day}: {desc}'):lower(),
 	}
 	Old, cMonth = {Day = 0, Month = 0, Year = 0}, {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
 	StartDay, Month, Year, InMonth, Error = 0, 0, 0, true, false
@@ -32,41 +32,40 @@ function Initialize()
 	-- Holiday File
 	hFile = {}
 	for _, FileName in ipairs(Delim('EventFile')) do
-		local File = io.open(SKIN:MakePathAbsolute(FileName), 'r')
+		local File, fName = io.open(SKIN:MakePathAbsolute(FileName), 'r'), FileName:match('[^/\\]+$')
 		if not File then -- File could not be opened.
-			ErrMsg(0, 'File Read Error', FileName:match('[^/\\]+$'))
+			ErrMsg(0, 'File Read Error', fName)
 		else -- File is open.
-			local text = File:read('*all'):gsub('<!%-%-.-%-%->', '') -- Read in file contents and remove comments.
+			local open, content, close = File:read('*all'):gsub('<!%-%-.-%-%->', ''):match('^.-<([^>]+)>(.+)<([^>]+)>$')
 			File:close()
-			if not text:lower():match('<eventfile.->.-</eventfile>') then
-				ErrMsg(0, 'Invalid Event File', FileName:match('[^/\\]+$'))
-			else
-				local eFile, eSet = {}, setmetatable({}, { __call = function(input)
+			if open:match('[^%s]+'):lower() == 'eventfile' and close:lower() == '/eventfile' then
+				local eFile, eSet = Keys(open), setmetatable({}, { __call = function(input)
 					local tbl = {}
+
 					for _, column in ipairs(input) do
 						for key, value in pairs(column) do
 							tbl[key] = value
 						end
 					end
+
 					return tbl
 				end})
 				local default = {month = '', day = '', year = false, descri = '', title = false, color = false, ['repeat'] = false, multip = 1, annive = false,}
 				local sw = setmetatable({ -- Define Event File tags
 					set = function(x) table.insert(eSet, Keys(x)) end,
 					['/set'] = function() table.remove(eSet, #eSet) end,
-					eventfile = function(x) eFile = Keys(x) end,
-					['/eventfile'] = function() eFile = {} end,
 					event = function(x)
 						local Tmp, dSet, tbl = Keys(x), eSet(), {}
 						for k, v in pairs(default) do tbl[k] = Tmp[k] or dSet[k] or eFile[k] or v end
 						table.insert(hFile, tbl)
 					end,
-				},
-				{ __index = function(tbl, tag) ErrMsg(0, 'Invalid Event Tag', tag, 'in', FileName:match('[^/\\]+$')) return function() end end,})
+				}, { __index = function(tbl, tag) ErrMsg(0, 'Invalid Event Tag', tag, 'in', fName) return function() end end,})
 
-				for tag in text:gmatch('%b<>') do
+				for tag in content:gmatch('%b<>') do
 					sw[tag:lower():match('^<([^%s>]+)')](tag)
 				end
+			else
+				ErrMsg(0, 'Invalid Event File', fName)
 			end
 		end
 	end
@@ -100,11 +99,9 @@ function Events() -- Parse Events table.
 	
 		for day = InMonth and Time.day or 1, cMonth[Month] do -- Parse through month days to keep days in order.
 			if self[day] then
-				local tbl = {day = day, desc = table.concat(self[day]['text'], ',')}
-				local event = Set.NFormat:gsub('(%b{})', function(variable)
-					return tbl[variable:lower():match('{(.+)}')] or ErrMsg('', 'Invalid NextFormat variable', variable)
-				end)
-				table.insert(Evns, event)
+				local tbl = setmetatable({day = day, desc = table.concat(self[day]['text'], ', ')},
+					{ __index = function(tbl, input) return ErrMsg('', 'Invalid NextFormat variable', input) end,})
+				table.insert(Evns, (Set.NFormat:gsub('{([^}]+)}', tbl)) )
 			end
 		end
 	
@@ -136,10 +133,11 @@ function Events() -- Parse Events table.
 	end
 	
 	for _, event in ipairs(hFile) do
-		local eMonth = SKIN:ParseFormula(Vars(event.month, event.descri))
+		local eMonth = SKIN:ParseFormula('(' .. Vars(event.month, event.descri) .. ')')
 		if  eMonth == Month or event['repeat'] then
-			local day = SKIN:ParseFormula(Vars(event.day, event.descri)) or ErrMsg(0, 'Invalid Event Day', event.day, 'in', event.descri)
+			local day = SKIN:ParseFormula('(' .. Vars(event.day, event.descri) .. ')') or ErrMsg(0, 'Invalid Event Day', event.day, 'in', event.descri)
 			local desc = event.descri .. '%s' .. (event.title and ' -' .. event.title or '')
+
 			local rswitch = setmetatable({
 				week = function()
 					if eMonth and event.year and day then
@@ -148,24 +146,31 @@ function Events() -- Parse Events table.
 						local mstart = os.time{month = Month, day = 1, year = Year,}
 						local multi = event.multip * 604800
 						local first = mstart + ((stamp - mstart) % multi)
+
 						for a = 0, 4 do
 							local tstamp = first + a * multi
 							local temp = os.date('*t', tstamp)
+
 							if temp.month == Month and test then
 								AddEvn(temp.day, desc, event.color, event.annive and ((tstamp - stamp) / multi + 1) or false)
 							end
 						end
+
 					end
-				end,
+				end, -- week
+
 				year = function()
 					local test = (event.year and event.multip > 1) and ((Year - event.year) % event.multip) or 0
+
 					if eMonth == Month and test == 0 then
 						AddEvn(day, desc, event.color, event.annive and (Year - event.year / event.multip) or false)
 					end
-				end,
+				end, -- year
+
 				month = function()
 					local ydiff = Year - event.year - 1
 					local mdiff = ydiff == -1 and (Month - eMonth) or ((12 - eMonth) + Month + (ydiff * 12))
+
 					if eMonth and event.year then
 						if Year >= event.year then
 							local estamp = os.time{year = event.year, month = eMonth, day = 1,}
@@ -178,9 +183,8 @@ function Events() -- Parse Events table.
 					else
 						AddEvn(day, desc, event.color, event.annive and (mdiff + 1) or false)
 					end
-				end,
-				},
-				{ __index = function() if event.year == Year then AddEvn(day, desc, event.color) end return function() end end })
+				end, -- month
+				}, { __index = function() if event.year == Year then AddEvn(day, desc, event.color) end return function() end end })
 			
 			rswitch[event['repeat']:lower()]()
 		end
@@ -236,8 +240,8 @@ function Draw() -- Sets all meter properties and calculates days.
 			FontColor = color,
 		} do SKIN:Bang('!SetOption', Set.MPref .. meter, k, v) end
 	end
-	-- Define skin variables.
-	for k, v in pairs{
+	
+	for k, v in pairs{ -- Define skin variables.
 		ThisWeek = math.ceil((Time.day + StartDay) / 7),
 		Week = rotate(Time.wday - 1),
 		Today = LZero(Time.day),
@@ -254,8 +258,7 @@ function Move(value) -- Move calendar through the months.
 		['1'] = function() Month, Year = (Month % 12 + 1), Month == 12 and (Year + 1) or Year end, -- Forward
 		['-1'] = function() Month, Year = Month == 1 and 12 or (Month - 1), Month == 1 and (Year - 1) or Year end, -- Back
 		['0'] = function() Month, Year = Time.month, Time.year end, -- Home
-	},
-	{ __index = function() ErrMsg(0, 'Invalid Move parameter', value) return function() end end, })
+	}, { __index = function() ErrMsg(0, 'Invalid Move parameter', value) return function() end end, })
 	sw[tostring(value or 0)]()
 	InMonth = Month == Time.month and Year == Time.year
 	SKIN:Bang('!SetVariable', 'NotCurrentMonth', InMonth and 0 or 1)
@@ -296,8 +299,8 @@ function Vars(line, source) -- Makes allowance for {Variables}
 	local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
 	local tbl = BuiltInEvents{mname = MLabels[Month] or Month, year = Year, today = LZero(Time.day), month = Month}
 	
-	return tostring(line):gsub('%b{}', function(variable)
-		local strip = variable:lower():match('{(.+)}')
+	return tostring(line):gsub('{([^}]+)}', function(variable)
+		local strip = variable:lower()
 		local v1, v2 = strip:match('(.+)(...)')
 		if tbl[strip] then -- Regular variable.
 			return tbl[strip]
@@ -328,26 +331,24 @@ function Keys(line, default) -- Converts Key="Value" sets to a table
 				return nil
 			elseif input:match(',') then
 				local hex = {}
-	
 				for rgb in input:gmatch('%d+') do
 					table.insert(hex, string.format('%02X', tonumber(rgb)))
 				end
-	
 				return table.concat(hex)
 			else
 				return input
 			end
-		end,
-		multip = function(input) return tonumber(input) and tonumber(string.format('%.0f', input)) or nil end,
-		annive = function(input) return tonumber(input) and (tonumber(input) > 0) or nil end,
-		year = function(input) return tonumber(input) end,
-	},
-	{ __index = function() return function(val) return tonumber(val) or val end end,})
+		end, -- color
+		multip = function(input) return tonumber(input) and tonumber(string.format('%.0f', (input:gsub('%s', '')))) or nil end,
+		annive = function(input) return input:gsub('%s', ''):lower() == 'true' end,
+		year = function(input) return tonumber((input:gsub('%s', ''))) end,
+	}, { __index = function() return function(val) return tonumber(val) or val end end,})
 	
-	for key, value in line:gmatch('(%a+)=(%b"")') do
-		value = value:gsub('&([^;]+);', {quot='"', lt='<', gt='>', amp='&',}) -- XML escape characters
+	local escape = {quot='"', lt='<', gt='>', amp='&',} -- XML escape characters
+
+	for key, value in line:gmatch('(%a+)="([^"]+)"') do
 		local nkey = key:sub(1, 6):lower()
-		tbl[nkey] = funcs[nkey](value:match('"(.+)"'))
+		tbl[nkey] = funcs[nkey](value:gsub('&([^;]+);', escape):gsub('\n', ' '))
 	end
 	
 	return tbl
