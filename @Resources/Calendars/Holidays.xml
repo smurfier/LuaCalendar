@@ -1,5 +1,5 @@
-<EventFile Repeat="Year">
-	<!-- Built in Holidays. Comment out to disable. -->
+ <EventFile Repeat="Year">
+	<!-- Built in Holidays. Add Inactive="true" to disable. -->
 	<Event Month="{GoodFridayMonth}" Day="{GoodFridayDay}" Description="Good Friday"/>
 	<Event Month="{EasterMonth}" Day="{EasterDay}" Description="Easter Sunday"/>
 	<Event Month="{AshWednesdayMonth}" Day="{AshWednesdayDay}" Description="Ash Wednesday"/>
@@ -35,7 +35,8 @@
 	<Event Month="8" Day="26" Description="Women's Equality Day"/>
 	<Set Month="9">
 		<Event Day="{FirstMon}" Description="Labor Day"/>
-		<Event Day="11" Year="2001" Description="Patriot Day"/>
+		<Event Day="{FirstMon}+6" Description="Grandparent's Day"/>
+		<Event Day="11" Year="2001" Description="Patriot Day" Anniversary="true"/>
 		<Event Day="17" Description="Citizen Day"/>
 	</Set>
 	<Set Month="10">

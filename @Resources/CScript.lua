@@ -2,6 +2,7 @@
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
+	lVersion = 3.5 -- Current LuaCalendar Version
 	Set={ -- Retrieve Measure Settings
 		DPref = SELF:GetOption('DayPrefix', 'l'),
 		HLWeek = SELF:GetNumberOption('HideLastWeek', 0) > 0,
@@ -12,7 +13,7 @@ function Initialize()
 		NFormat = SELF:GetOption('NextFormat', '{day}: {desc}'):lower(),
 	}
 	Old, cMonth = {Day = 0, Month = 0, Year = 0}, {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
-	StartDay, Month, Year, InMonth, Error = 0, 0, 0, true, false
+	StartDay, Month, Year, InMonth, rMessage = 0, 0, 0, true, '!Success'
 	-- Weekday labels text
 	local Labels = Delim('DayLabels', 'S|M|T|W|T|F|S')
 	if #Labels < 7 then -- Check for Error
@@ -30,45 +31,7 @@ function Initialize()
 		end
 	end
 	-- Holiday File
-	hFile = {}
-	for _, FileName in ipairs(Delim('EventFile')) do
-		local File, fName = io.open(SKIN:MakePathAbsolute(FileName), 'r'), FileName:match('[^/\\]+$')
-		if not File then -- File could not be opened.
-			ErrMsg(0, 'File Read Error', fName)
-		else -- File is open.
-			local open, content, close = File:read('*all'):gsub('<!%-%-.-%-%->', ''):match('^.-<([^>]+)>(.+)<([^>]+)>$')
-			File:close()
-			if open:match('[^%s]+'):lower() == 'eventfile' and close:lower() == '/eventfile' then
-				local eFile, eSet = Keys(open), setmetatable({}, { __call = function(input)
-					local tbl = {}
-
-					for _, column in ipairs(input) do
-						for key, value in pairs(column) do
-							tbl[key] = value
-						end
-					end
-
-					return tbl
-				end})
-				local default = {month = '', day = '', year = false, descri = '', title = false, color = false, ['repeat'] = false, multip = 1, annive = false,}
-				local sw = setmetatable({ -- Define Event File tags
-					set = function(x) table.insert(eSet, Keys(x)) end,
-					['/set'] = function() table.remove(eSet, #eSet) end,
-					event = function(x)
-						local Tmp, dSet, tbl = Keys(x), eSet(), {}
-						for k, v in pairs(default) do tbl[k] = Tmp[k] or dSet[k] or eFile[k] or v end
-						table.insert(hFile, tbl)
-					end,
-				}, { __index = function(tbl, tag) ErrMsg(0, 'Invalid Event Tag', tag, 'in', fName) return function() end end,})
-
-				for tag in content:gmatch('%b<>') do
-					sw[tag:lower():match('^<([^%s>]+)')](tag)
-				end
-			else
-				ErrMsg(0, 'Invalid Event File', fName)
-			end
-		end
-	end
+	LoadEvents()
 end -- Initialize
 
 function Update()
@@ -90,8 +53,99 @@ function Update()
 		Draw()
 	end
 	
-	return Error and 'Error!' or 'Success!'
+	return rMessage
 end -- Update
+
+function LoadEvents()
+	hFile = {}
+	local default = {
+		month = {value = '', ktype = 'string'},
+		day = {value = '', ktype = 'string'},
+		year = {value = false, ktype = 'number'},
+		descri = {value = '', ktype = 'string', spaces = true},
+		title = {value = false, ktype = 'string'},
+		color = {value = false, ktype = 'color'},
+		['repeat'] = {value = false, ktype = 'string'},
+		multip = {value = 1, ktype = 'number', round = 0},
+		annive = {value = false, ktype = 'boolean'},
+		inacti = {value = false, ktype = 'boolean'},
+	}
+
+	local Keys = function(line) -- Converts Key="Value" sets to a table
+		local tbl = {}
+		
+		local funcs = {
+			color = function(key, input)
+				input = input:gsub('%s', '')
+				if input:len() == 0 then
+					return false
+				elseif input:match(',') then
+					local hex = {}
+					for rgb in input:gmatch('%d+') do table.insert(hex, string.format('%02X', tonumber(rgb))) end
+					for i = #hex, 4 do table.insert(hex, 'FF') end
+					return table.concat(hex)
+				else
+					return input
+				end
+			end, -- color
+			number = function(key, input)
+				local num = tonumber((input:gsub('%s', '')))
+				return (num and default[key].round) and string.format('%.' .. default[key].round .. 'f', num) or num
+			end, -- number
+			string = function(key, input) return default[key].spaces and input:match('^%s*(.-)%s*$') or (input:gsub('%s', '')) end,
+			boolean = function(key, input) return input:gsub('%s', ''):lower() == 'true' end,
+		}
+	
+		local escape = {quot='"', lt='<', gt='>', amp='&',} -- XML escape characters
+
+		for key, value in line:gmatch('(%a+)="([^"]+)"') do
+			local nkey = key:sub(1, 6):lower()
+			local ktype = default[nkey].ktype
+			tbl[nkey] = funcs[ktype](nkey, value:gsub('&([^;]+);', escape):gsub('\r?\n', ' '))
+		end
+	
+		return tbl
+	end -- Keys
+
+	for _, FileName in ipairs(Delim('EventFile')) do
+		local File, fName = io.open(SKIN:MakePathAbsolute(FileName), 'r'), FileName:match('[^/\\]+$')
+		if not File then -- File could not be opened.
+			ErrMsg(0, 'File Read Error', fName)
+		else -- File is open.
+			local open, content, close = File:read('*all'):gsub('<!%-%-.-%-%->', ''):match('^.-<([^>]+)>(.+)<([^>]+)>$')
+			File:close()
+			if open:match('[^%s]+'):lower() == 'eventfile' and close:lower() == '/eventfile' then
+				local eFile, eSet = Keys(open), setmetatable({}, { __call = function(input)
+					local tbl = {}
+
+					for _, column in ipairs(input) do
+						for key, value in pairs(column) do
+							tbl[key] = value
+						end
+					end
+
+					return tbl
+				end})
+
+				local sw = setmetatable({ -- Define Event File tags
+					set = function(x) table.insert(eSet, Keys(x)) end,
+					['/set'] = function() table.remove(eSet) end,
+					event = function(x)
+						local Tmp, dSet, tbl = Keys(x), eSet(), {}
+						for k, v in pairs(default) do tbl[k] = Tmp[k] or dSet[k] or eFile[k] or v.value end
+						if not tbl.inacti then table.insert(hFile, tbl) end
+					end,
+				}, { __index = function(tbl, tag) return ErrMsg(function() end, 'Invalid Event Tag', tag, 'in', fName) end,})
+
+				for tag in content:gmatch('%b<>') do
+					sw[tag:lower():match('^<([^%s>]+)')](tag)
+				end
+			else
+				ErrMsg(0, 'Invalid Event File', fName)
+			end
+		end
+	end
+end
 
 function Events() -- Parse Events table.
 	Hol = setmetatable({}, { __call = function(self) -- Returns a list of events
@@ -299,7 +353,7 @@ function Vars(line, source) -- Makes allowance for {Variables}
 	local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
 	local tbl = BuiltInEvents{mname = MLabels[Month] or Month, year = Year, today = LZero(Time.day), month = Month}
 	
-	return tostring(line):gsub('{([^}]+)}', function(variable)
+	return line:gsub('{([^}]+)}', function(variable)
 		local strip = variable:lower()
 		local v1, v2 = strip:match('(.+)(...)')
 		if tbl[strip] then -- Regular variable.
@@ -321,42 +375,9 @@ function LZero(value) -- Used to make allowance for LeadingZeros
 	return Set.LZer and string.format('%02d', value) or value
 end -- LZero
 
-function Keys(line, default) -- Converts Key="Value" sets to a table
-	local tbl = default or {}
-	
-	local funcs = setmetatable({
-		color = function(input)
-			input = input:gsub('%s', '')
-			if input:len() == 0 then
-				return nil
-			elseif input:match(',') then
-				local hex = {}
-				for rgb in input:gmatch('%d+') do
-					table.insert(hex, string.format('%02X', tonumber(rgb)))
-				end
-				return table.concat(hex)
-			else
-				return input
-			end
-		end, -- color
-		multip = function(input) return tonumber(input) and tonumber(string.format('%.0f', (input:gsub('%s', '')))) or nil end,
-		annive = function(input) return input:gsub('%s', ''):lower() == 'true' end,
-		year = function(input) return tonumber((input:gsub('%s', ''))) end,
-	}, { __index = function() return function(val) return tonumber(val) or val end end,})
-	
-	local escape = {quot='"', lt='<', gt='>', amp='&',} -- XML escape characters
-
-	for key, value in line:gmatch('(%a+)="([^"]+)"') do
-		local nkey = key:sub(1, 6):lower()
-		tbl[nkey] = funcs[nkey](value:gsub('&([^;]+);', escape):gsub('\n', ' '))
-	end
-	
-	return tbl
-end -- Keys
-
 function ErrMsg(...) -- Used to display errors
-	Error = true
-	print('LuaCalendar: ' .. table.concat(arg, ' ', 2))
+	rMessage = table.concat(arg, ' ', 2)
+	print('LuaCalendar: ' .. rMessage)
 	return arg[1]
 end -- ErrMsg
 
@@ -365,3 +386,14 @@ function Delim(option, default) -- Separate String by Delimiter
 	for word in value:gmatch('[^|]+') do table.insert(tbl, word) end
 	return tbl
 end -- Delim
+
+function CheckUpdate()
+	local sVersion = tonumber(SKIN:GetMeasure('UpdateVersion'):GetStringValue())
+	if sVersion > lVersion then
+		rMessage = 'LuaCalendar Update Available: v' .. sVersion
+		print(rMessage)
+	elseif lVersion > sVersion then
+		rMessage = 'LuaCalendar: Thanks for testing the Beta version!'
+	end
+	SKIN:Bang('!DisableMeasure', 'UpdateVersion')
+end
