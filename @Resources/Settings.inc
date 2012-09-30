@@ -33,3 +33,6 @@ EventFile=#@#Calendars\Holidays.xml
 ;Set to 1 to pull month names from the Localization Settings of your computer. Overrides Custom Month Labels.
 UseLocalMonths=1
 
+;The format for the list of upcomming events. {day} and {desc} are valid variables.
+;NextFormat={day}: {desc}
+

@@ -1,8 +1,8 @@
--- LuaCalendar v3.6 beta 2 by Smurfier (smurfier20@gmail.com)
+-- LuaCalendar v3.6 by Smurfier (smurfier20@gmail.com)
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
-	lVersion = 3.5 -- Current LuaCalendar Version
+	lVersion = 3.6 -- Current LuaCalendar Version
 	Set={ -- Retrieve Measure Settings
 		DPref = SELF:GetOption('DayPrefix', 'l'),
 		HLWeek = SELF:GetNumberOption('HideLastWeek', 0) > 0,
@@ -107,6 +107,18 @@ function LoadEvents()
 		return tbl
 	end -- Keys
 
+	local compress = function(input)
+		local tbl = {}
+			
+		for _, column in ipairs(input) do
+			for key, value in pairs(column) do
+				tbl[key] = value
+			end
+		end
+
+		return tbl
+	end
+
 	for _, FileName in ipairs(Delim('EventFile')) do
 		local File, fName = io.open(SKIN:MakePathAbsolute(FileName), 'r'), FileName:match('[^/\\]+$')
 		if not File then -- File could not be opened.
@@ -115,23 +127,13 @@ function LoadEvents()
 			local open, content, close = File:read('*all'):gsub('<!%-%-.-%-%->', ''):match('^.-<([^>]+)>(.+)<([^>]+)>$')
 			File:close()
 			if open:match('[^%s]+'):lower() == 'eventfile' and close:lower() == '/eventfile' then
-				local eFile, eSet = Keys(open), setmetatable({}, { __call = function(input)
-					local tbl = {}
-
-					for _, column in ipairs(input) do
-						for key, value in pairs(column) do
-							tbl[key] = value
-						end
-					end
-
-					return tbl
-				end})
+				local eFile, eSet = Keys(open), {}
 
 				local sw = setmetatable({ -- Define Event File tags
 					set = function(x) table.insert(eSet, Keys(x)) end,
 					['/set'] = function() table.remove(eSet) end,
 					event = function(x)
-						local Tmp, dSet, tbl = Keys(x), eSet(), {}
+						local Tmp, dSet, tbl = Keys(x), compress(eSet), {}
 						for k, v in pairs(default) do tbl[k] = Tmp[k] or dSet[k] or eFile[k] or v.value end
 						if not tbl.inacti then table.insert(hFile, tbl) end
 					end,
@@ -145,7 +147,7 @@ function LoadEvents()
 			end
 		end
 	end
-end
+end -- LeadEvents
 
 function Events() -- Parse Events table.
 	Hol = setmetatable({}, { __call = function(self) -- Returns a list of events
@@ -222,11 +224,10 @@ function Events() -- Parse Events table.
 				end, -- year
 
 				month = function()
-					local ydiff = Year - event.year - 1
-					local mdiff = ydiff == -1 and (Month - eMonth) or ((12 - eMonth) + Month + (ydiff * 12))
-
 					if eMonth and event.year then
 						if Year >= event.year then
+							local ydiff = Year - event.year - 1
+							local mdiff = ydiff == -1 and (Month - eMonth) or ((12 - eMonth) + Month + (ydiff * 12))
 							local estamp = os.time{year = event.year, month = eMonth, day = 1,}
 							local mstart = os.time{year = Year, month = Month, day = 1,}
 
@@ -235,7 +236,7 @@ function Events() -- Parse Events table.
 							end
 						end
 					else
-						AddEvn(day, desc, event.color, event.annive and (mdiff + 1) or false)
+						AddEvn(day, desc, event.color, false)
 					end
 				end, -- month
 				}, { __index = function() if event.year == Year then AddEvn(day, desc, event.color) end return function() end end })
@@ -330,9 +331,10 @@ function Easter() -- Returns a timestamp representing easter of the current year
 	return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = Year}
 end -- Easter
 
-function BuiltInEvents(default) -- Makes allowance for events that require calculation.
-	local tbl = default or {}
-	
+function Vars(line, source) -- Makes allowance for {Variables}
+	local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
+	local tbl = {mname = MLabels[Month] or Month, year = Year, today = LZero(Time.day), month = Month}
+	-- Built in Events
 	local SetVar = function(name, timestamp)
 		local temp = os.date('*t', timestamp)
 		tbl[name:lower() .. 'month'] = temp.month
@@ -345,14 +347,7 @@ function BuiltInEvents(default) -- Makes allowance for events that require calcu
 	SetVar('goodfriday', sEaster - 2 * day)
 	SetVar('ashwednesday', sEaster - 46 * day)
 	SetVar('mardigras', sEaster - 47 * day)
-	
-	return tbl
-end -- BuiltInEvents
 
-function Vars(line, source) -- Makes allowance for {Variables}
-	local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
-	local tbl = BuiltInEvents{mname = MLabels[Month] or Month, year = Year, today = LZero(Time.day), month = Month}
-	
 	return line:gsub('{([^}]+)}', function(variable)
 		local strip = variable:lower()
 		local v1, v2 = strip:match('(.+)(...)')
@@ -387,7 +382,7 @@ function Delim(option, default) -- Separate String by Delimiter
 	return tbl
 end -- Delim
 
-function CheckUpdate()
+function CheckUpdate() -- Checks for an update to LuaCalendar
 	local sVersion = tonumber(SKIN:GetMeasure('UpdateVersion'):GetStringValue())
 	if sVersion > lVersion then
 		rMessage = 'LuaCalendar Update Available: v' .. sVersion
@@ -396,4 +391,4 @@ function CheckUpdate()
 		rMessage = 'LuaCalendar: Thanks for testing the Beta version!'
 	end
 	SKIN:Bang('!DisableMeasure', 'UpdateVersion')
-end
+end -- CheckUpdate
