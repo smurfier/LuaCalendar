@@ -319,6 +319,10 @@ function Move(value) -- Move calendar through the months
 		Month, Year = Month == 1 and 12 or (Month - 1), Month == 1 and (Year - 1) or Year
 	elseif num == 0 then
 		Month, Year = Time.month, Time.year
+	elseif num == 12 then
+		Year = Year + 1
+	elseif num == -12 then
+		Year = Year - 1
 	else
 		ErrMsg(nil, 'Invalid Move parameter %s', value)
 	end
