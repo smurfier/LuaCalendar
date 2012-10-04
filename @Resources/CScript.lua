@@ -313,10 +313,12 @@ end -- Draw
 function Move(value) -- Move calendar through the months
 	if not value then
 		Month, Year = Time.month, Time.year
+	elseif math.ceil(value) ~= value then
+		ErrMsg(nil, 'Invalid Move Parameter %s', value)
 	else
 		local mvalue = Month + value - (math.modf(value / 12)) * 12
 		local mchange = value < 0 and (mvalue < 1 and 12 or 0) or (mvalue > 12 and -12 or 0)
-		Month, Year = (mvalue + mchange), (Year + (math.modf(value/12)) - mchange / 12)
+		Month, Year = (mvalue + mchange), (Year + (math.modf(value / 12)) - mchange / 12)
 	end
 
 	InMonth = Month == Time.month and Year == Time.year
