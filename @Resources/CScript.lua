@@ -311,20 +311,18 @@ function Draw() -- Sets all meter properties and calculates days
 end -- Draw
 
 function Move(value) -- Move calendar through the months
-	local num = tonumber(value) or 0
-
-	if num == 1 then
-		Month, Year = (Month % 12 + 1), Month == 12 and (Year + 1) or Year
-	elseif num == -1 then
-		Month, Year = Month == 1 and 12 or (Month - 1), Month == 1 and (Year - 1) or Year
-	elseif num == 0 then
+	local num = value or 0
+	
+	if num == 0 then
 		Month, Year = Time.month, Time.year
-	elseif num == 12 then
-		Year = Year + 1
-	elseif num == -12 then
-		Year = Year - 1
-	else
-		ErrMsg(nil, 'Invalid Move parameter %s', value)
+	elseif num < 0 then
+		local mvalue = Month + num - (math.modf(num / 12)) * 12
+		Month = mvalue + (mvalue < 1 and 12 or 0)
+		Year = Year + (math.modf(num/12)) + (mvalue < 1 and -1 or 0) 
+	elseif num > 0 then
+		local mvalue = Month + (num % 12)
+		Month = mvalue + (mvalue > 12 and -12 or 0)
+		Year = Year + (math.modf(num/12)) + (mvalue > 12 and 1 or 0)
 	end
 
 	InMonth = Month == Time.month and Year == Time.year
