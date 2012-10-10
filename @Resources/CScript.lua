@@ -336,8 +336,17 @@ function Easter() -- Returns a timestamp representing easter of the current year
 end -- Easter
 
 function Vars(line, source) -- Makes allowance for {Variables}
-	local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
-	local tbl = {mname = MLabels[Month] or Month, year = Year, today = LZero(Time.day), month = Month}
+	local tbl = setmetatable({mname = MLabels[Month] or Month, year = Year, today = LZero(Time.day), month = Month},
+		{ __index = function(_, input)
+			local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
+			local v1, v2 = input:match('(.+)(...)')
+			if W[v1 or ''] and D[v2 or ''] then -- Variable day
+				local L, wD = (36 + D[v2] - StartDay), rotate(D[v2])
+				return W[v1] < 4 and (wD + 1 - StartDay + (StartDay > wD and 7 or 0) + 7 * W[v1]) or (L - math.ceil((L - cMonth[Month]) / 7) * 7)
+			else -- Error
+				return ErrMsg(0, 'Invalid Variable {%s} in %s', input, source)
+			end
+		end})
 	-- Built in Events
 	local SetVar = function(name, timestamp)
 		local temp = os.date('*t', timestamp)
@@ -352,18 +361,7 @@ function Vars(line, source) -- Makes allowance for {Variables}
 	SetVar('ashwednesday', sEaster - 46 * day)
 	SetVar('mardigras', sEaster - 47 * day)
 
-	return line:gsub('{([^}]+)}', function(variable)
-		local strip = variable:lower()
-		local v1, v2 = strip:match('(.+)(...)')
-		if tbl[strip] then -- Regular variable
-			return tbl[strip]
-		elseif W[v1 or ''] and D[v2 or ''] then -- Variable day
-			local L, wD = (36 + D[v2]-StartDay), rotate(D[v2])
-			return W[v1] < 4 and (wD + 1 - StartDay + (StartDay > wD and 7 or 0) + 7 * W[v1]) or (L - math.ceil((L - cMonth[Month]) / 7) * 7)
-		else -- Error
-			return ErrMsg(0, 'Invalid Variable {%s} in %s', variable, source)
-		end
-	end)
+	return line:gsub('{([^}]+)}', function(variable) return tbl[variable:lower()] end)
 end -- Vars
 
 function rotate(value) -- Makes allowance for StartOnMonday
