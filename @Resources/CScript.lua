@@ -16,19 +16,13 @@ function Initialize()
 	-- Weekday labels text
 	local Labels = {}
 	for label in SELF:GetOption('DayLabels', 'S|M|T|W|T|F|S'):gmatch('[^|]+') do table.insert(Labels, label) end
-	if #Labels < 7 then -- Check for Error
-		Labels = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid DayLabels string')
-	end
-	for a = 1, 7 do
-		SKIN:Bang('!SetOption', Set.DPref .. a, 'Text', Labels[Set.SMon and (a % 7 + 1) or a])
-	end
+	if #Labels < 7 then Labels = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid DayLabels string') end
+	for a = 1, 7 do SKIN:Bang('!SetOption', Set.DPref .. a, 'Text', Labels[Set.SMon and (a % 7 + 1) or a]) end
 	-- Localization
-	MLabels = {}
+	MLabels = setmetatable({}, { __index = function(_, key) return key end})
 	if SELF:GetNumberOption('UseLocalMonths', 0) > 0 then
 		os.setlocale('', 'time')
-		for a = 1, 12 do
-			MLabels[a] = os.date('%B', os.time{year = 2000, month = a, day = 1})
-		end
+		for a = 1, 12 do MLabels[a] = os.date('%B', os.time{year = 2000, month = a, day = 1}) end
 	else
 		for label in SELF:GetOption('MonthLabels'):gmatch('[^|]+') do table.insert(MLabels, label) end
 	end
@@ -82,7 +76,7 @@ function LoadEvents()
 					return false
 				elseif input:match(',') then
 					local hex = {}
-					for rgb in input:gmatch('%d+') do table.insert(hex, string.format('%02X', tonumber(rgb))) end
+					for rgb in input:gmatch('%d+') do table.insert(hex, ('%02X'):format(tonumber(rgb))) end
 					for i = #hex, 4 do table.insert(hex, 'FF') end
 					return table.concat(hex)
 				else
@@ -91,7 +85,7 @@ function LoadEvents()
 			end, -- color
 			number = function(key, input)
 				local num = tonumber((input:gsub('%s', '')))
-				return (num and default[key].round) and string.format('%.' .. default[key].round .. 'f', num) or num
+				return (num and default[key].round) and ('%.' .. default[key].round .. 'f'):format(num) or num
 			end, -- number
 			string = function(key, input) return default[key].spaces and input:match('^%s*(.-)%s*$') or (input:gsub('%s', '')) end,
 			boolean = function(key, input) return input:gsub('%s', ''):lower() == 'true' end,
@@ -102,8 +96,7 @@ function LoadEvents()
 		for key, value in line:gmatch('(%a+)="([^"]+)"') do
 			local nkey = key:sub(1, 6):lower()
 			if default[nkey] then
-				local ktype = default[nkey].ktype
-				tbl[nkey] = funcs[ktype](nkey, value:gsub('&([^;]+);', escape):gsub('\r?\n', ' '))
+				tbl[nkey] = funcs[(default[nkey].ktype)](nkey, value:gsub('&([^;]+);', escape):gsub('\r?\n', ' '))
 			else
 				ErrMsg(nil, 'Invalid key %s=%q in %s', key, value, source)
 			end
@@ -116,9 +109,7 @@ function LoadEvents()
 		local tbl = {}
 			
 		for _, column in ipairs(input) do
-			for key, value in pairs(column) do
-				tbl[key] = value
-			end
+			for key, value in pairs(column) do tbl[key] = value end
 		end
 
 		return tbl
@@ -164,7 +155,7 @@ function Events() -- Parse Events table.
 		for day = InMonth and Time.day or 1, cMonth[Month] do -- Parse through month days to keep days in order
 			if self[day] then
 				local tbl = setmetatable({day = day, desc = table.concat(self[day]['text'], ', ')},
-					{ __index = function(tbl, input) return ErrMsg('', 'Invalid NextFormat variable {%s}', input) end,})
+					{ __index = function(_, input) return ErrMsg('', 'Invalid NextFormat variable {%s}', input) end,})
 				table.insert(Evns, (Set.NFormat:gsub('{([^}]+)}', tbl)) )
 			end
 		end
@@ -173,26 +164,12 @@ function Events() -- Parse Events table.
 	end})
 
 	local AddEvn = function(day, desc, color, ann)
-		desc = string.format(desc, ann and ' (' .. ann .. ') ' or '')
+		desc = desc:format(ann and ' (' .. ann .. ') ' or '')
 		if Hol[day] then
-			table.insert(Hol[day]['text'], desc)
-			table.insert(Hol[day]['color'], color)
+			table.insert(Hol[day].text, desc)
+			table.insert(Hol[day].color, color)
 		else
-			Hol[day] = {text = {desc}, color = setmetatable({color}, { __call = function(tbl)
-				local color
-	
-				for _, value in ipairs(tbl) do
-					if color then
-						if color ~= value then
-							return ''
-						end
-					else
-						color = value
-					end
-				end
-				
-				return color
-			end,}),}
+			Hol[day] = {text = {desc}, color = {color},}
 		end
 	end
 	
@@ -263,7 +240,7 @@ function Draw() -- Sets all meter properties and calculates days
 	end
 	
 	for meter = 1, 42 do -- Calculate and set day meters
-		local day, event, color, Styles = (meter - StartDay), '', '', {'TextStyle'}
+		local day, Styles, event, color = (meter - StartDay), {'TextStyle'}
 		if meter == 1 then
 			table.insert(Styles, 'FirstDay')
 		elseif (meter % 7) == 1 then
@@ -271,9 +248,19 @@ function Draw() -- Sets all meter properties and calculates days
 		end
 		-- Holiday ToolTip and Style
 		if day > 0 and day <= cMonth[Month] and Hol[day] then
-			event = table.concat(Hol[day]['text'], '\n')
+			event = table.concat(Hol[day].text, '\n')
 			table.insert(Styles, 'HolidayStyle')
-			color = Hol[day]['color']()
+			
+			for _, value in ipairs(Hol[day].color) do
+				if value then
+					if not color then
+						color = value
+					elseif color ~= value then
+						color = ''
+						break
+					end
+				end
+			end
 		end
 		
 		if (Time.day + StartDay) == meter and InMonth then
@@ -293,8 +280,8 @@ function Draw() -- Sets all meter properties and calculates days
 		for k,v in pairs{ -- Define meter properties
 			Text = LZero(day),
 			MeterStyle = table.concat(Styles, '|'),
-			ToolTipText = event,
-			FontColor = color,
+			ToolTipText = event or '',
+			FontColor = color or '',
 		} do SKIN:Bang('!SetOption', Set.MPref .. meter, k, v) end
 	end
 	
@@ -302,7 +289,7 @@ function Draw() -- Sets all meter properties and calculates days
 		ThisWeek = math.ceil((Time.day + StartDay) / 7),
 		Week = rotate(Time.wday - 1),
 		Today = LZero(Time.day),
-		Month = MLabels[Month] or Month,
+		Month = MLabels[Month],
 		Year = Year,
 		MonthLabel = Vars(Set.LText, 'MonthLabel'),
 		LastWkHidden = LastWeek and 1 or 0,
@@ -336,7 +323,7 @@ function Easter() -- Returns a timestamp representing easter of the current year
 end -- Easter
 
 function Vars(line, source) -- Makes allowance for {Variables}
-	local tbl = setmetatable({mname = MLabels[Month] or Month, year = Year, today = LZero(Time.day), month = Month},
+	local tbl = setmetatable({mname = MLabels[Month], year = Year, today = LZero(Time.day), month = Month},
 		{ __index = function(_, input)
 			local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
 			local v1, v2 = input:match('(.+)(...)')
@@ -369,7 +356,7 @@ function rotate(value) -- Makes allowance for StartOnMonday
 end -- rotate
 
 function LZero(value) -- Makes allowance for LeadingZeros
-	return Set.LZer and string.format('%02d', value) or value
+	return Set.LZer and ('%02d'):format(value) or value
 end -- LZero
 
 function ErrMsg(...) -- Used to display errors
