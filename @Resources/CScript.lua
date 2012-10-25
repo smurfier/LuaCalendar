@@ -11,8 +11,7 @@ function Initialize()
 		LText = SELF:GetOption('LabelText', '{MName}, {Year}'),
 		NFormat = SELF:GetOption('NextFormat', '{day}: {desc}'):lower(),
 	}
-	Old, cMonth = {Day = 0, Month = 0, Year = 0}, {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
-	StartDay, Month, Year, InMonth, rMessage = 0, 0, 0, true, '!Success'
+	mLength, StartDay, Month, Year, InMonth, Old = 0, 0, 0, 0, true, {Day = 0, Month = 0, Year = 0}
 	-- Weekday labels text
 	local Labels = {}
 	for label in SELF:GetOption('DayLabels', 'S|M|T|W|T|F|S'):gmatch('[^|]+') do table.insert(Labels, label) end
@@ -39,8 +38,7 @@ function Update()
 	
 	if Month ~= Old.Month or Year ~= Old.Year then -- Recalculate and Redraw if Month and/or Year changes
 		Old = {Month=Month, Year=Year, Day=Time.day}
-		StartDay = rotate(tonumber(os.date('%w', os.time{year = Year, month = Month, day = 1})))
-		cMonth[2] = 28 + ((((Year % 4) == 0 and (Year % 100) ~= 0) or (Year % 400) == 0) and 1 or 0) -- Check for Leap Year
+		StartDay, mLength = rotate(tonumber(os.date('%w', os.time{year = Year, month = Month, day = 1}))), MonthLength(Month, Year)
 		Events()
 		Draw()
 	elseif Time.day ~= Old.Day then -- Redraw if Today changes
@@ -48,7 +46,7 @@ function Update()
 		Draw()
 	end
 	
-	return rMessage
+	return rMessage or 'Success!'
 end -- Update
 
 function LoadEvents()
@@ -152,11 +150,11 @@ function Events() -- Parse Events table.
 	Hol = setmetatable({}, { __call = function(self) -- Returns a list of events
 		local Evns = {}
 	
-		for day = InMonth and Time.day or 1, cMonth[Month] do -- Parse through month days to keep days in order
+		for day = InMonth and Time.day or 1, mLength do -- Parse through month days to keep days in order
 			if self[day] then
 				local tbl = setmetatable({day = day, desc = table.concat(self[day]['text'], ', ')},
 					{ __index = function(_, input) return ErrMsg('', 'Invalid NextFormat variable {%s}', input) end,})
-				table.insert(Evns, (Set.NFormat:gsub('{([^}]+)}', tbl)) )
+				table.insert(Evns, (Set.NFormat:gsub('{([^}]+)}', function(variable) return tbl[variable:lower()] end)) )
 			end
 		end
 	
@@ -173,10 +171,12 @@ function Events() -- Parse Events table.
 		end
 	end
 	
+	local formula = function(input, source) return SKIN:ParseFormula(('(%s)'):format(Vars(input, source))) end
+
 	for _, event in ipairs(hFile) do
-		local eMonth = SKIN:ParseFormula('(' .. Vars(event.month, event.descri) .. ')')
+		local eMonth = formula(event.month, event.descri)
 		if  eMonth == Month or event['repeat'] then
-			local day = SKIN:ParseFormula('(' .. Vars(event.day, event.descri) .. ')') or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
+			local day = formula(event.day, event.descri) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
 			local desc = event.descri .. '%s' .. (event.title and ' -' .. event.title or '')
 
 			local nrepeat = event['repeat']:lower()
@@ -226,7 +226,7 @@ function Events() -- Parse Events table.
 end -- Events
 
 function Draw() -- Sets all meter properties and calculates days
-	local LastWeek = Set.HLWeek and math.ceil((StartDay + cMonth[Month]) / 7) < 6
+	local LastWeek = Set.HLWeek and math.ceil((StartDay + mLength) / 7) < 6
 	
 	for wday = 1, 7 do -- Set Weekday Labels styles
 		local Styles = {'LblTxtSty'}
@@ -239,6 +239,7 @@ function Draw() -- Sets all meter properties and calculates days
 		SKIN:Bang('!SetOption', Set.DPref .. wday, 'MeterStyle', table.concat(Styles, '|'))
 	end
 	
+	local pLength = MonthLength(Month == 1 and 12 or (Month - 1), Year + (Month == 1 and -1 or 0)) -- Length of previous month.
 	for meter = 1, 42 do -- Calculate and set day meters
 		local day, Styles, event, color = (meter - StartDay), {'TextStyle'}
 		if meter == 1 then
@@ -247,10 +248,10 @@ function Draw() -- Sets all meter properties and calculates days
 			table.insert(Styles, 'NewWk')
 		end
 		-- Holiday ToolTip and Style
-		if day > 0 and day <= cMonth[Month] and Hol[day] then
+		if day > 0 and day <= mLength and Hol[day] then
 			event = table.concat(Hol[day].text, '\n')
 			table.insert(Styles, 'HolidayStyle')
-			
+
 			for _, value in ipairs(Hol[day].color) do
 				if value then
 					if not color then
@@ -268,10 +269,10 @@ function Draw() -- Sets all meter properties and calculates days
 		elseif meter > 35 and LastWeek then
 			table.insert(Styles, 'LastWeek')
 		elseif day < 1 then
-			day = day + cMonth[Month == 1 and 12 or (Month - 1)]
+			day = day + pLength
 			table.insert(Styles, 'PreviousMonth')
-		elseif day > cMonth[Month] then
-			day = day - cMonth[Month]
+		elseif day > mLength then
+			day = day - mLength
 			table.insert(Styles, 'NextMonth')
 		elseif (meter % 7) == 0 or (meter % 7) == (Set.SMon and 6 or 1) then
 			table.insert(Styles, 'WeekendStyle')
@@ -312,6 +313,13 @@ function Move(value) -- Move calendar through the months
 	SKIN:Bang('!SetVariable', 'NotCurrentMonth', InMonth and 0 or 1)
 end -- Move
 
+function MonthLength(month, year) -- Calculates the length of a given month
+	local tstart = os.time{day = 1, month = month, year = year, isdst = false,}
+	local nstart = os.time{day = 1, month = (month % 12 + 1), year = (year + (month == 12 and 1 or 0)), isdst = false,}
+	
+	return (nstart - tstart) / 86400
+end -- MonthLength
+
 function Easter() -- Returns a timestamp representing easter of the current year
 	local a, b, c, h, L, m = (Year % 19), math.floor(Year / 100), (Year % 100), 0, 0, 0
 	local d, e, f, i, k = math.floor(b/4), (b % 4), math.floor((b + 8) / 25), math.floor(c / 4), (c % 4)
@@ -328,8 +336,12 @@ function Vars(line, source) -- Makes allowance for {Variables}
 			local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
 			local v1, v2 = input:match('(.+)(...)')
 			if W[v1 or ''] and D[v2 or ''] then -- Variable day
-				local L, wD = (36 + D[v2] - StartDay), rotate(D[v2])
-				return W[v1] < 4 and (wD + 1 - StartDay + (StartDay > wD and 7 or 0) + 7 * W[v1]) or (L - math.ceil((L - cMonth[Month]) / 7) * 7)
+				if v1 == 'last' then
+					local L = 36 + D[v2] - StartDay
+					return L - math.ceil((L - mLength) / 7) * 7
+				else
+					return rotate(D[v2]) + 1 - StartDay + (StartDay > rotate(D[v2]) and 7 or 0) + 7 * W[v1]
+				end
 			else -- Error
 				return ErrMsg(0, 'Invalid Variable {%s} in %s', input, source)
 			end
@@ -348,7 +360,7 @@ function Vars(line, source) -- Makes allowance for {Variables}
 	SetVar('ashwednesday', sEaster - 46 * day)
 	SetVar('mardigras', sEaster - 47 * day)
 
-	return line:gsub('{([^}]+)}', function(variable) return tbl[variable:lower()] end)
+	return line:gsub('{([^}]+)}', function(variable) return tbl[variable:gsub('%s', ''):lower()] end)
 end -- Vars
 
 function rotate(value) -- Makes allowance for StartOnMonday
