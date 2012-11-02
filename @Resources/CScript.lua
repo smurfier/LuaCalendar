@@ -297,11 +297,8 @@ function Draw() -- Sets all meter properties and calculates days
 		NextEvent = Hol(),
 	} do SKIN:Bang('!SetVariable', k, v) end
 	-- Week Numbers for the current month
-	local WeekNumber = tonumber(os.date('%U', os.time{month = Month, year = Year, day = 1}))
 	for i = 0, 5 do
-		local num = WeekNumber + i
-		if num > 52 and math.ceil((StartDay + mLength) / 7) < 6 then num = 1 end
-		SKIN:Bang('!SetVariable', 'WeekNumber' .. (i + 1), num % 53)
+		SKIN:Bang('!SetVariable', 'WeekNumber' .. (i + 1), math.ceil(tonumber(os.date('%j', os.time{day = (1 + (7 * i)), month = Month, year = Year})) / 7))
 	end
 end -- Draw
 
