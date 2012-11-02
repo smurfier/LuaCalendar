@@ -296,6 +296,9 @@ function Draw() -- Sets all meter properties and calculates days
 		LastWkHidden = LastWeek and 1 or 0,
 		NextEvent = Hol(),
 	} do SKIN:Bang('!SetVariable', k, v) end
+	-- Week Numbers for the current month
+	local WeekNumber = tonumber(os.date('%U', os.time{month = Month, year = Year, day = 1}))
+	for i = 0, 5 do SKIN:Bang('!SetVariable', 'WeekNumber' .. (i + 1), WeekNumber + i) end
 end -- Draw
 
 function Move(value) -- Move calendar through the months
@@ -380,7 +383,7 @@ end -- ErrMsg
 
 function CheckUpdate() -- Checks for an update to LuaCalendar
 	local lVersion = 3.6 -- Current LuaCalendar Version
-	local sVersion = tonumber(SKIN:GetMeasure('UpdateVersion'):GetStringValue())
+	local sVersion = tonumber(SKIN:GetMeasure('UpdateVersion'):GetStringValue():match('<version>(.+)</version>') or 0)
 	if sVersion > lVersion then
 		ErrMsg(nil, 'Update Available: v%s', sVersion)
 	elseif lVersion > sVersion then
