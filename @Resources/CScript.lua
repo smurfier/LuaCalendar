@@ -297,8 +297,9 @@ function Draw() -- Sets all meter properties and calculates days
 		NextEvent = Hol(),
 	} do SKIN:Bang('!SetVariable', k, v) end
 	-- Week Numbers for the current month
+	local FirstWeek = os.time{day = 6 - StartDay, month = Month, year = Year}
 	for i = 0, 5 do
-		SKIN:Bang('!SetVariable', 'WeekNumber' .. (i + 1), math.ceil(tonumber(os.date('%j', os.time{day = (1 + (7 * i)), month = Month, year = Year})) / 7))
+		SKIN:Bang('!SetVariable', 'WeekNumber' .. (i + 1), math.ceil(tonumber(os.date('%j', (FirstWeek + (i * 604800)))) / 7))
 	end
 end -- Draw
 
