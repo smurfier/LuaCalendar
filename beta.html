@@ -227,16 +227,14 @@ These variable are created and updated by the script.
 		<ul><li>Set to 1 if week 6 is hidden.</li></ul></li>
 	<li>NextEvent
 		<ul><li>A list of upcomming events in the currently displayed month following the style defined in the NextFormat setting.</li></ul></li>
+	<li>WeekNumberN
+		<ul><li>WeekNumberN (where N is the numbers 1-6) is the week number (1-53) of the week.</li></ul></li>
 </ul></li>
 
 <li><b>Script Functions</b><br>
 These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command()"</code> to control the calendar.
-	<ul><li>Move(1)
-			<ul><li>Used to browse forward in the calendar.</li></ul></li>
-		<li>Move(-1)
-			<ul><li>Used to browse back in the calendar.</li></ul></li>
-		<li>Move(0)
-			<ul><li>Used to return to the current month.</li></ul></li>
+	<ul><li>Move(<i>number</i>)
+		<ul><li>Moves the calendar <i>number</i> of months. The <i>number</i> parameter must be a whole integer and can be either positive or negative.</li></ul></li>
 	</ul>
 </li>
 
@@ -255,6 +253,11 @@ These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command(
 	<li class="change">Moved Calendar files to Calendars folder.</li>
 	<li class="change">Moved Event list to bottom of the calendar on DefaultEvents style.</li>
 	<li class="add">Added Inactive option for events.</li>
+	<li class="change">Move function now accepts any whole integer.</li>
+	<li class="add">Added Custom Context Menu actions.</li>
+	<li class="fix">Fixed Custom Event Colors with nested tags.</li>
+	<li class="add">Added WeekNumber variables.</li>
+	<li class="add">Added DefaultWeeks style.</a>
 	</ul>
 
 <b>3.5</b> (7/20/2012)
