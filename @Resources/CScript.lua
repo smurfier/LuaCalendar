@@ -11,7 +11,25 @@ function Initialize()
 		LText = SELF:GetOption('LabelText', '{MName}, {Year}'),
 		NFormat = SELF:GetOption('NextFormat', '{day}: {desc}'):lower(),
 	}
-	mLength, StartDay, Month, Year, InMonth, Old = 0, 0, 0, 0, true, {Day = 0, Month = 0, Year = 0}
+
+	Time, mLength, StartDay, Month, Year, InMonth, Old = {}, 0, 0, 0, 0, true, {Day = 0, Month = 0, Year = 0}
+
+	local sRange = SELF:GetOption('Range', 'month'):lower():gsub(' ', '')
+	if not ('week|month'):find(sRange) then ErrMsg(nil, 'Invalid Range: %s', Set.Range) end
+	if sRange == 'week' then
+		Range = {
+			formula = function(input) return Time.day +((input - 1) - rotate(Time.wday - 1)) end,
+			days = 7,
+			week = function() return 1 end,
+			nomove = true,
+		}
+	else
+		Range = {
+			formula = function(input) return input - StartDay end,
+			days = 42,
+			week = function() return math.ceil((Time.day + StartDay) / 7) end,
+		}
+	end
 	-- Weekday labels text
 	local Labels = {}
 	for label in SELF:GetOption('DayLabels', 'S|M|T|W|T|F|S'):gmatch('[^|]+') do table.insert(Labels, label) end
@@ -240,8 +258,10 @@ function Draw() -- Sets all meter properties and calculates days
 	end
 	
 	local pLength = MonthLength(Month == 1 and 12 or (Month - 1), Year + (Month == 1 and -1 or 0)) -- Length of previous month.
-	for meter = 1, 42 do -- Calculate and set day meters
-		local day, Styles, event, color = (meter - StartDay), {'TextStyle'}
+
+	for meter = 1, Range.days do -- Calculate and set day meters
+		local Styles, day, event, color = {'TextStyle'}, Range.formula(meter)
+
 		if meter == 1 then
 			table.insert(Styles, 'FirstDay')
 		elseif (meter % 7) == 1 then
@@ -287,7 +307,7 @@ function Draw() -- Sets all meter properties and calculates days
 	end
 	
 	for k, v in pairs{ -- Define skin variables
-		ThisWeek = math.ceil((Time.day + StartDay) / 7),
+		ThisWeek = Range.week(),
 		Week = rotate(Time.wday - 1),
 		Today = LZero(Time.day),
 		Month = MLabels[Month],
@@ -304,7 +324,7 @@ function Draw() -- Sets all meter properties and calculates days
 end -- Draw
 
 function Move(value) -- Move calendar through the months
-	if not value then
+	if Range.nomove or not value then
 		Month, Year = Time.month, Time.year
 	elseif math.ceil(value) ~= value then
 		ErrMsg(nil, 'Invalid Move Parameter %s', value)
@@ -384,7 +404,7 @@ function ErrMsg(...) -- Used to display errors
 end -- ErrMsg
 
 function CheckUpdate() -- Checks for an update to LuaCalendar
-	local lVersion = 4.0 -- Current LuaCalendar Version
+	local lVersion = 4.1 -- Current LuaCalendar Version
 	local sVersion = tonumber(SKIN:GetMeasure('UpdateVersion'):GetStringValue():match('<version>(.+)</version>') or 0)
 	if sVersion > lVersion then
 		ErrMsg(nil, 'Update Available: v%s', sVersion)
