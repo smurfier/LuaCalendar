@@ -15,7 +15,7 @@ function Initialize()
 	Time, mLength, StartDay, Month, Year, InMonth, Old = {}, 0, 0, 0, 0, true, {Day = 0, Month = 0, Year = 0}
 
 	local sRange = SELF:GetOption('Range', 'month'):lower():gsub(' ', '')
-	if not ('week|month'):find(sRange) then ErrMsg(nil, 'Invalid Range: %s', Set.Range) end
+	if not ('week|month'):find(sRange) then ErrMsg(nil, 'Invalid Range: %s', sRange) end
 	if sRange == 'week' then
 		Range = {
 			formula = function(input) return Time.day +((input - 1) - rotate(Time.wday - 1)) end,
