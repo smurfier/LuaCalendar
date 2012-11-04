@@ -21,19 +21,18 @@
 <p>One of the major features of the skin is the abiltiy to display events that are defined by the user. This was a long requested feature of the existing calendar skins. All of the easily configured settings and features are listed below.</p>
 
 <h1>Release Notes</h1>
-<table><tr><td style="width:210px;"><a href="https://github.com/downloads/smurfier/LuaCalendar/LuaCalendar_3.5.rmskin" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
+<table><tr><td style="width:210px;"><a href="https://github.com/downloads/smurfier/LuaCalendar/LuaCalendar_4.0.rmskin" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
 Download from GitHub.<br>
-Version 3.5<br>
-7/20/2012</a></td>
+Version 4.0<br>
+11/4/2012</a></td>
 <td><ul style="margin-top:0;padding-left:0;">
-	<li>Updated Event file formatting.</li>
-	<li>Added Custom Colors to Event files.</li>
-	<li>Added support for nested Set tags in Event files.</li>
-	<li>Added support for custom built in Events.</li>
-	<li>Added support for formulas in the Month parameter.</li>
-	<li>Fixed inline tags.</li>
-	<li>Added Version Checking</li>
+	<li class="change">Changed Event files to use a more robust system for repeating events.</li>
+	<li class="add">Added Inactive option for events.</li>
+	<li class="add">Added Custom Context Menu actions.</li>
+	<li class="add">Added WeekNumber variables.</li>
+	<li class="add">Added DefaultWeeks style.</a>
 </ul>
+<a href="#changes">See more changes</a>
 </td></tr></table>
 </div>
 <a name="settings"></a>
@@ -97,10 +96,10 @@ These Script settings are specific to the skin using the script.
 <li><code>EventFile=Holidays\Holidays.hol|Holidays\BDays.hol</code></li></ul>
 
 <p>There is no limit to the number of Events used. Event files must be formatted in the following XML style format, indents not required.</p>
-<pre>&lt;EventFile Title="Holidays">
-	&lt;Event Month="1" Day="10" Desc="Event Description"/>
+<pre>&lt;EventFile Title="Holidays" Repeat="Year">
+	&lt;Event Month="1" Day="10" Description="Event Description"/>
 	&lt;Set Month="2">
-		&lt;Event Day="12" Desc="Some Other Event"/>
+		&lt;Event Day="12" Description="Some Other Event"/>
 	&lt;/Set>
 &lt;!--This is a comment.-->
 &lt;/EventFile>
@@ -109,20 +108,40 @@ These Script settings are specific to the skin using the script.
 <ul><li><b>Title</b>*<br/>
 	The title of the event which is displayed after the events.</li>
 <li><b>Month</b><br/>
-	The month in which the event occurs. Using an asterisk (*) denotes a monthly event.</li>
+	The month in which the event occurs. This setting allows the use of formulas and <a href="#vars">Variables</a>.</li>
 <li><b>Day</b><br/>
 	The day on which the event occurs. This setting allows the use of formulas and <a href="#vars">Variables</a>.<br/>
-	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({FirstMon}+1)*(({Year}%2)=0)" Desc="Election Day"/></code></li>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({FirstMon}+1)*(({Year}%2)=0)" Repeat="Year" Description="Election Day"/></code></li>
 			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li>
 <li><b>Year</b>*<br/>
-	When the Year is included the anniversary of the event is calculated and displayed. Using a year in the future will display a number denoting the number of years until that event.<br/>
-	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Desc="Smurfier's BDay"/></code></li>
-			<li>Appears as: <code>Smurfier's BDay (26)</code></li></ul></li></li>
-<li><b>Desc</b><br/>
+	The Year the event occurs on.
+<li><b>Description</b><br/>
 	The description of the event.</li>
 <li><b>Color</b>*<br/>
-		The RGB or HEX color to be used for the specified event(s).<br/>
-		<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Color="255,0,0,255" Desc="Smurfier's BDay"/></code></li></ul></li>
+	The RGB or HEX color to be used for the specified event(s).<br/>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Color="FF0000FF" Repeat="Year" Description="Smurfier's BDay"/></code></li></ul></li>
+<li><b>Repeat</b>*<br/>
+	When used, this option allows an event to repeat using a specified pattern.
+	<ul><li><b>Month</b><br/>
+		The event repeats on the same day each month. If a multiplier is used a full date must be specified, else only a day is necessary.
+	</li>
+	<li><b>Year</b><br/>
+		The event repeats on a yearly basis. Month and day must be specified.
+	</li>
+	<li><b>Week</b><br/>
+		The event repeats on a weekly basis. A full date must be specified.
+	</li></ul></li>
+<li><b>Multiplier</b>*<br/>
+	The frequency an event repeats.
+</li>
+<li><b>Anniversary</b>*<br/>
+	When set to <code>true</code> the number of times the event has repeated will be shown.<br/>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Repeat="Year" Anniversary="true" Description="Smurfier's BDay"/></code></li>
+			<li>Appears as: <code>Smurfier's BDay (26)</code></li></ul></li></li>
+</li>
+<li><b>Inactive</b>*<br/>
+	When set to <code>true</code> the event is skipped when parsing the Event File.
+</li>
 </ul>
 <i style="font-size:0.8em;">*This field is optional.</i>
 </div>
@@ -144,10 +163,10 @@ These Script settings are specific to the skin using the script.
 <p>Variable Days are used to calculate holidays that occur on days like the Second Tuesday of the month. They are defined using the following keywords.</p>
 <p style="text-indent:0;">Starts with: <code>First, Second, Third, Fourth, Last</code></p>
 <p style="text-indent:0;">Ends with: <code>Sun, Mon, Tue, Wed, Thu, Fri, Sat</code></p>
-<p style="text-indent:0;"><b>Example</b>:<br><code>&lt;Event Month="11" Day="{FourthThu}">...&lt;/Event></code></p>
+<p style="text-indent:0;"><b>Example</b>:<br><code>&lt;Event Month="11" Day="{FourthThu}" .../></code></p>
 </div>
 <div style="clear:both"><b>Built-In Event Variables</b>
-<p>In order to support events that require complex calculations, LuaCalendar supports certain Built-In events. These events create both a <code>{EventNameMonth}</code> and an <code>{EventNameDay}</code> variable. The value of these variables is recalculated for each year so that they are kept up to date.</p>
+<p>In order to support events that require complex calculations, LuaCalendar supports certain Built-In events. These events create both a <code>{EventNameMonth}</code> and an <code>{EventNameDay}</code> variable. The value of these variables are recalculated for each year so that they are kept up to date.</p>
 <p>Currently the supported Built-In Events are Easter, GoodFriday, AshWednesday, and MardiGras.</p></div>
 </div>
 <a name="styles"></a>
@@ -210,16 +229,14 @@ These variable are created and updated by the script.
 		<ul><li>Set to 1 if week 6 is hidden.</li></ul></li>
 	<li>NextEvent
 		<ul><li>A list of upcomming events in the currently displayed month following the style defined in the NextFormat setting.</li></ul></li>
+	<li>WeekNumberN
+		<ul><li>WeekNumberN (where N is the numbers 1-6) is the week number (1-53) of the week.</li></ul></li>
 </ul></li>
 
 <li><b>Script Functions</b><br>
 These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command()"</code> to control the calendar.
-	<ul><li>Move(1)
-			<ul><li>Used to browse forward in the calendar.</li></ul></li>
-		<li>Move(-1)
-			<ul><li>Used to browse back in the calendar.</li></ul></li>
-		<li>Move(0)
-			<ul><li>Used to return to the current month.</li></ul></li>
+	<ul><li>Move(<i>number</i>)
+		<ul><li>Moves the calendar <i>number</i> of months. The <i>number</i> parameter must be a whole integer and can be either positive or negative.</li></ul></li>
 	</ul>
 </li>
 
@@ -231,6 +248,19 @@ These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command(
 <li class="change">Change</li>
 <li class="fix">Fix</li>
 <li class="remove">Remove</li></ul>
+
+<b>4.0</b> (11/4/2012)
+	<ul><li class="change">Changed Event files to use a more robust system for repeating events.</li>
+	<li class="fix">Fixed HideLastWeek.</li>
+	<li class="change">Moved Calendar files to Calendars folder.</li>
+	<li class="change">Moved Event list to bottom of the calendar on DefaultEvents style.</li>
+	<li class="add">Added Inactive option for events.</li>
+	<li class="change">Move function now accepts any whole integer.</li>
+	<li class="add">Added Custom Context Menu actions.</li>
+	<li class="fix">Fixed Custom Event Colors with nested tags.</li>
+	<li class="add">Added WeekNumber variables.</li>
+	<li class="add">Added DefaultWeeks style.</a>
+	</ul>
 
 <b>3.5</b> (7/20/2012)
 	<ul><li class="change">Updated Event file formatting.</li>
