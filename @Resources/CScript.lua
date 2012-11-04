@@ -1,4 +1,4 @@
--- LuaCalendar v3.6 by Smurfier (smurfier20@gmail.com)
+-- LuaCalendar v4.0 by Smurfier (smurfier20@gmail.com)
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
@@ -384,7 +384,7 @@ function ErrMsg(...) -- Used to display errors
 end -- ErrMsg
 
 function CheckUpdate() -- Checks for an update to LuaCalendar
-	local lVersion = 3.6 -- Current LuaCalendar Version
+	local lVersion = 4.0 -- Current LuaCalendar Version
 	local sVersion = tonumber(SKIN:GetMeasure('UpdateVersion'):GetStringValue():match('<version>(.+)</version>') or 0)
 	if sVersion > lVersion then
 		ErrMsg(nil, 'Update Available: v%s', sVersion)
