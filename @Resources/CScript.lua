@@ -56,7 +56,10 @@ function Update()
 	
 	if Month ~= Old.Month or Year ~= Old.Year then -- Recalculate and Redraw if Month and/or Year changes
 		Old = {Month=Month, Year=Year, Day=Time.day}
-		StartDay, mLength = rotate(tonumber(os.date('%w', os.time{year = Year, month = Month, day = 1}))), MonthLength(Month, Year)
+		StartDay = rotate(tonumber(os.date('%w', os.time{year = Year, month = Month, day = 1})))
+		local tstart = os.time{day = 1, month = Month, year = Year, isdst = false,}
+		local nstart = os.time{day = 1, month = (Month % 12 + 1), year = (Year + (Month == 12 and 1 or 0)), isdst = false,}
+		mLength, pLength = (nstart - tstart) / 86400, tonumber(os.date('%d', tstart - 86400))
 		Events()
 		Draw()
 	elseif Time.day ~= Old.Day then -- Redraw if Today changes
@@ -256,8 +259,6 @@ function Draw() -- Sets all meter properties and calculates days
 		end
 		SKIN:Bang('!SetOption', Set.DPref .. wday, 'MeterStyle', table.concat(Styles, '|'))
 	end
-	
-	local pLength = MonthLength(Month == 1 and 12 or (Month - 1), Year + (Month == 1 and -1 or 0)) -- Length of previous month.
 
 	for meter = 1, Range.days do -- Calculate and set day meters
 		local Styles, day, event, color = {'TextStyle'}, Range.formula(meter)
@@ -337,13 +338,6 @@ function Move(value) -- Move calendar through the months
 	InMonth = Month == Time.month and Year == Time.year
 	SKIN:Bang('!SetVariable', 'NotCurrentMonth', InMonth and 0 or 1)
 end -- Move
-
-function MonthLength(month, year) -- Calculates the length of a given month
-	local tstart = os.time{day = 1, month = month, year = year, isdst = false,}
-	local nstart = os.time{day = 1, month = (month % 12 + 1), year = (year + (month == 12 and 1 or 0)), isdst = false,}
-	
-	return (nstart - tstart) / 86400
-end -- MonthLength
 
 function Easter() -- Returns a timestamp representing easter of the current year
 	local a, b, c, h, L, m = (Year % 19), math.floor(Year / 100), (Year % 100), 0, 0, 0
