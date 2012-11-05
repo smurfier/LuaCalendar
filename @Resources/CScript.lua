@@ -56,10 +56,9 @@ function Update()
 	
 	if Month ~= Old.Month or Year ~= Old.Year then -- Recalculate and Redraw if Month and/or Year changes
 		Old = {Month=Month, Year=Year, Day=Time.day}
-		StartDay = rotate(tonumber(os.date('%w', os.time{year = Year, month = Month, day = 1})))
 		local tstart = os.time{day = 1, month = Month, year = Year, isdst = false,}
 		local nstart = os.time{day = 1, month = (Month % 12 + 1), year = (Year + (Month == 12 and 1 or 0)), isdst = false,}
-		mLength, pLength = (nstart - tstart) / 86400, tonumber(os.date('%d', tstart - 86400))
+		mLength, pLength, StartDay = (nstart - tstart) / 86400, tonumber(os.date('%d', tstart - 86400)), rotate(tonumber(os.date('%w', tstart)))
 		Events()
 		Draw()
 	elseif Time.day ~= Old.Day then -- Redraw if Today changes
@@ -124,16 +123,6 @@ function LoadEvents()
 		return tbl
 	end
 
-	local compress = function(input)
-		local tbl = {}
-			
-		for _, column in ipairs(input) do
-			for key, value in pairs(column) do tbl[key] = value end
-		end
-
-		return tbl
-	end
-
 	for FileName in SELF:GetOption('EventFile'):gmatch('[^|]+') do
 		local File, fName = io.open(SKIN:MakePathAbsolute(FileName), 'r'), FileName:match('[^/\\]+$')
 		if not File then
@@ -153,7 +142,10 @@ function LoadEvents()
 					elseif ntag == '/set' then
 						table.remove(eSet)
 					elseif ntag == 'event' then
-						local Tmp, dSet, tbl = Keys(line, fName), compress(eSet), {}
+						local Tmp, dSet, tbl = Keys(line, fName), {}, {}
+						for _, column in ipairs(eSet) do
+							for key, value in pairs(column) do dSet[key] = value end
+						end
 						for k, v in pairs(default) do tbl[k] = Tmp[k] or dSet[k] or eFile[k] or v.value end
 						if not tbl.inacti then table.insert(hFile, tbl) end
 					else
