@@ -62,7 +62,11 @@ function Update()
 		Time.old = {month=Time.show.month, year=Time.show.year, day=Time.curr.day}
 		local tstart = os.time{day = 1, month = Time.show.month, year = Time.show.year, isdst = false,}
 		local nstart = os.time{day = 1, month = (Time.show.month % 12 + 1), year = (Time.show.year + (Time.show.month == 12 and 1 or 0)), isdst = false,}
-		Time.stats = {clength = ((nstart - tstart) / 86400), plength = (tonumber(os.date('%d', tstart - 86400))), startday = rotate(tonumber(os.date('%w', tstart))),}
+		Time.stats = {
+			clength = ((nstart - tstart) / 86400),
+			plength = (tonumber(os.date('%d', tstart - 86400))),
+			startday = rotate(tonumber(os.date('%w', tstart))),
+		}
 		Events()
 		Draw()
 	elseif Time.curr.day ~= Time.old.day then -- Redraw if Today changes
@@ -129,6 +133,7 @@ function LoadEvents()
 
 	for FileName in SELF:GetOption('EventFile'):gmatch('[^|]+') do
 		local File, fName = io.open(SKIN:MakePathAbsolute(FileName), 'r'), FileName:match('[^/\\]+$')
+		
 		if not File then
 			ErrMsg(nil, 'File Read Error: %s', fName)
 		else
@@ -179,7 +184,7 @@ function Events() -- Parse Events table.
 	end})
 
 	local AddEvn = function(day, desc, color, ann)
-		desc = desc:format(ann and ' (' .. ann .. ') ' or '')
+		desc = desc:format(ann and (' (%s)'):format(ann) or '')
 		if Hol[day] then
 			table.insert(Hol[day].text, desc)
 			table.insert(Hol[day].color, color)
@@ -217,7 +222,7 @@ function Events() -- Parse Events table.
 			elseif nrepeat == 'year' then
 				local test = (event.year and event.multip > 1) and ((Time.show.year - event.year) % event.multip) or 0
 
-				if eMonth == Month and test == 0 then
+				if eMonth == Time.show.month and test == 0 then
 					AddEvn(day, desc, event.color, event.annive and (Time.show.year - event.year / event.multip) or false)
 				end
 			elseif nrepeat == 'month' then
