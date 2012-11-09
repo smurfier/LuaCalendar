@@ -47,7 +47,16 @@ function Initialize()
 	else
 		for label in SELF:GetOption('MonthLabels'):gmatch('[^|]+') do table.insert(MLabels, label) end
 	end
-	LoadEvents()
+	local fTemp = {}
+	for word in SELF:GetOption('EventFile'):gmatch('[^|]+') do table.insert(fTemp, word) end
+	if SELF:GetNumberOption('SingleFolder', 0) > 0 and #fTemp > 1 then
+		local folder = table.remove(fTemp, 1)
+		if not folder:match('[/\\]$') then folder = folder .. '\\' end
+		for k, v in ipairs(fTemp) do
+			fTemp[k] = folder .. v
+		end
+	end
+	LoadEvents(fTemp)
 end -- Initialize
 
 function Update()
@@ -77,7 +86,7 @@ function Update()
 	return rMessage or 'Success!'
 end -- Update
 
-function LoadEvents()
+function LoadEvents(FileTable)
 	hFile = {}
 	local default = {
 		month = {value = '', ktype = 'string'},
@@ -131,7 +140,7 @@ function LoadEvents()
 		return tbl
 	end
 
-	for FileName in SELF:GetOption('EventFile'):gmatch('[^|]+') do
+	for _, FileName in ipairs(FileTable) do
 		local File, fName = io.open(SKIN:MakePathAbsolute(FileName), 'r'), FileName:match('[^/\\]+$')
 		
 		if not File then

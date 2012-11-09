@@ -18,6 +18,10 @@ Style=Default
 ;Note: For Holiday file names, multiple sources can be used by uisng the pipe delimiter (|).
 EventFile=#@#Calendars\Holidays.xml
 
+;Single Folder Mode
+;When set to 1, the first parameter in EventFile is the folder all subsiquent files located are in.
+;SingleFolder=1
+
 ;Custom Text formatting for Month Labels. See Readme for details.
 ;LabelText=
 
