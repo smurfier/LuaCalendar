@@ -1,3 +1,5 @@
+; Please visit http://smurfier.github.com/LuaCalendar for detailed descriptions of the features listed below.
+
 [Variables]
 ;Name of the Style Sheet
 Style=Default
@@ -19,7 +21,7 @@ Style=Default
 EventFile=#@#Calendars\Holidays.xml
 
 ;Single Folder Mode
-;When set to 1, the first parameter in EventFile is the folder all subsiquent files located are in.
+;When set to 1, the first parameter in EventFile is the folder all subsiquent files are located are in.
 ;SingleFolder=1
 
 ;Custom Text formatting for Month Labels. See Readme for details.
