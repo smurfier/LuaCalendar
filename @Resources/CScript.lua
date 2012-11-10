@@ -2,20 +2,46 @@
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
-	Set={ -- Retrieve Measure Settings
-		DPref = SELF:GetOption('DayPrefix', 'l'),
+	Set = { -- Retrieve Measure Settings
+		Name = 'LuaCalendar',
+		Color = 'FontColor',
 		HLWeek = SELF:GetNumberOption('HideLastWeek', 0) > 0,
 		LZer = SELF:GetNumberOption('LeadingZeroes', 0) > 0,
-		MPref = SELF:GetOption('MeterPrefix', 'mDay'),
 		SMon = SELF:GetNumberOption('StartOnMonday', 0) > 0,
 		LText = SELF:GetOption('LabelText', '{MName}, {Year}'),
 		NFormat = SELF:GetOption('NextFormat', '{day}: {desc}'):lower(),
 	}
+
+	Meters = {
+		Labels = {
+			Name = SELF:GetOption('DayPrefix', 'l%d'),
+			Styles = {
+				Normal = 'LblTxtSty',
+				First = 'LblTxtStart',
+				Current = 'LblCurrSty',
+			},
+		},
+		Days = {
+			Name = SELF:GetOption('MeterPrefix', 'mDay%d'),
+			Styles = {
+				Normal = 'TextStyle',
+				FirstDay = 'FirstDay',
+				NewWeek = 'NewWk',
+				Current = 'CurrentDay',
+				LastWk = 'LastWeek',
+				PrevMnth = 'PreviousMonth',
+				NxtMnth = 'NextMonth',
+				Wknd = 'WeekendStyle',
+				Holiday = 'HolidayStyle',
+			},
+		},
+	}
+
 	Time = {
 		curr = {},
 		old = {day = 0, month = 0, year = 0,},
 		show = {month = 0, year = 0,},
-		stats = {clength = 0, plength = 0, startday= 0, inmonth = true,}
+		stats = {clength = 0, plength = 0, startday = 0, inmonth = true,},
 	}
 
 	local sRange = SELF:GetOption('Range', 'month'):lower():gsub(' ', '')
@@ -37,8 +63,7 @@ function Initialize()
 	-- Weekday labels text
 	local Labels = {}
 	for label in SELF:GetOption('DayLabels', 'S|M|T|W|T|F|S'):gmatch('[^|]+') do table.insert(Labels, label) end
-	if #Labels < 7 then Labels = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid DayLabels string') end
-	for a = 1, 7 do SKIN:Bang('!SetOption', Set.DPref .. a, 'Text', Labels[Set.SMon and (a % 7 + 1) or a]) end
+	SetLabels(Labels)
 	-- Localization
 	MLabels = setmetatable({}, { __index = function(_, key) return key end})
 	if SELF:GetNumberOption('UseLocalMonths', 0) > 0 then
@@ -47,14 +72,13 @@ function Initialize()
 	else
 		for label in SELF:GetOption('MonthLabels'):gmatch('[^|]+') do table.insert(MLabels, label) end
 	end
+	--Events File
 	local fTemp = {}
 	for word in SELF:GetOption('EventFile'):gmatch('[^|]+') do table.insert(fTemp, word) end
 	if SELF:GetNumberOption('SingleFolder', 0) > 0 and #fTemp > 1 then
 		local folder = table.remove(fTemp, 1)
 		if not folder:match('[/\\]$') then folder = folder .. '\\' end
-		for k, v in ipairs(fTemp) do
-			fTemp[k] = folder .. v
-		end
+		for k, v in ipairs(fTemp) do fTemp[k] = SKIN:MakePathAbsolute(folder .. v) end
 	end
 	LoadEvents(fTemp)
 end -- Initialize
@@ -85,6 +109,11 @@ function Update()
 	
 	return rMessage or 'Success!'
 end -- Update
+
+function SetLabels(tbl)
+	if #tbl < 7 then tbl = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid DayLabels string') end
+	for a = 1, 7 do SKIN:Bang('!SetOption', Meters.Labels.Name:format(a), 'Text', tbl[Set.SMon and (a % 7 + 1) or a]) end
+end
 
 function LoadEvents(FileTable)
 	hFile = {}
@@ -141,7 +170,7 @@ function LoadEvents(FileTable)
 	end
 
 	for _, FileName in ipairs(FileTable) do
-		local File, fName = io.open(SKIN:MakePathAbsolute(FileName), 'r'), FileName:match('[^/\\]+$')
+		local File, fName = io.open(FileName, 'r'), FileName:match('[^/\\]+$')
 		
 		if not File then
 			ErrMsg(nil, 'File Read Error: %s', fName)
@@ -260,28 +289,28 @@ function Draw() -- Sets all meter properties and calculates days
 	local LastWeek = Set.HLWeek and math.ceil((Time.stats.startday + Time.stats.clength) / 7) < 6
 	
 	for wday = 1, 7 do -- Set Weekday Labels styles
-		local Styles = {'LblTxtSty'}
+		local Styles = {Meters.Labels.Styles.Normal}
 		if wday == 1 then
-			table.insert(Styles, 'LblTxtStart')
+			table.insert(Styles, Meters.Labels.Styles.First)
 		end
 		if rotate(Time.curr.wday - 1) == (wday - 1) and Time.stats.inmonth then
-			table.insert(Styles, 'LblCurrSty')
+			table.insert(Styles, Meters.Labels.Styles.Current)
 		end
-		SKIN:Bang('!SetOption', Set.DPref .. wday, 'MeterStyle', table.concat(Styles, '|'))
+		SKIN:Bang('!SetOption', Meters.Labels.Name:format(wday), 'MeterStyle', table.concat(Styles, '|'))
 	end
 
 	for meter = 1, Range.days do -- Calculate and set day meters
-		local Styles, day, event, color = {'TextStyle'}, Range.formula(meter)
+		local Styles, day, event, color = {Meters.Days.Styles.Normal}, Range.formula(meter)
 
 		if meter == 1 then
-			table.insert(Styles, 'FirstDay')
+			table.insert(Styles, Meters.Days.Styles.FirstDay)
 		elseif (meter % 7) == 1 then
-			table.insert(Styles, 'NewWk')
+			table.insert(Styles, Meters.Days.Styles.NewWeek)
 		end
 		-- Holiday ToolTip and Style
 		if day > 0 and day <= Time.stats.clength and Hol[day] then
 			event = table.concat(Hol[day].text, '\n')
-			table.insert(Styles, 'HolidayStyle')
+			table.insert(Styles, Meters.Days.Styles.Holiday)
 
 			for _, value in ipairs(Hol[day].color) do
 				if value then
@@ -296,25 +325,25 @@ function Draw() -- Sets all meter properties and calculates days
 		end
 		
 		if (Time.curr.day + Time.stats.startday) == meter and Time.stats.inmonth then
-			table.insert(Styles, 'CurrentDay')
+			table.insert(Styles, Meters.Days.Styles.Current)
 		elseif meter > 35 and LastWeek then
-			table.insert(Styles, 'LastWeek')
+			table.insert(Styles, Meters.Days.Styles.LastWk)
 		elseif day < 1 then
 			day = day + Time.stats.plength
-			table.insert(Styles, 'PreviousMonth')
+			table.insert(Styles, Meters.Days.Styles.PrevMnth)
 		elseif day > Time.stats.clength then
 			day = day - Time.stats.clength
-			table.insert(Styles, 'NextMonth')
+			table.insert(Styles, Meters.Days.Styles.NxtMnth)
 		elseif (meter % 7) == 0 or (meter % 7) == (Set.SMon and 6 or 1) then
-			table.insert(Styles, 'WeekendStyle')
+			table.insert(Styles, Meters.Days.Styles.Wknd)
 		end
 		
-		for k,v in pairs{ -- Define meter properties
+		for k, v in pairs{ -- Define meter properties
 			Text = LZero(day),
 			MeterStyle = table.concat(Styles, '|'),
 			ToolTipText = event or '',
-			FontColor = color or '',
-		} do SKIN:Bang('!SetOption', Set.MPref .. meter, k, v) end
+			[Set.Color] = color or '',
+		} do SKIN:Bang('!SetOption', Meters.Days.Name:format(meter), k, v) end
 	end
 	
 	for k, v in pairs{ -- Define skin variables
@@ -328,7 +357,7 @@ function Draw() -- Sets all meter properties and calculates days
 		NextEvent = Hol(),
 	} do SKIN:Bang('!SetVariable', k, v) end
 	-- Week Numbers for the current month
-	local FirstWeek = os.time{day = 6 - Time.stats.startday, month = Time.show.month, year = Time.show.year}
+	local FirstWeek = os.time{day = (6 - Time.stats.startday), month = Time.show.month, year = Time.show.year}
 	for i = 0, 5 do
 		SKIN:Bang('!SetVariable', 'WeekNumber' .. (i + 1), math.ceil(tonumber(os.date('%j', (FirstWeek + (i * 604800)))) / 7))
 	end
@@ -403,7 +432,7 @@ end -- LZero
 function ErrMsg(...) -- Used to display errors
 	local value = table.remove(arg, 1)
 	rMessage = string.format(unpack(arg))
-	print('LuaCalendar: ' .. rMessage)
+	print(Set.Name .. ': ' .. rMessage)
 	return value
 end -- ErrMsg
 
