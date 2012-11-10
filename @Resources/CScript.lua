@@ -14,7 +14,7 @@ function Initialize()
 
 	Meters = {
 		Labels = {
-			Name = SELF:GetOption('DayPrefix', 'l%d'),
+			Name = 'l%d',
 			Styles = {
 				Normal = 'LblTxtSty',
 				First = 'LblTxtStart',
@@ -22,7 +22,7 @@ function Initialize()
 			},
 		},
 		Days = {
-			Name = SELF:GetOption('MeterPrefix', 'mDay%d'),
+			Name = 'mDay%d',
 			Styles = {
 				Normal = 'TextStyle',
 				FirstDay = 'FirstDay',
