@@ -5,6 +5,7 @@ function Initialize()
 	Set = { -- Retrieve Measure Settings
 		Name = 'LuaCalendar',
 		Color = 'FontColor',
+		Range = 'month',
 		HLWeek = SELF:GetNumberOption('HideLastWeek', 0) > 0,
 		LZer = SELF:GetNumberOption('LeadingZeroes', 0) > 0,
 		SMon = SELF:GetNumberOption('StartOnMonday', 0) > 0,
@@ -37,44 +38,12 @@ function Initialize()
 		},
 	}
 
-	Time = {
-		curr = {},
-		old = {day = 0, month = 0, year = 0,},
-		show = {month = 0, year = 0,},
-		stats = {clength = 0, plength = 0, startday = 0, inmonth = true,},
-	}
-
-	local sRange = SELF:GetOption('Range', 'month'):lower():gsub(' ', '')
-	if not ('week|month'):find(sRange) then ErrMsg(nil, 'Invalid Range: %s', sRange) end
-	if sRange == 'week' then
-		Range = {
-			formula = function(input) return Time.curr.day +((input - 1) - rotate(Time.curr.wday - 1)) end,
-			days = 7,
-			week = function() return 1 end,
-			nomove = true,
-		}
-	else
-		Range = {
-			formula = function(input) return input - Time.stats.startday end,
-			days = 42,
-			week = function() return math.ceil((Time.curr.day + Time.stats.startday) / 7) end,
-		}
-	end
 	-- Weekday labels text
-	local Labels = {}
-	for label in SELF:GetOption('DayLabels', 'S|M|T|W|T|F|S'):gmatch('[^|]+') do table.insert(Labels, label) end
-	SetLabels(Labels)
+	SetLabels(Delim(SELF:GetOption('DayLabels', 'S|M|T|W|T|F|S')))
 	-- Localization
-	MLabels = setmetatable({}, { __index = function(_, key) return key end})
-	if SELF:GetNumberOption('UseLocalMonths', 0) > 0 then
-		os.setlocale('', 'time')
-		for a = 1, 12 do MLabels[a] = os.date('%B', os.time{year = 2000, month = a, day = 1}) end
-	else
-		for label in SELF:GetOption('MonthLabels'):gmatch('[^|]+') do table.insert(MLabels, label) end
-	end
+	MonthNames(Delim(SELF:GetOption('MonthLabels')), SELF:GetNumberOption('UseLocalMonths', 0) > 0)
 	--Events File
-	local fTemp = {}
-	for word in SELF:GetOption('EventFile'):gmatch('[^|]+') do table.insert(fTemp, word) end
+	local fTemp = Delim(SELF:GetOption('EventFile'))
 	if SELF:GetNumberOption('SingleFolder', 0) > 0 and #fTemp > 1 then
 		local folder = table.remove(fTemp, 1)
 		if not folder:match('[/\\]$') then folder = folder .. '\\' end
@@ -84,22 +53,13 @@ function Initialize()
 end -- Initialize
 
 function Update()
-	Time.curr = os.date('*t')
-	
 	-- If in the current month or if browsing and Month changes to that month, set to Real Time
 	if (Time.stats.inmonth and Time.show.month ~= Time.curr.month) or ((not Time.stats.inmonth) and Time.show.month == Time.curr.month and Time.show.year == Time.curr.year) then
 		Move()
 	end
 	
 	if Time.show.month ~= Time.old.month or Time.show.year ~= Time.old.year then -- Recalculate and Redraw if Month and/or Year changes
-		Time.old = {month=Time.show.month, year=Time.show.year, day=Time.curr.day}
-		local tstart = os.time{day = 1, month = Time.show.month, year = Time.show.year, isdst = false,}
-		local nstart = os.time{day = 1, month = (Time.show.month % 12 + 1), year = (Time.show.year + (Time.show.month == 12 and 1 or 0)), isdst = false,}
-		Time.stats = {
-			clength = ((nstart - tstart) / 86400),
-			plength = (tonumber(os.date('%d', tstart - 86400))),
-			startday = rotate(tonumber(os.date('%w', tstart))),
-		}
+		Time.old = {month = Time.show.month, year = Time.show.year, day = Time.curr.day}
 		Events()
 		Draw()
 	elseif Time.curr.day ~= Time.old.day then -- Redraw if Today changes
@@ -107,13 +67,58 @@ function Update()
 		Draw()
 	end
 	
-	return rMessage or 'Success!'
+	return ReturnError()
 end -- Update
 
-function SetLabels(tbl)
+Time = { -- Used to store and call date functions and statistics
+	curr = setmetatable({}, {__index = function(_, index) return os.date('*t')[index] end,}),
+	old = {day = 0, month = 0, year = 0,},
+	show = {month = 0, year = 0,},
+	stats = setmetatable({inmonth = true,}, {__index = function(_, index)
+		local tstart = os.time{day = 1, month = Time.show.month, year = Time.show.year, isdst = false,}
+		local nstart = os.time{day = 1, month = (Time.show.month % 12 + 1), year = (Time.show.year + (Time.show.month == 12 and 1 or 0)), isdst = false,}
+		
+		return ({
+			clength = ((nstart - tstart) / 86400),
+			plength = (tonumber(os.date('%d', tstart - 86400))),
+			startday = rotate(tonumber(os.date('%w', tstart))),
+		})[index]
+	end,}),
+} -- Time
+
+Range = setmetatable({ -- Mekes allowance for either Month or Week ranges
+	month = {
+		formula = function(input) return input - Time.stats.startday end,
+		days = 42,
+		week = function() return math.ceil((Time.curr.day + Time.stats.startday) / 7) end,
+	},
+	week = {
+		formula = function(input) return Time.curr.day +((input - 1) - rotate(Time.curr.wday - 1)) end,
+		days = 7,
+		week = function() return 1 end,
+		nomove = true,
+	},
+	}, { __index = function(tbl, index) return ErrMsg(tbl.month, 'Invalid Range: %s', index) end,
+}) -- Range
+
+function Delim(input, sep) -- Separates an input string by a delimiter
+	local tbl = {}
+	for word in input:gmatch('[^' .. (sep or '|') ..']+') do table.insert(tbl, word) end
+	return tbl
+end -- SetLabels
+
+function MonthNames(names, locale) -- Populates MLabels with the provided month names and provides localization option
+	MLabels = setmetatable(names or {}, { __index = function(_, key) return key end})
+	if locale then
+		os.setlocale('', 'time')
+		for a = 1, 12 do MLabels[a] = os.date('%B', os.time{year = 2000, month = a, day = 1}) end
+	end
+end -- MonthNames
+
+function SetLabels(tbl) -- Sets weekday labels
 	if #tbl < 7 then tbl = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid DayLabels string') end
 	for a = 1, 7 do SKIN:Bang('!SetOption', Meters.Labels.Name:format(a), 'Text', tbl[Set.SMon and (a % 7 + 1) or a]) end
-end
+end -- SetLabels
 
 function LoadEvents(FileTable)
 	hFile = {}
@@ -233,7 +238,7 @@ function Events() -- Parse Events table.
 	
 	local formula = function(input, source) return SKIN:ParseFormula(('(%s)'):format(Vars(input, source))) end
 
-	for _, event in ipairs(hFile) do
+	for _, event in ipairs(hFile or {}) do
 		local eMonth = formula(event.month, event.descri)
 		if  eMonth == Time.show.month or event['repeat'] then
 			local day = formula(event.day, event.descri) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
@@ -299,8 +304,8 @@ function Draw() -- Sets all meter properties and calculates days
 		SKIN:Bang('!SetOption', Meters.Labels.Name:format(wday), 'MeterStyle', table.concat(Styles, '|'))
 	end
 
-	for meter = 1, Range.days do -- Calculate and set day meters
-		local Styles, day, event, color = {Meters.Days.Styles.Normal}, Range.formula(meter)
+	for meter = 1, Range[Set.Range].days do -- Calculate and set day meters
+		local Styles, day, event, color = {Meters.Days.Styles.Normal}, Range[Set.Range].formula(meter)
 
 		if meter == 1 then
 			table.insert(Styles, Meters.Days.Styles.FirstDay)
@@ -308,17 +313,19 @@ function Draw() -- Sets all meter properties and calculates days
 			table.insert(Styles, Meters.Days.Styles.NewWeek)
 		end
 		-- Holiday ToolTip and Style
-		if day > 0 and day <= Time.stats.clength and Hol[day] then
-			event = table.concat(Hol[day].text, '\n')
-			table.insert(Styles, Meters.Days.Styles.Holiday)
+		if Hol then
+			if day > 0 and day <= Time.stats.clength and Hol[day] then
+				event = table.concat(Hol[day].text, '\n')
+				table.insert(Styles, Meters.Days.Styles.Holiday)
 
-			for _, value in ipairs(Hol[day].color) do
-				if value then
-					if not color then
-						color = value
-					elseif color ~= value then
-						color = ''
-						break
+				for _, value in ipairs(Hol[day].color) do
+					if value then
+						if not color then
+							color = value
+						elseif color ~= value then
+							color = ''
+							break
+						end
 					end
 				end
 			end
@@ -347,14 +354,14 @@ function Draw() -- Sets all meter properties and calculates days
 	end
 	
 	for k, v in pairs{ -- Define skin variables
-		ThisWeek = Range.week(),
+		ThisWeek = Range[Set.Range].week(),
 		Week = rotate(Time.curr.wday - 1),
 		Today = LZero(Time.curr.day),
 		Month = MLabels[Time.show.month],
 		Year = Time.show.year,
 		MonthLabel = Vars(Set.LText, 'MonthLabel'),
 		LastWkHidden = LastWeek and 1 or 0,
-		NextEvent = Hol(),
+		NextEvent = Hol and Hol() or '',
 	} do SKIN:Bang('!SetVariable', k, v) end
 	-- Week Numbers for the current month
 	local FirstWeek = os.time{day = (6 - Time.stats.startday), month = Time.show.month, year = Time.show.year}
@@ -364,7 +371,7 @@ function Draw() -- Sets all meter properties and calculates days
 end -- Draw
 
 function Move(value) -- Move calendar through the months
-	if Range.nomove or not value then
+	if Range[Set.Range].nomove or not value then
 		Time.show = Time.curr
 	elseif math.ceil(value) ~= value then
 		ErrMsg(nil, 'Invalid Move Parameter %s', value)
@@ -431,10 +438,32 @@ end -- LZero
 
 function ErrMsg(...) -- Used to display errors
 	local value = table.remove(arg, 1)
-	rMessage = string.format(unpack(arg))
-	print(Set.Name .. ': ' .. rMessage)
+	local msg = string.format(unpack(arg))
+	if not rMessage then
+		rMessage = {msg}
+	else
+		table.insert(rMessage, msg)
+	end
 	return value
 end -- ErrMsg
+
+function ReturnError()
+	if rMessage then
+		local temp = {}
+		for k, v in ipairs(rMessage) do
+			local count = 0
+			for k2, v2 in ipairs(temp) do
+				if v == v2 then count = count +1 end
+			end
+			if count == 0 then table.insert(temp, v) end
+		end
+		for k, v in ipairs(temp) do print(Set.Name .. ': ' .. v) end
+		Error, rMessage = rMessage[#rMessage], nil
+		return Error
+	else
+		return Error or 'Success!'
+	end
+end
 
 function CheckUpdate() -- Checks for an update to LuaCalendar
 	local lVersion = 4.1 -- Current LuaCalendar Version
@@ -442,7 +471,7 @@ function CheckUpdate() -- Checks for an update to LuaCalendar
 	if sVersion > lVersion then
 		ErrMsg(nil, 'Update Available: v%s', sVersion)
 	elseif lVersion > sVersion then
-		rMessage = 'Thanks for testing the Beta version!'
+		ErrMsg(nil, 'Thanks for testing the Beta version!')
 	end
 	SKIN:Bang('!DisableMeasure', 'UpdateVersion')
 end -- CheckUpdate
