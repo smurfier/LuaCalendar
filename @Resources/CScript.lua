@@ -11,6 +11,8 @@ function Initialize()
 		SMon = SELF:GetNumberOption('StartOnMonday', 0) > 0,
 		LText = SELF:GetOption('LabelText', '{MName}, {Year}'),
 		NFormat = SELF:GetOption('NextFormat', '{day}: {desc}'):lower(),
+		Locale = SELF:GetNumberOption('UseLocalMonths', 0) > 0,
+		MonthNames = Delim(SELF:GetOption('MonthLabels')),
 	}
 
 	Meters = {
@@ -40,8 +42,6 @@ function Initialize()
 
 	-- Weekday labels text
 	SetLabels(Delim(SELF:GetOption('DayLabels', 'S|M|T|W|T|F|S')))
-	-- Localization
-	MonthNames(Delim(SELF:GetOption('MonthLabels')), SELF:GetNumberOption('UseLocalMonths', 0) > 0)
 	--Events File
 	local fTemp = Delim(SELF:GetOption('EventFile'))
 	if SELF:GetNumberOption('SingleFolder', 0) > 0 and #fTemp > 1 then
@@ -86,7 +86,7 @@ Time = { -- Used to store and call date functions and statistics
 	end,}),
 } -- Time
 
-Range = setmetatable({ -- Mekes allowance for either Month or Week ranges
+Range = setmetatable({ -- Makes allowance for either Month or Week ranges
 	month = {
 		formula = function(input) return input - Time.stats.startday end,
 		days = 42,
@@ -101,19 +101,22 @@ Range = setmetatable({ -- Mekes allowance for either Month or Week ranges
 	}, { __index = function(tbl, index) return ErrMsg(tbl.month, 'Invalid Range: %s', index) end,
 }) -- Range
 
+function MLabels(input) -- Makes allowance for Month Names
+	if Set.Locale then
+		os.setlocale('', 'time')
+		return os.date('%B', os.time{year = 2000, month = input, day = 1})
+	elseif type(Set.MonthNames) == 'table' then
+		return Set.MonthNames[input] or ErrMsg(input, 'Not enough indices in MonthNames')
+	else
+		return input
+	end
+end -- MLabels
+
 function Delim(input, sep) -- Separates an input string by a delimiter
 	local tbl = {}
 	for word in input:gmatch('[^' .. (sep or '|') ..']+') do table.insert(tbl, word) end
 	return tbl
 end -- SetLabels
-
-function MonthNames(names, locale) -- Populates MLabels with the provided month names and provides localization option
-	MLabels = setmetatable(names or {}, { __index = function(_, key) return key end})
-	if locale then
-		os.setlocale('', 'time')
-		for a = 1, 12 do MLabels[a] = os.date('%B', os.time{year = 2000, month = a, day = 1}) end
-	end
-end -- MonthNames
 
 function SetLabels(tbl) -- Sets weekday labels
 	if #tbl < 7 then tbl = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid DayLabels string') end
@@ -237,6 +240,7 @@ function Events() -- Parse Events table.
 	end
 	
 	local formula = function(input, source) return SKIN:ParseFormula(('(%s)'):format(Vars(input, source))) end
+	local tstamp = function(d, m, y) return os.time{day = d, month = m, year= y, isdst = false} end
 
 	for _, event in ipairs(hFile or {}) do
 		local eMonth = formula(event.month, event.descri)
@@ -248,9 +252,9 @@ function Events() -- Parse Events table.
 
 			if nrepeat == 'week' then
 				if eMonth and event.year and day then
-					local stamp = os.time{month = eMonth, day = day, year = event.year,}
-					local test = os.time{month = Time.show.month, day = day, year = Time.show.year,} >= stamp
-					local mstart = os.time{month = Time.show.month, day = 1, year = Time.show.year,}
+					local stamp = tstamp(day, eMonth, event.year)
+					local test = tstamp(day, Time.show.month, Time.show.year) >= stamp
+					local mstart = tstamp(1, Time.show.month, Time.show.year)
 					local multi = event.multip * 604800
 					local first = mstart + ((stamp - mstart) % multi)
 
@@ -273,8 +277,7 @@ function Events() -- Parse Events table.
 					if Year >= event.year then
 						local ydiff = Time.show.year - event.year - 1
 						local mdiff = ydiff == -1 and (Time.show.month - eMonth) or ((12 - eMonth) + Time.show.month + (ydiff * 12))
-						local estamp = os.time{year = event.year, month = eMonth, day = 1,}
-						local mstart = os.time{year = Time.show.year, month = Time.show.month, day = 1,}
+						local estamp, mstart = tstamp(1, eMonth, event.year), tstamp(1, Time.show.month, Time.show.year)
 
 						if (mdiff % event.multip) == 0 and mstart >= estamp then
 							AddEvn(day, desc, event.color, event.annive and (mdiff / event.multip + 1) or false)
@@ -357,7 +360,7 @@ function Draw() -- Sets all meter properties and calculates days
 		ThisWeek = Range[Set.Range].week(),
 		Week = rotate(Time.curr.wday - 1),
 		Today = LZero(Time.curr.day),
-		Month = MLabels[Time.show.month],
+		Month = MLabels(Time.show.month),
 		Year = Time.show.year,
 		MonthLabel = Vars(Set.LText, 'MonthLabel'),
 		LastWkHidden = LastWeek and 1 or 0,
@@ -396,7 +399,7 @@ function Easter() -- Returns a timestamp representing easter of the current year
 end -- Easter
 
 function Vars(line, source) -- Makes allowance for {Variables}
-	local tbl = setmetatable({mname = MLabels[Time.show.month], year = Time.show.year, today = LZero(Time.curr.day), month = Time.show.month},
+	local tbl = setmetatable({mname = MLabels(Time.show.month), year = Time.show.year, today = LZero(Time.curr.day), month = Time.show.month},
 		{ __index = function(_, input)
 			local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
 			local v1, v2 = input:match('(.+)(...)')
