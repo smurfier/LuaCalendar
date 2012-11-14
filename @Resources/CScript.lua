@@ -2,19 +2,19 @@
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
-	Set = { -- Retrieve Measure Settings
-		Name = 'LuaCalendar',
-		Color = 'FontColor',
-		Range = 'month',
-		HLWeek = SELF:GetNumberOption('HideLastWeek', 0) > 0,
-		LZer = SELF:GetNumberOption('LeadingZeroes', 0) > 0,
-		SMon = SELF:GetNumberOption('StartOnMonday', 0) > 0,
-		LText = SELF:GetOption('LabelText', '{MName}, {Year}'),
-		NFormat = SELF:GetOption('NextFormat', '{day}: {desc}'):lower(),
-		Locale = SELF:GetNumberOption('UseLocalMonths', 0) > 0,
-		MonthNames = Delim(SELF:GetOption('MonthLabels')),
+	Settings = {
+		Name = 'LuaCalendar', -- String
+		Color = 'FontColor', -- String
+		Range = 'month', -- String
+		HideLastWeek = SELF:GetNumberOption('HideLastWeek', 0) > 0, -- Boolean
+		LeadingZeroes = SELF:GetNumberOption('LeadingZeroes', 0) > 0, -- Boolean
+		StartOnMonday = SELF:GetNumberOption('StartOnMonday', 0) > 0, -- Boolean
+		LabelFormat = SELF:GetOption('LabelText', '{MName}, {Year}'), -- String
+		NextFormat = SELF:GetOption('NextFormat', '{day}: {desc}'), -- String
+		Locale = SELF:GetNumberOption('UseLocalMonths', 0) > 0, -- Boolean
+		MonthNames = Delim(SELF:GetOption('MonthLabels')), -- Table
 	}
-
+	-- MeterStyle Names
 	Meters = {
 		Labels = {
 			Name = 'l%d',
@@ -102,11 +102,11 @@ Range = setmetatable({ -- Makes allowance for either Month or Week ranges
 }) -- Range
 
 function MLabels(input) -- Makes allowance for Month Names
-	if Set.Locale then
+	if Settings.Locale then
 		os.setlocale('', 'time')
 		return os.date('%B', os.time{year = 2000, month = input, day = 1})
-	elseif type(Set.MonthNames) == 'table' then
-		return Set.MonthNames[input] or ErrMsg(input, 'Not enough indices in MonthNames')
+	elseif type(Settings.MonthNames) == 'table' then
+		return Settings.MonthNames[input] or ErrMsg(input, 'Not enough indices in MonthNames')
 	else
 		return input
 	end
@@ -120,7 +120,7 @@ end -- SetLabels
 
 function SetLabels(tbl) -- Sets weekday labels
 	if #tbl < 7 then tbl = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid DayLabels string') end
-	for a = 1, 7 do SKIN:Bang('!SetOption', Meters.Labels.Name:format(a), 'Text', tbl[Set.SMon and (a % 7 + 1) or a]) end
+	for a = 1, 7 do SKIN:Bang('!SetOption', Meters.Labels.Name:format(a), 'Text', tbl[Settings.StartOnMonday and (a % 7 + 1) or a]) end
 end -- SetLabels
 
 function LoadEvents(FileTable)
@@ -222,7 +222,7 @@ function Events() -- Parse Events table.
 			if self[day] then
 				local tbl = setmetatable({day = day, desc = table.concat(self[day]['text'], ', ')},
 					{ __index = function(_, input) return ErrMsg('', 'Invalid NextFormat variable {%s}', input) end,})
-				table.insert(Evns, (Set.NFormat:gsub('{([^}]+)}', function(variable) return tbl[variable:lower()] end)) )
+				table.insert(Evns, (Settings.NextFormat:gsub('{([^}]+)}', function(variable) return tbl[variable:lower()] end)) )
 			end
 		end
 	
@@ -294,7 +294,7 @@ function Events() -- Parse Events table.
 end -- Events
 
 function Draw() -- Sets all meter properties and calculates days
-	local LastWeek = Set.HLWeek and math.ceil((Time.stats.startday + Time.stats.clength) / 7) < 6
+	local LastWeek = Settings.HideLastWeek and math.ceil((Time.stats.startday + Time.stats.clength) / 7) < 6
 	
 	for wday = 1, 7 do -- Set Weekday Labels styles
 		local Styles = {Meters.Labels.Styles.Normal}
@@ -307,8 +307,8 @@ function Draw() -- Sets all meter properties and calculates days
 		SKIN:Bang('!SetOption', Meters.Labels.Name:format(wday), 'MeterStyle', table.concat(Styles, '|'))
 	end
 
-	for meter = 1, Range[Set.Range].days do -- Calculate and set day meters
-		local Styles, day, event, color = {Meters.Days.Styles.Normal}, Range[Set.Range].formula(meter)
+	for meter = 1, Range[Settings.Range].days do -- Calculate and set day meters
+		local Styles, day, event, color = {Meters.Days.Styles.Normal}, Range[Settings.Range].formula(meter)
 
 		if meter == 1 then
 			table.insert(Styles, Meters.Days.Styles.FirstDay)
@@ -344,7 +344,7 @@ function Draw() -- Sets all meter properties and calculates days
 		elseif day > Time.stats.clength then
 			day = day - Time.stats.clength
 			table.insert(Styles, Meters.Days.Styles.NxtMnth)
-		elseif (meter % 7) == 0 or (meter % 7) == (Set.SMon and 6 or 1) then
+		elseif (meter % 7) == 0 or (meter % 7) == (Settings.StartOnMonday and 6 or 1) then
 			table.insert(Styles, Meters.Days.Styles.Wknd)
 		end
 		
@@ -352,17 +352,17 @@ function Draw() -- Sets all meter properties and calculates days
 			Text = LZero(day),
 			MeterStyle = table.concat(Styles, '|'),
 			ToolTipText = event or '',
-			[Set.Color] = color or '',
+			[Settings.Color] = color or '',
 		} do SKIN:Bang('!SetOption', Meters.Days.Name:format(meter), k, v) end
 	end
 	
 	for k, v in pairs{ -- Define skin variables
-		ThisWeek = Range[Set.Range].week(),
+		ThisWeek = Range[Settings.Range].week(),
 		Week = rotate(Time.curr.wday - 1),
 		Today = LZero(Time.curr.day),
 		Month = MLabels(Time.show.month),
 		Year = Time.show.year,
-		MonthLabel = Vars(Set.LText, 'MonthLabel'),
+		MonthLabel = Vars(Settings.LabelFormat, 'MonthLabel'),
 		LastWkHidden = LastWeek and 1 or 0,
 		NextEvent = Hol and Hol() or '',
 	} do SKIN:Bang('!SetVariable', k, v) end
@@ -374,7 +374,7 @@ function Draw() -- Sets all meter properties and calculates days
 end -- Draw
 
 function Move(value) -- Move calendar through the months
-	if Range[Set.Range].nomove or not value then
+	if Range[Settings.Range].nomove or not value then
 		Time.show = Time.curr
 	elseif math.ceil(value) ~= value then
 		ErrMsg(nil, 'Invalid Move Parameter %s', value)
@@ -432,11 +432,11 @@ function Vars(line, source) -- Makes allowance for {Variables}
 end -- Vars
 
 function rotate(value) -- Makes allowance for StartOnMonday
-	return Set.SMon and ((value - 1 + 7) % 7) or value
+	return Settings.StartOnMonday and ((value - 1 + 7) % 7) or value
 end -- rotate
 
 function LZero(value) -- Makes allowance for LeadingZeros
-	return Set.LZer and ('%02d'):format(value) or value
+	return Settings.LeadingZeroes and ('%02d'):format(value) or value
 end -- LZero
 
 function ErrMsg(...) -- Used to display errors
@@ -460,7 +460,7 @@ function ReturnError()
 			end
 			if count == 0 then table.insert(temp, v) end
 		end
-		for k, v in ipairs(temp) do print(Set.Name .. ': ' .. v) end
+		for k, v in ipairs(temp) do print(Settings.Name .. ': ' .. v) end
 		Error, rMessage = rMessage[#rMessage], nil
 		return Error
 	else
