@@ -15,15 +15,17 @@ X=#Space.X#R
 Y=r
 FontFace=Trebuchet MS
 FontColor=255,255,255,150
+SolidColor=255,255,255,25
 FontSize=8
-stringAlign=center
+stringAlign=CenterCenter
 AntiAlias=1
 
 [LblTxtStart]
 X=(#Bumper.x#+#C.w#*1.5+#Space.x#)
-Y=(#Bumper.top#+#C.h#+#Space.y#+2)
+Y=(#Bumper.top#+#C.h#*1.5+#Space.y#)
 
 [LblCurrSty]
+StringStyle=Bold
 
 ;Main Calendar Styles
 [TextStyle]
@@ -38,7 +40,7 @@ stringAlign=center
 AntiAlias=1
 
 [FirstDay]
-Y=(#Space.y#/2)R
+Y=(#C.h#/2+#Space.y#)r
 X=(#Bumper.x#+#C.w#*1.5+#Space.x#)
 
 [NewWk]
@@ -77,44 +79,6 @@ FontSize=10
 stringAlign=Center
 AntiAlias=1
 DynamicVariables=1
-
-;Day Label BG
-[LblBgSty]
-X=#Space.X#R
-Y=r
-H=#C.h#
-W=#C.W#
-SolidColor=255,255,255,25
-
-[lSunBG]
-Meter=image
-MeterStyle=LblBgSty
-X=(#Bumper.x#+#C.w#+#Space.x#)
-Y=(#Bumper.top#+#C.h#+#Space.y#)
-
-[lMonBG]
-Meter=image
-MeterStyle=LblBgSty
-
-[lTuesBG]
-Meter=image
-MeterStyle=LblBgSty
-
-[lWedBG]
-Meter=image
-MeterStyle=LblBgSty
-
-[lThurBG]
-Meter=image
-MeterStyle=LblBgSty
-
-[lFriBG]
-Meter=image
-MeterStyle=LblBgSty
-
-[lSatBG]
-Meter=image
-MeterStyle=LblBgSty
 
 ;Control Bar
 [ControlForward]
