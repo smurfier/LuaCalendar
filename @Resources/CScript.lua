@@ -9,8 +9,8 @@ function Initialize()
 		HideLastWeek = SELF:GetNumberOption('HideLastWeek', 0) > 0, -- Boolean
 		LeadingZeroes = SELF:GetNumberOption('LeadingZeroes', 0) > 0, -- Boolean
 		StartOnMonday = SELF:GetNumberOption('StartOnMonday', 0) > 0, -- Boolean
-		LabelFormat = SELF:GetOption('LabelText', '{MName}, {Year}'), -- String
-		NextFormat = SELF:GetOption('NextFormat', '{day}: {desc}'), -- String
+		LabelFormat = SELF:GetOption('LabelText', '{$MName}, {$Year}'), -- String
+		NextFormat = SELF:GetOption('NextFormat', '{$day}: {$desc}'), -- String
 		Locale = SELF:GetNumberOption('UseLocalMonths', 0) > 0, -- Boolean
 		MonthNames = Delim(SELF:GetOption('MonthLabels')), -- Table
 	}
@@ -113,21 +113,21 @@ function MLabels(input) -- Makes allowance for Month Names
 end -- MLabels
 
 function Delim(input, sep) -- Separates an input string by a delimiter
-	assert(type(input) == 'string', ErrMsg(nil, 'Delim: input must be a string. Received %s instead', type(input)))
-	assert(type(sep) == 'string' and sep, ErrMsg(nil, 'Delim: sep must be a string. Received %s instead', type(sep)))
+	test(type(input) == 'string', 'Delim: input must be a string. Received %s instead', type(input))
+	if sep then test(type(sep) == 'string', 'Delim: sep must be a string. Received %s instead', type(sep)) end
 	local tbl = {}
 	for word in input:gmatch('[^' .. (sep or '|') ..']+') do table.insert(tbl, word) end
 	return tbl
 end -- SetLabels
 
 function SetLabels(tbl) -- Sets weekday labels
-	assert(type(tbl) == 'table', ErrMsg(nil, 'SetLabels must recieve a table'))
+	test(type(tbl) == 'table', 'SetLabels must recieve a table')
 	if #tbl < 7 then tbl = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid SetLabels input') end
 	for a = 1, 7 do SKIN:Bang('!SetOption', Meters.Labels.Name:format(a), 'Text', tbl[Settings.StartOnMonday and (a % 7 + 1) or a]) end
 end -- SetLabels
 
 function LoadEvents(FileTable)
-	assert(type(FileTable) == 'table', ErrMsg(nil, 'LoadEvents: input must be a table. Received %s instead.', type(FileTable)))
+	test(type(FileTable) == 'table', 'LoadEvents: input must be a table. Received %s instead.', type(FileTable))
 
 	hFile = {}
 	local default = {
@@ -227,7 +227,7 @@ function Events() -- Parse Events table.
 			if self[day] then
 				local tbl = setmetatable({day = day, desc = table.concat(self[day]['text'], ', ')},
 					{ __index = function(_, input) return ErrMsg('', 'Invalid NextFormat variable {%s}', input) end,})
-				table.insert(Evns, (Settings.NextFormat:gsub('{([^}]+)}', function(variable) return tbl[variable:lower()] end)) )
+				table.insert(Evns, (Settings.NextFormat:gsub('{%$([^}]+)}', function(variable) return tbl[variable:lower()] end)) )
 			end
 		end
 	
@@ -379,7 +379,7 @@ function Draw() -- Sets all meter properties and calculates days
 end -- Draw
 
 function Move(value) -- Move calendar through the months
-	assert(value and type(value) == 'number', ErrMsg(nil, 'Move: input must be a number. Recieved %s instead.', type(value)))
+	if value then test(type(value) == 'number', 'Move: input must be a number. Recieved %s instead.', type(value)) end
 	if Range[Settings.Range].nomove or not value then
 		Time.show = Time.curr
 	elseif math.ceil(value) ~= value then
@@ -434,7 +434,7 @@ function Vars(line, source) -- Makes allowance for {Variables}
 	SetVar('ashwednesday', sEaster - 46 * day)
 	SetVar('mardigras', sEaster - 47 * day)
 
-	return line:gsub('{([^}]+)}', function(variable) return tbl[variable:gsub('%s', ''):lower()] end)
+	return line:gsub('{%$([^}]+)}', function(variable) return tbl[variable:gsub('%s', ''):lower()] end)
 end -- Vars
 
 function rotate(value) -- Makes allowance for StartOnMonday
@@ -473,6 +473,8 @@ function ReturnError()
 		return Error or 'Success!'
 	end
 end
+
+function test(...) if not table.remove(arg, 1) then ErrMsg(nil, unpack(arg)) end end
 
 function CheckUpdate() -- Checks for an update to LuaCalendar
 	local lVersion = 4.1 -- Current LuaCalendar Version
