@@ -16,7 +16,7 @@ function Initialize()
 	}
 	-- MeterStyle Names
 	Meters = {
-		Labels = {
+		Labels = { -- Week Day Labels
 			Name = 'l%d',
 			Styles = {
 				Normal = 'LblTxtSty',
@@ -24,7 +24,7 @@ function Initialize()
 				Current = 'LblCurrSty',
 			},
 		},
-		Days = {
+		Days = { -- Month Days
 			Name = 'mDay%d',
 			Styles = {
 				Normal = 'TextStyle',
@@ -113,17 +113,22 @@ function MLabels(input) -- Makes allowance for Month Names
 end -- MLabels
 
 function Delim(input, sep) -- Separates an input string by a delimiter
+	assert(type(input) == 'string', ErrMsg(nil, 'Delim: input must be a string. Received %s instead', type(input)))
+	assert(type(sep) == 'string' and sep, ErrMsg(nil, 'Delim: sep must be a string. Received %s instead', type(sep)))
 	local tbl = {}
 	for word in input:gmatch('[^' .. (sep or '|') ..']+') do table.insert(tbl, word) end
 	return tbl
 end -- SetLabels
 
 function SetLabels(tbl) -- Sets weekday labels
-	if #tbl < 7 then tbl = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid DayLabels string') end
+	assert(type(tbl) == 'table', ErrMsg(nil, 'SetLabels must recieve a table'))
+	if #tbl < 7 then tbl = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid SetLabels input') end
 	for a = 1, 7 do SKIN:Bang('!SetOption', Meters.Labels.Name:format(a), 'Text', tbl[Settings.StartOnMonday and (a % 7 + 1) or a]) end
 end -- SetLabels
 
 function LoadEvents(FileTable)
+	assert(type(FileTable) == 'table', ErrMsg(nil, 'LoadEvents: input must be a table. Received %s instead.', type(FileTable)))
+
 	hFile = {}
 	local default = {
 		month = {value = '', ktype = 'string'},
@@ -374,6 +379,7 @@ function Draw() -- Sets all meter properties and calculates days
 end -- Draw
 
 function Move(value) -- Move calendar through the months
+	assert(value and type(value) == 'number', ErrMsg(nil, 'Move: input must be a number. Recieved %s instead.', type(value)))
 	if Range[Settings.Range].nomove or not value then
 		Time.show = Time.curr
 	elseif math.ceil(value) ~= value then
