@@ -2,6 +2,8 @@
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
+	Scroll = 0
+
 	Settings = {
 		Name = 'LuaCalendar', -- String
 		Color = 'FontColor', -- String
@@ -51,6 +53,14 @@ function Initialize()
 end -- Initialize
 
 function Update()
+	if Scroll > 0 then
+		Scroll = 0
+		Move(1)
+	elseif Scroll <0 then
+		Scroll = 0
+		Move(-1)
+	end
+
 	-- If in the current month or if browsing and Month changes to that month, set to Real Time
 	if (Time.stats.inmonth and Time.show.month ~= Time.curr.month) or ((not Time.stats.inmonth) and Time.show.month == Time.curr.month and Time.show.year == Time.curr.year) then
 		Move()
