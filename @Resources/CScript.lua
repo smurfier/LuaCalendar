@@ -43,13 +43,11 @@ function Initialize()
 	-- Weekday labels text
 	SetLabels(Delim(SELF:GetOption('DayLabels', 'S|M|T|W|T|F|S')))
 	--Events File
-	local fTemp = Delim(SELF:GetOption('EventFile'))
-	if SELF:GetNumberOption('SingleFolder', 0) > 0 and #fTemp > 1 then
-		local folder = table.remove(fTemp, 1)
-		if not folder:match('[/\\]$') then folder = folder .. '\\' end
-		for k, v in ipairs(fTemp) do fTemp[k] = SKIN:MakePathAbsolute(folder .. v) end
+	if SELF:GetNumberOption('SingleFolder', 0) > 0 then -- Single Folder option
+		LoadEvents(ExpandFolder(Delim(SELF:GetOption('EventFile'))))
+	else
+		LoadEvents(Delim(SELF:GetOption('EventFile')))
 	end
-	LoadEvents(fTemp)
 end -- Initialize
 
 function Update()
@@ -119,6 +117,16 @@ function Delim(input, sep) -- Separates an input string by a delimiter
 	for word in input:gmatch('[^' .. (sep or '|') ..']+') do table.insert(tbl, word) end
 	return tbl
 end -- SetLabels
+
+function ExpandFolder(input) -- Makes allowance for when the first value in a table represents the folder containing all objects.
+	test(type(input) == 'table', 'ExpandFolder: input must be a table. Received %s instead.', type(input))
+	if #input > 1 then
+		local folder = table.remove(input, 1)
+		if not folder:match('[/\\]$') then folder = folder .. '\\' end
+		for k, v in ipairs(input) do input[k] = SKIN:MakePathAbsolute(folder .. v) end
+	end
+	return input
+end -- ExpandFolder
 
 function SetLabels(tbl) -- Sets weekday labels
 	test(type(tbl) == 'table', 'SetLabels must recieve a table')
@@ -379,7 +387,7 @@ function Draw() -- Sets all meter properties and calculates days
 end -- Draw
 
 function Move(value) -- Move calendar through the months
-	if value then test(type(value) == 'number', 'Move: input must be a number. Recieved %s instead.', type(value)) end
+	if value then test(type(value) == 'number', 'Move: input must be a number. Received %s instead.', type(value)) end
 	if Range[Settings.Range].nomove or not value then
 		Time.show = Time.curr
 	elseif math.ceil(value) ~= value then
