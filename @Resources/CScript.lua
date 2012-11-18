@@ -2,7 +2,7 @@
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
-	Scroll = 0
+	Scroll = 0 -- Used to  combine Scroll messages
 
 	Settings = {
 		Name = 'LuaCalendar', -- String
@@ -53,12 +53,9 @@ function Initialize()
 end -- Initialize
 
 function Update()
-	if Scroll > 0 then
+	if Scroll ~= 0 then
+		Move(Scroll / math.abs(Scroll))
 		Scroll = 0
-		Move(1)
-	elseif Scroll <0 then
-		Scroll = 0
-		Move(-1)
 	end
 
 	-- If in the current month or if browsing and Month changes to that month, set to Real Time
