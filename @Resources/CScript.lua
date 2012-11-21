@@ -198,37 +198,30 @@ function LoadEvents(FileTable)
 	end
 
 	for _, FileName in ipairs(FileTable) do
-		local File, fName = io.open(FileName, 'r'), FileName:match('[^/\\]+$')
+		local File, fName = test(io.open(FileName, 'r'), 'File Read Error: %s', fName), FileName:match('[^/\\]+$')
 		
-		if not File then
-			ErrMsg(nil, 'File Read Error: %s', fName)
-		else
-			local open, content, close = File:read('*all'):gsub('<!%-%-.-%-%->', ''):match('^.-<([^>]+)>(.+)<([^>]+)>[^>]*$')
-			File:close()
+		local open, content, close = File:read('*all'):gsub('<!%-%-.-%-%->', ''):match('^.-<([^>]+)>(.+)<([^>]+)>[^>]*$')
+		File:close()
 
-			if open:match('%S+'):lower() == 'eventfile' and close:lower() == '/eventfile' then
-				local eFile, eSet = Keys(open, fName), {}
-				
-				for tag, line in content:gmatch('<([^%s>]+)([^>]*)>') do
-					local ntag = tag:lower()
+		test(open:match('%S+'):lower() == 'eventfile' and close:lower() == '/eventfile', 'Invalid Event File: %s', fName)
+		local eFile, eSet = Keys(open, fName), {}
+			
+		for tag, line in content:gmatch('<([^%s>]+)([^>]*)>') do
+			local ntag = tag:lower()
 
-					if ntag == 'set' then
-						table.insert(eSet, Keys(line, fName))
-					elseif ntag == '/set' then
-						table.remove(eSet)
-					elseif ntag == 'event' then
-						local Tmp, dSet, tbl = Keys(line, fName), {}, {}
-						for _, column in ipairs(eSet) do
-							for key, value in pairs(column) do dSet[key] = value end
-						end
-						for k, v in pairs(default) do tbl[k] = Tmp[k] or dSet[k] or eFile[k] or v.value end
-						if not tbl.inacti then table.insert(hFile, tbl) end
-					else
-						ErrMsg(nil, 'Invalid Event Tag <%s> in %s', tag, fName)
-					end
+			if ntag == 'set' then
+				table.insert(eSet, Keys(line, fName))
+			elseif ntag == '/set' then
+				table.remove(eSet)
+			elseif ntag == 'event' then
+				local Tmp, dSet, tbl = Keys(line, fName), {}, {}
+				for _, column in ipairs(eSet) do
+					for key, value in pairs(column) do dSet[key] = value end
 				end
+				for k, v in pairs(default) do tbl[k] = Tmp[k] or dSet[k] or eFile[k] or v.value end
+				if not tbl.inacti then table.insert(hFile, tbl) end
 			else
-				ErrMsg(nil, 'Invalid Event File: %s', fName)
+				ErrMsg(nil, 'Invalid Event Tag <%s> in %s', tag, fName)
 			end
 		end
 	end
@@ -376,7 +369,7 @@ function Draw() -- Sets all meter properties and calculates days
 		} do SKIN:Bang('!SetOption', Meters.Days.Name:format(meter), k, v) end
 	end
 	
-	for k, v in pairs{ -- Define skin variables
+	local sVars = { -- Define skin variables
 		ThisWeek = Range[Settings.Range].week(),
 		Week = rotate(Time.curr.wday - 1),
 		Today = LZero(Time.curr.day),
@@ -385,12 +378,12 @@ function Draw() -- Sets all meter properties and calculates days
 		MonthLabel = Vars(Settings.LabelFormat, 'MonthLabel'),
 		LastWkHidden = LastWeek and 1 or 0,
 		NextEvent = Hol and Hol() or '',
-	} do SKIN:Bang('!SetVariable', k, v) end
+	}
 	-- Week Numbers for the current month
 	local FirstWeek = os.time{day = (6 - Time.stats.startday), month = Time.show.month, year = Time.show.year}
-	for i = 0, 5 do
-		SKIN:Bang('!SetVariable', 'WeekNumber' .. (i + 1), math.ceil(tonumber(os.date('%j', (FirstWeek + (i * 604800)))) / 7))
-	end
+	for i = 0, 5 do sVars['WeekNumber' .. (i + 1)] = math.ceil(tonumber(os.date('%j', (FirstWeek + (i * 604800)))) / 7) end
+	-- Set Skin Variables
+	for k, v in pairs(sVars) do SKIN:Bang('!SetVariable', k, v) end
 end -- Draw
 
 function Move(value) -- Move calendar through the months
@@ -471,7 +464,7 @@ function ErrMsg(...) -- Used to display errors
 	return value
 end -- ErrMsg
 
-function ReturnError()
+function ReturnError() -- Used to prevent duplicate error messages
 	if rMessage then
 		local temp = {}
 		for k, v in ipairs(rMessage) do
@@ -487,9 +480,15 @@ function ReturnError()
 	else
 		return Error or 'Success!'
 	end
-end
+end -- ReturnError
 
-function test(...) if not table.remove(arg, 1) then ErrMsg(nil, unpack(arg)) end end
+function test(...) -- clone of assert
+	local rvalue = table.remove(arg, 1)
+	if not rvalue then
+		ErrMsg(nil, unpack(arg))
+	end
+	return rvalue
+end -- test
 
 function CheckUpdate() -- Checks for an update to LuaCalendar
 	local lVersion = 4.1 -- Current LuaCalendar Version
