@@ -402,14 +402,14 @@ function Move(value) -- Move calendar through the months
 	SKIN:Bang('!SetVariable', 'NotCurrentMonth', Time.stats.inmonth and 0 or 1)
 end -- Move
 
-function Easter() -- Returns a timestamp representing easter of the current year
-	local a, b, c, h, L, m = (Time.show.year % 19), math.floor(Time.show.year / 100), (Time.show.year % 100), 0, 0, 0
+function Easter(year) -- Returns a timestamp representing easter of the current year
+	local a, b, c, h, L, m = (year % 19), math.floor(year / 100), (year % 100), 0, 0, 0
 	local d, e, f, i, k = math.floor(b/4), (b % 4), math.floor((b + 8) / 25), math.floor(c / 4), (c % 4)
 	h = (19 * a + b - d - math.floor((b - f + 1) / 3) + 15) % 30
 	L = (32 + 2 * e + 2 * i - h - k) % 7
 	m = math.floor((a + 11 * h + 22 * L) / 451)
 	
-	return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = Time.show.year}
+	return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = year}
 end -- Easter
 
 function Vars(line, source) -- Makes allowance for {Variables}
@@ -435,8 +435,7 @@ function Vars(line, source) -- Makes allowance for {Variables}
 		tbl[name:lower() .. 'day'] = temp.day
 	end
 	
-	local sEaster = Easter()
-	local day = 86400
+	local sEaster, day = Easter(Time.show.year), 86400
 	SetVar('easter', sEaster)
 	SetVar('goodfriday', sEaster - 2 * day)
 	SetVar('ashwednesday', sEaster - 46 * day)
