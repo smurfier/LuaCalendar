@@ -121,7 +121,7 @@ function Delim(input, sep) -- Separates an input string by a delimiter
 	test(type(input) == 'string', 'Delim: input must be a string. Received %s instead', type(input))
 	if sep then test(type(sep) == 'string', 'Delim: sep must be a string. Received %s instead', type(sep)) end
 	local tbl = {}
-	for word in input:gmatch('[^' .. (sep or '|') ..']+') do table.insert(tbl, word) end
+	for word in input:gmatch('[^' .. (sep or '|') .. ']+') do table.insert(tbl, word:match('^%s*(.-)%s*$')) end
 	return tbl
 end -- SetLabels
 
