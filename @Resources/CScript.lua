@@ -419,6 +419,8 @@ function Vars(line, source) -- Makes allowance for {Variables}
 			local v1, v2 = input:match('(.+)(...)')
 			if W[v1 or ''] and D[v2 or ''] then -- Variable day
 				if v1 == 'last' then
+					--local LastWeekDay = os.date('%w', os.time{month= Time.show.month, year = Time.show.year, day= Time.stats.clength, isdst=false,}) - D[v2]
+					--return Time.stats.clength - LastWeekDay - (LastWeekDay < 0 and 7 or 0)
 					local L = 36 + D[v2] - Time.stats.startday
 					return L - math.ceil((L - Time.stats.clength) / 7) * 7
 				else
