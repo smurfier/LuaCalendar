@@ -123,7 +123,7 @@ function Delim(input, sep) -- Separates an input string by a delimiter
 	local tbl = {}
 	for word in input:gmatch('[^' .. (sep or '|') .. ']+') do table.insert(tbl, word:match('^%s*(.-)%s*$')) end
 	return tbl
-end -- SetLabels
+end -- Delim
 
 function ExpandFolder(input) -- Makes allowance for when the first value in a table represents the folder containing all objects.
 	test(type(input) == 'table', 'ExpandFolder: input must be a table. Received %s instead.', type(input))
