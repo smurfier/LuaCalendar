@@ -261,7 +261,7 @@ function Events() -- Parse Events table.
 			local day = formula(event.day, event.descri) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
 			local desc = event.descri .. '%s' .. (event.title and ' -' .. event.title or '')
 
-			local nrepeat = event['repeat']:lower()
+			local nrepeat = (event['repeat'] or ''):lower()
 
 			if nrepeat == 'week' then
 				if eMonth and event.year and day then
