@@ -7,9 +7,10 @@
 <body>
 <div id="header">
 <ul><li><h2>LuaCalendar by Smurfier</h2></li>
-<li><a href="#intro">Introduction</a></li>
+<li><a href="#intro">Intro</a></li>
 <li><a href="#settings">Settings</a></li>
-<li><a href="#hol">Event Files</a></li>
+<li><a href="#actions">Skin Actions</a></li>
+<li><a href="#hol">Events</a></li>
 <li><a href="#vars">Variables</a></li>
 <li><a href="#styles">Style Sheets</a></li>
 <li><a href="#changes">ChangeLog</a></li></ul>
@@ -21,16 +22,18 @@
 <p>One of the major features of the skin is the abiltiy to display events that are defined by the user. This was a long requested feature of the existing calendar skins. All of the easily configured settings and features are listed below.</p>
 
 <h1>Release Notes</h1>
-<table><tr><td style="width:210px;"><a href="https://github.com/downloads/smurfier/LuaCalendar/LuaCalendar_4.0.rmskin" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
+<table><tr><td style="width:210px;"><a href="https://github.com/downloads/smurfier/LuaCalendar/LuaCalendar_4.1.rmskin" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
 Download from GitHub.<br>
-Version 4.0<br>
+Version 4.1<br>
 11/4/2012</a></td>
 <td><ul style="margin-top:0;padding-left:0;">
-	<li class="change">Changed Event files to use a more robust system for repeating events.</li>
-	<li class="add">Added Inactive option for events.</li>
-	<li class="add">Added Custom Context Menu actions.</li>
-	<li class="add">Added WeekNumber variables.</li>
-	<li class="add">Added DefaultWeeks style.</a>
+	<li class="fix">Fixed a fatal error when no Repeat was set for an event.</li>
+	<li class="change">Made the script more modular.</li>
+	<li class="change">Changed variables to use XML standard syntax.</li>
+	<li class="change">Updated the Enigma style.</li>
+	<li class="add">Added support for the new MouseScroll actions introduced in the Rainmeter 2.5 beta.</li>
+	<li class="add">Added option for SingleFolder option.</li>
+	<li class="add">Reinstated Range option for displaying Month or Week range.</li>
 </ul>
 <a href="#changes">See more changes</a>
 </td></tr></table>
@@ -56,8 +59,8 @@ All settings can be found in Settings.inc
 	<li> Defaults to <code>1|2|3|4|5|6|7|8|9|10|11|12</code></li></ul></li>
 <li class="space"><b>LabelText</b>
 	<ul><li>Allows for personalized formatting of the calendar title. A list of available variables can be found <a href="#vars">here.</a></li>
-	<li><b>Example</b>: <code>LabelText={MName} of {Year}</code></li>
-	<li>Defaults to <code>{MName}, {Year}</code></li></ul></li>
+	<li><b>Example</b>: <code>LabelText={$MName} of {$Year}</code></li>
+	<li>Defaults to <code>{$MName}, {$Year}</code></li></ul></li>
 <li class="space"><b>LeadingZeroes</b>
 	<ul><li>Set to 1 to add a leading zero to any number below 10.</li>
 	<li>Defaults to <code>0</code>.</li></ul></li>
@@ -72,22 +75,27 @@ All settings can be found in Settings.inc
 	<ul><li>A pipe delimited list of paths to Event files formatted as described below.</li>
 	<li>These paths are relative to the skin folder unless a full path is specified.</li></ul>
 <li class="space"><b>NextFormat</b>
-	<ul><li>The formatting used for the NextEvent skin variable. Use <code>{day}</code> to display the day number and <code>{desc}</code> for the comma delimited list of events.</li>
-	<li>Defaults to <code>{day}: {desc}</code>.</ul>
-</ul>
-
-<h1>Skin Specific Settings</h1>
-These Script settings are specific to the skin using the script.
-<ul><li class="space"><b>DayPrefix</b>
-	<ul><li>The meter prefix used for the Day Labels. There must be seven Day Labels, numbered 1 thru 7.</li>
-	<li><b>Example</b>: Label1,Label2...</li>
-	<li>Defaults to <code>l</code></li></ul></li>
-<li class="space"><b>MeterPrefix</b>
-	<ul><li>The meter prefix used for the Calendar Days. There must be fourty-two Calendar days, numbered from 1 thru 42.</li>
-	<li><b>Example</b>: Day1,Day2...</li>
-	<li>Defaults to <code>mDay</code></li></ul></li>
+	<ul><li>The formatting used for the NextEvent skin variable. Use <code>{$day}</code> to display the day number and <code>{$desc}</code> for the comma delimited list of events.</li>
+	<li>Defaults to <code>{$day}: {$desc}</code>.</ul>
+<li class="space"><b>Range</b>
+	<ul><li>Can be set to either Month or Week to display a whole month or just the current week.</li>
+	<li>Setting to Week disables the ability to move through the calendar.</li>
+	<li>Defaults to <code>Month</code>.</li></ul>
+<li class="space"><b>SingleFolder</b>
+	<ul><li>When set to 1, the first item in the EventFile list is used as the path for all items following it.</li>
+	<li>Default to <code>0</code></li></li></ul>
 </ul>
 </div>
+
+<a name="actions"></a>
+<div class="balloon"><h1>Skin Actions</h1>
+<p>LuaCalendar has the ability to show different months while using the Month range. While some styles may have visual elements for this, not all do. This is where the Skin Actions come in.</p>
+<h3>Scroll Actions</h3>
+<p>When hoving over the skin, scroll using the scrollwheel on the mouse up to move back and down to move forward. This action is based on the update speed of the skin. It groups multiple scrolls during on update into a single scroll action.</p>
+<h3>Context Menu Actions</h3>
+<p>Under the submenu named "Custom skin actions" in the context menu several options have been made available. These options include editing of the calendar options, moving through the months, and returning to the current month.</p>
+</div>
+
 <a name="hol"></a>
 <div class="balloon" id="holiday"><h1>Using Event Files</h1>
 <p>To use Event Files set EventFile to the path of a text file on the calendar measure. Multiple files can be aggregated together using a pipe delimiter.<br/>
@@ -111,7 +119,7 @@ These Script settings are specific to the skin using the script.
 	The month in which the event occurs. This setting allows the use of formulas and <a href="#vars">Variables</a>.</li>
 <li><b>Day</b><br/>
 	The day on which the event occurs. This setting allows the use of formulas and <a href="#vars">Variables</a>.<br/>
-	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({FirstMon}+1)*(({Year}%2)=0)" Repeat="Year" Description="Election Day"/></code></li>
+	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({$FirstMon}+1)*(({$Year}%2)=0)" Repeat="Year" Description="Election Day"/></code></li>
 			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li>
 <li><b>Year</b>*<br/>
 	The Year the event occurs on.
@@ -147,15 +155,15 @@ These Script settings are specific to the skin using the script.
 </div>
 <a name="vars"></a>
 <div class="balloon" id="vars"><h1>Variables</h1>
-<p>There are two instances when certain Variables can be used with LuaCalendar settings. The first being LabelText and the other being in the Day parameter of Holiday Files. Variables are surrounded by {Curly Brackets} and are case insensitive.</p>
+<p>There are two instances when certain Variables can be used with LuaCalendar settings. The first being LabelText and the other being in the Day parameter of Holiday Files. Variables are surrounded by {$Curly Brackets} with the dollar sign in front of the variable name, and are case insensitive.</p>
 <div style="float:left;width:48%;padding-right:1%;"><b>Static Variables</b>
-<ul style="margin-top:0px;"><li><code>{MName}</code>
+<ul style="margin-top:0px;"><li><code>{$MName}</code>
 <ul><li>The name of the current month. If a name is not provided the month number is used.</li></ul></li>
-<li><code>{Year}</code>
+<li><code>{$Year}</code>
 <ul><li>The current year.</li></ul></li>
-<li><code>{Today}</code>
+<li><code>{$Today}</code>
 <ul><li>The current day number. This variable follows the LeadingZeroes setting.</li></ul></li>
-<li><code>{Month}</code>
+<li><code>{$Month}</code>
 <ul><li>The current month number.</li></ul></li></ul>
 </div>
 <div style="float:right;width:48%;padding-left:1%;border-left:1px solid #ffffff;">
@@ -163,10 +171,10 @@ These Script settings are specific to the skin using the script.
 <p>Variable Days are used to calculate holidays that occur on days like the Second Tuesday of the month. They are defined using the following keywords.</p>
 <p style="text-indent:0;">Starts with: <code>First, Second, Third, Fourth, Last</code></p>
 <p style="text-indent:0;">Ends with: <code>Sun, Mon, Tue, Wed, Thu, Fri, Sat</code></p>
-<p style="text-indent:0;"><b>Example</b>:<br><code>&lt;Event Month="11" Day="{FourthThu}" .../></code></p>
+<p style="text-indent:0;"><b>Example</b>:<br><code>&lt;Event Month="11" Day="{$FourthThu}" .../></code></p>
 </div>
 <div style="clear:both"><b>Built-In Event Variables</b>
-<p>In order to support events that require complex calculations, LuaCalendar supports certain Built-In events. These events create both a <code>{EventNameMonth}</code> and an <code>{EventNameDay}</code> variable. The value of these variables are recalculated for each year so that they are kept up to date.</p>
+<p>In order to support events that require complex calculations, LuaCalendar supports certain Built-In events. These events create both a <code>{$EventNameMonth}</code> and an <code>{$EventNameDay}</code> variable. The value of these variables are recalculated for each year so that they are kept up to date.</p>
 <p>Currently the supported Built-In Events are Easter, GoodFriday, AshWednesday, and MardiGras.</p></div>
 </div>
 <a name="styles"></a>
@@ -249,6 +257,17 @@ These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command(
 <li class="fix">Fix</li>
 <li class="remove">Remove</li></ul>
 
+<b>4.1</b> (11/27/2012)
+	<ul><li class="fix">Fixed a fatal error when no Repeat was set for an event.</li>
+	<li class="change">Made the script more modular.</li>
+	<li class="change">Changed variables to use XML standard syntax.</li>
+	<li class="change">Updated the Enigma style.</li>
+	<li class="add">Added support for the new MouseScroll actions introduced in the Rainmeter 2.5 beta.</li>
+	<li class="add">Added option for SingleFolder option.</li>
+	<li class="add">Reinstated Range option for displaying Month or Week range.</li>
+	<li class="remove">Removed DayPrefix and MeterPrefix skin settings. Now set in script file.</li>
+	</ul>
+
 <b>4.0</b> (11/4/2012)
 	<ul><li class="change">Changed Event files to use a more robust system for repeating events.</li>
 	<li class="fix">Fixed HideLastWeek.</li>
@@ -259,7 +278,7 @@ These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command(
 	<li class="add">Added Custom Context Menu actions.</li>
 	<li class="fix">Fixed Custom Event Colors with nested tags.</li>
 	<li class="add">Added WeekNumber variables.</li>
-	<li class="add">Added DefaultWeeks style.</a>
+	<li class="add">Added DefaultWeeks style.</li>
 	</ul>
 
 <b>3.5</b> (7/20/2012)
