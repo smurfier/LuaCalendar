@@ -1,9 +1,7 @@
--- LuaCalendar v4.0 by Smurfier (smurfier20@gmail.com)
+-- LuaCalendar v4.2 by Smurfier (smurfier20@gmail.com)
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
-	Scroll = 0 -- Used to  combine Scroll messages
-
 	Settings = {
 		Name = 'LuaCalendar', -- String
 		Color = 'FontColor', -- String
@@ -53,10 +51,7 @@ function Initialize()
 end -- Initialize
 
 function Update()
-	if Scroll ~= 0 then
-		Move(Scroll / math.abs(Scroll))
-		Scroll = 0
-	end
+	CombineScroll(0)
 
 	-- If in the current month or if browsing and Month changes to that month, set to Real Time
 	if (Time.stats.inmonth and Time.show.month ~= Time.curr.month) or ((not Time.stats.inmonth) and Time.show.month == Time.curr.month and Time.show.year == Time.curr.year) then
@@ -74,6 +69,17 @@ function Update()
 	
 	return ReturnError()
 end -- Update
+
+function CombineScroll(input)
+	if input and not Scroll then
+		Scroll = input
+	elseif Scroll ~= 0 and input == 0 then
+		Move(Scroll / math.abs(Scroll))
+		Scroll = 0
+	else
+		Scroll = Scroll + input
+	end
+end
 
 Time = { -- Used to store and call date functions and statistics
 	curr = setmetatable({}, {__index = function(_, index) return os.date('*t')[index] end,}),
@@ -492,7 +498,7 @@ function test(...) -- clone of assert
 end -- test
 
 function CheckUpdate() -- Checks for an update to LuaCalendar
-	local lVersion = 4.1 -- Current LuaCalendar Version
+	local lVersion = 4.2 -- Current LuaCalendar Version
 	local sVersion = tonumber(SKIN:GetMeasure('UpdateVersion'):GetStringValue():match('<version>(.+)</version>') or 0)
 	if sVersion > lVersion then
 		ErrMsg(nil, 'Update Available: v%s', sVersion)
