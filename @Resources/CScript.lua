@@ -1,4 +1,4 @@
--- LuaCalendar v4.2 by Smurfier (smurfier20@gmail.com)
+-- LuaCalendar v4.2 by Smurfier (john@smurfier.com)
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
