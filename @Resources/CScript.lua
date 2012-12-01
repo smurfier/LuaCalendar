@@ -158,7 +158,7 @@ function LoadEvents(FileTable)
 		descri = {value = '', ktype = 'string', spaces = true},
 		title = {value = false, ktype = 'string'},
 		color = {value = false, ktype = 'color'},
-		['repeat'] = {value = false, ktype = 'string'},
+		['repeat'] = {value = '', ktype = 'string'},
 		multip = {value = 1, ktype = 'number', round = 0},
 		annive = {value = false, ktype = 'boolean'},
 		inacti = {value = false, ktype = 'boolean'},
@@ -267,7 +267,7 @@ function Events() -- Parse Events table.
 			local day = formula(event.day, event.descri) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
 			local desc = event.descri .. '%s' .. (event.title and ' -' .. event.title or '')
 
-			local nrepeat = (event['repeat'] or ''):lower()
+			local nrepeat = event['repeat']:lower()
 
 			if nrepeat == 'week' then
 				if eMonth and event.year and day then
