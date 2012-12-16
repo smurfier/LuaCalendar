@@ -1,0 +1,4 @@
+[Metadata]
+Name=Enigma
+Author=Smurfier and Kaelri
+Info=A clone of the Enigma calendar (v4.0) with a couple small additions.

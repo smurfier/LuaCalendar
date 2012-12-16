@@ -1,0 +1,4 @@
+[Metadata]
+Name=Default Events
+Author=Smurfier
+Info=A variant of the Default style with a list of upcomming events.

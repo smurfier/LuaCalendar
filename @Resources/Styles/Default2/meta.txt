@@ -1,0 +1,4 @@
+[Metadata]
+Name=Default Bars
+Author=Smurfier
+Info=A variant of the Default style using bars to indicate the current day.

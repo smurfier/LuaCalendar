@@ -6,13 +6,13 @@ function Initialize()
 		Name = 'LuaCalendar', -- String
 		Color = 'FontColor', -- String
 		Range = 'month', -- String
-		HideLastWeek = SELF:GetNumberOption('HideLastWeek', 0) > 0, -- Boolean
-		LeadingZeroes = SELF:GetNumberOption('LeadingZeroes', 0) > 0, -- Boolean
-		StartOnMonday = SELF:GetNumberOption('StartOnMonday', 0) > 0, -- Boolean
-		LabelFormat = SELF:GetOption('LabelText', '{$MName}, {$Year}'), -- String
-		NextFormat = SELF:GetOption('NextFormat', '{$day}: {$desc}'), -- String
-		Locale = SELF:GetNumberOption('UseLocalMonths', 0) > 0, -- Boolean
-		MonthNames = Delim(SELF:GetOption('MonthLabels')), -- Table
+		HideLastWeek = GetNumberOption('HideLastWeek') > 0, -- Boolean
+		LeadingZeroes = GetNumberOption('LeadingZeroes') > 0, -- Boolean
+		StartOnMonday = GetNumberOption('StartOnMonday') > 0, -- Boolean
+		LabelFormat = GetOption('LabelText', '{$MName}, {$Year}'), -- String
+		NextFormat = GetOption('NextFormat', '{$day}: {$desc}'), -- String
+		Locale = GetNumberOption('UseLocalMonths') > 0, -- Boolean
+		MonthNames = Delim(GetOption('MonthLabels')), -- Table
 	}
 	-- MeterStyle Names
 	Meters = {
@@ -41,13 +41,9 @@ function Initialize()
 	}
 
 	-- Weekday labels text
-	SetLabels(Delim(SELF:GetOption('DayLabels', 'S|M|T|W|T|F|S')))
+	SetLabels(Delim(GetOption('DayLabels', 'S|M|T|W|T|F|S')))
 	--Events File
-	if SELF:GetNumberOption('SingleFolder', 0) > 0 then -- Single Folder option
-		LoadEvents(ExpandFolder(Delim(SELF:GetOption('EventFile'))))
-	else
-		LoadEvents(Delim(SELF:GetOption('EventFile')))
-	end
+	LoadEvents(ExpandFolder(Delim(GetOption('EventFile'))))
 end -- Initialize
 
 function Update()
@@ -496,6 +492,28 @@ function test(...) -- clone of assert
 	end
 	return rvalue
 end -- test
+
+function GetOption(option, default) -- Allows for existing but empty string options.
+	local input = SELF:GetOption(option)
+	if input == '' then
+		return default or ''
+	else
+		return input
+	end
+end -- GetOption
+
+function GetNumberOption(option, default) -- Allows for existing but empty number options.
+	return tonumber(SELF:GetOption(option)) or default or 0
+end -- GetNumberOption
+
+function GetVariable(option, default) -- Allows for existing but empty variables.
+	local input = SKIN:GetVariable(option)
+	if input == '' then
+		return default or ''
+	else
+		return input
+	end
+end -- GetVariable
 
 function CheckUpdate() -- Checks for an update to LuaCalendar
 	local lVersion = 4.2 -- Current LuaCalendar Version

@@ -1,0 +1,4 @@
+[Metadata]
+Name=Default Weeks
+Author=Smurfier
+Info=The same look of the Default style with added week numbers.
