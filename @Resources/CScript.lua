@@ -514,14 +514,3 @@ function GetVariable(option, default) -- Allows for existing but empty variables
 		return input
 	end
 end -- GetVariable
-
-function CheckUpdate() -- Checks for an update to LuaCalendar
-	local lVersion = 4.2 -- Current LuaCalendar Version
-	local sVersion = tonumber(SKIN:GetMeasure('UpdateVersion'):GetStringValue():match('<version>(.+)</version>') or 0)
-	if sVersion > lVersion then
-		ErrMsg(nil, 'Update Available: v%s', sVersion)
-	elseif lVersion > sVersion then
-		ErrMsg(nil, 'Thanks for testing the Beta version!')
-	end
-	SKIN:Bang('!DisableMeasure', 'UpdateVersion')
-end -- CheckUpdate
