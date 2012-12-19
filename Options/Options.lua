@@ -101,6 +101,7 @@ end -- SetStyle
 -- ========== END SCROLLBOX ==========
 
 function Save()
+	MessageOutput()
 	file = SKIN:ReplaceVariables('#@#Settings.inc')
 	for k, _ in pairs(Variables) do SKIN:Bang('!WriteKeyValue', 'Variables', k, SKIN:GetVariable(k), file) end
 	SKIN:Bang('!Refresh', 'LuaCalendar')
