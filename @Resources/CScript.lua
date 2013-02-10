@@ -2,18 +2,15 @@
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
-	Settings = {
-		Name = 'LuaCalendar', -- String
-		Color = 'FontColor', -- String
-		Range = 'month', -- String
-		HideLastWeek = GetNumberOption('HideLastWeek') > 0, -- Boolean
-		LeadingZeroes = GetNumberOption('LeadingZeroes') > 0, -- Boolean
-		StartOnMonday = GetNumberOption('StartOnMonday') > 0, -- Boolean
-		LabelFormat = GetOption('LabelText', '{$MName}, {$Year}'), -- String
-		NextFormat = GetOption('NextFormat', '{$day}: {$desc}'), -- String
-		Locale = GetNumberOption('UseLocalMonths') > 0, -- Boolean
-		MonthNames = Delim(GetOption('MonthLabels')), -- Table
-	}
+	Settings.Color = 'FontColor'
+	Settings.HideLastWeek = GetNumberOption('HideLastWeek') > 0
+	Settings.LeadingZeroes = GetNumberOption('LeadingZeroes') > 0
+	Settings.StartOnMonday = GetNumberOption('StartOnMonday') > 0
+	Settings.LabelFormat = GetOption('LabelText', '{$MName}, {$Year}')
+	Settings.NextFormat = GetOption('NextFormat', '{$day}: {$desc}')
+	Settings.Locale = GetNumberOption('UseLocalMonths') > 0
+	Settings.MonthNames = Delim(GetOption('MonthLabels'))
+	
 	-- MeterStyle Names
 	Meters = {
 		Labels = { -- Week Day Labels
@@ -77,6 +74,33 @@ function CombineScroll(input)
 	end
 end
 
+Settings = setmetatable({}, {
+	__index = {
+		Name = 'LuaCalendar', -- String
+		Color = '', -- String
+		Range = 'month', -- String
+		HideLastWeek = false, -- Boolean
+		LeadingZeroes = false, -- Boolean
+		StartOnMonday = false, -- Boolean
+		LabelFormat = '{$MName}, {$Year}', -- String
+		NextFormat = '{$day}: {$desc}', -- String
+		Locale = false, -- Boolean
+		MonthNames = {}, -- Table
+	},
+	__newindex = function(_, key, value)
+		local tbl = getmetatable(Settings).__index
+		if tbl[key] ~= nil then
+			if type(value) == type(tbl[key]) then
+				rawset(Settings, key, value)
+			else
+				ErrMsg(nil, 'Invalid Setting type. %s expected, received %s instead.', type(tbl[key]), type(value))
+			end
+		else
+			ErrMsg(nil, 'Setting does not exist: %s', key)
+		end
+	end}
+)
+
 Time = { -- Used to store and call date functions and statistics
 	curr = setmetatable({}, {__index = function(_, index) return os.date('*t')[index] end,}),
 	old = {day = 0, month = 0, year = 0,},
@@ -112,7 +136,7 @@ function MLabels(input) -- Makes allowance for Month Names
 	if Settings.Locale then
 		os.setlocale('', 'time')
 		return os.date('%B', os.time{year = 2000, month = input, day = 1})
-	elseif type(Settings.MonthNames) == 'table' then
+	elseif Settings.MonthNames then
 		return Settings.MonthNames[input] or ErrMsg(input, 'Not enough indices in MonthNames')
 	else
 		return input
