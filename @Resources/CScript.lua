@@ -10,33 +10,6 @@ function Initialize()
 	Settings.NextFormat = GetOption('NextFormat', '{$day}: {$desc}')
 	Settings.Locale = GetNumberOption('UseLocalMonths') > 0
 	Settings.MonthNames = Delim(GetOption('MonthLabels'))
-	
-	-- MeterStyle Names
-	Meters = {
-		Labels = { -- Week Day Labels
-			Name = 'l%d',
-			Styles = {
-				Normal = 'LblTxtSty',
-				First = 'LblTxtStart',
-				Current = 'LblCurrSty',
-			},
-		},
-		Days = { -- Month Days
-			Name = 'mDay%d',
-			Styles = {
-				Normal = 'TextStyle',
-				FirstDay = 'FirstDay',
-				NewWeek = 'NewWk',
-				Current = 'CurrentDay',
-				LastWk = 'LastWeek',
-				PrevMnth = 'PreviousMonth',
-				NxtMnth = 'NextMonth',
-				Wknd = 'WeekendStyle',
-				Holiday = 'HolidayStyle',
-			},
-		},
-	}
-
 	-- Weekday labels text
 	SetLabels(Delim(GetOption('DayLabels', 'S|M|T|W|T|F|S')))
 	--Events File
@@ -99,7 +72,34 @@ Settings = setmetatable({}, {
 			ErrMsg(nil, 'Setting does not exist: %s', key)
 		end
 	end}
-)
+) -- Settings
+
+Meters = setmetatable({}, {
+	__index = {
+		Labels = { -- Week Day Labels
+			Name = 'l%d',
+			Styles = {
+				Normal = 'LblTxtSty',
+				First = 'LblTxtStart',
+				Current = 'LblCurrSty',
+			},
+		},
+		Days = { -- Month Days
+			Name = 'mDay%d',
+			Styles = {
+				Normal = 'TextStyle',
+				FirstDay = 'FirstDay',
+				NewWeek = 'NewWk',
+				Current = 'CurrentDay',
+				LastWk = 'LastWeek',
+				PrevMnth = 'PreviousMonth',
+				NxtMnth = 'NextMonth',
+				Wknd = 'WeekendStyle',
+				Holiday = 'HolidayStyle',
+			},
+		},
+	},
+}) -- Meters
 
 Time = { -- Used to store and call date functions and statistics
 	curr = setmetatable({}, {__index = function(_, index) return os.date('*t')[index] end,}),
@@ -162,8 +162,9 @@ function ExpandFolder(input) -- Makes allowance for when the first value in a ta
 end -- ExpandFolder
 
 function SetLabels(tbl) -- Sets weekday labels
-	test(type(tbl) == 'table', 'SetLabels must recieve a table')
-	if #tbl < 7 then tbl = ErrMsg({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Invalid SetLabels input') end
+	local res = test(type(tbl) == 'table', 'SetLabels must receive a table')
+	if res then res = test(#tbl >= 7, 'SetLabels must receive a table with seven indicies') end
+	if not res then tbl = {'S', 'M', 'T', 'W', 'T', 'F', 'S'} end
 	for a = 1, 7 do SKIN:Bang('!SetOption', Meters.Labels.Name:format(a), 'Text', tbl[Settings.StartOnMonday and (a % 7 + 1) or a]) end
 end -- SetLabels
 
