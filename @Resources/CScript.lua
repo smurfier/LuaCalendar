@@ -168,6 +168,26 @@ function SetLabels(tbl) -- Sets weekday labels
 	for a = 1, 7 do SKIN:Bang('!SetOption', Meters.Labels.Name:format(a), 'Text', tbl[Settings.StartOnMonday and (a % 7 + 1) or a]) end
 end -- SetLabels
 
+case = {
+	none = function(input) return input end,
+	lower = string.lower,
+	upper = string.upper,
+	title = function(input)
+		return (input:gsub('%w+', function(word)
+				local first, rest = word:match('(.)(.*)')
+		
+				return first:upper() .. rest:lower()
+			end))
+		end,
+	sentence = function(input)
+		return (input:gsub('[^.]+', function(sentence)
+				local space, first, rest = sentence:match('(%s*)(.)(.*)')
+		
+				return space .. first:upper() .. rest:lower():gsub('%si%s', ' I ')
+			end))
+		end,
+}
+
 function LoadEvents(FileTable)
 	test(type(FileTable) == 'table', 'LoadEvents: input must be a table. Received %s instead.', type(FileTable))
 
@@ -183,6 +203,7 @@ function LoadEvents(FileTable)
 		multip = {value = 1, ktype = 'number', round = 0},
 		annive = {value = false, ktype = 'boolean'},
 		inacti = {value = false, ktype = 'boolean'},
+		case = {value = 'none', ktype = 'list', list = 'none|lower|upper|title|sentence'},
 	}
 
 	local Keys = function(line, source)
@@ -208,6 +229,14 @@ function LoadEvents(FileTable)
 			end, -- number
 			string = function(key, input) return default[key].spaces and input:match('^%s*(.-)%s*$') or (input:gsub('%s', '')) end,
 			boolean = function(key, input) return input:gsub('%s', ''):lower() == 'true' end,
+			list = function(key, input)
+				local temp = input:gsub('[|%s]', ''):lower()
+				if default[key].list:find(temp) then
+					return temp
+				else
+					return false
+				end
+			end, -- list
 		}
 	
 		local escape = {quot='"', lt='<', gt='>', amp='&',} -- XML escape characters
@@ -269,8 +298,9 @@ function Events() -- Parse Events table.
 		return table.concat(Evns, '\n')
 	end})
 
-	local AddEvn = function(day, desc, color, ann)
+	local AddEvn = function(day, desc, color, ann, cs)
 		desc = desc:format(ann and (' (%s)'):format(ann) or '')
+		if cs then desc = case[cs](desc) end
 		if Hol[day] then
 			table.insert(Hol[day].text, desc)
 			table.insert(Hol[day].color, color)
@@ -302,7 +332,7 @@ function Events() -- Parse Events table.
 						local tstamp = first + a * multi
 						local temp = os.date('*t', tstamp)
 						if temp.month == Time.show.month and test then
-							AddEvn(temp.day, desc, event.color, event.annive and ((tstamp - stamp) / multi + 1) or false)
+							AddEvn(temp.day, desc, event.color, event.annive and ((tstamp - stamp) / multi + 1) or false, event.case)
 						end
 					end
 				end
@@ -310,7 +340,7 @@ function Events() -- Parse Events table.
 				local test = (event.year and event.multip > 1) and ((Time.show.year - event.year) % event.multip) or 0
 
 				if eMonth == Time.show.month and test == 0 then
-					AddEvn(day, desc, event.color, event.annive and (Time.show.year - event.year / event.multip) or false)
+					AddEvn(day, desc, event.color, event.annive and (Time.show.year - event.year / event.multip) or false, event.case)
 				end
 			elseif nrepeat == 'month' then
 				if eMonth and event.year then
@@ -320,14 +350,14 @@ function Events() -- Parse Events table.
 						local estamp, mstart = tstamp(1, eMonth, event.year), tstamp(1, Time.show.month, Time.show.year)
 
 						if (mdiff % event.multip) == 0 and mstart >= estamp then
-							AddEvn(day, desc, event.color, event.annive and (mdiff / event.multip + 1) or false)
+							AddEvn(day, desc, event.color, event.annive and (mdiff / event.multip + 1) or false, event.case)
 						end
 					end
 				else
-					AddEvn(day, desc, event.color, false)
+					AddEvn(day, desc, event.color, false, event.case)
 				end
 			elseif event.year == Time.show.year then
-				AddEvn(day, desc, event.color)
+				AddEvn(day, desc, event.color, event.case)
 			end
 		end
 	end
