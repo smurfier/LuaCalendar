@@ -187,7 +187,12 @@ function LoadEvents(FileTable)
 		skip = {value = false, ktype = 'string'}
 	}
 
-	local Keys = function(line, source)
+	local vtypes = {
+		name = {value = '', ktype = 'string'},
+		['select'] = {value = '', ktype = 'string', spaces = true},
+	}
+
+	local Keys = function(line, source, types)
 		local tbl = {}
 		
 		local funcs = {
@@ -206,13 +211,13 @@ function LoadEvents(FileTable)
 			end, -- color
 			number = function(key, input)
 				local num = tonumber((input:gsub('%s', '')))
-				return (num and default[key].round) and ('%.' .. default[key].round .. 'f'):format(num) or num
+				return (num and types[key].round) and ('%.' .. types[key].round .. 'f'):format(num) or num
 			end, -- number
-			string = function(key, input) return default[key].spaces and input:match('^%s*(.-)%s*$') or (input:gsub('%s', '')) end,
+			string = function(key, input) return types[key].spaces and input:match('^%s*(.-)%s*$') or (input:gsub('%s', '')) end,
 			boolean = function(key, input) return input:gsub('%s', ''):lower() == 'true' end,
 			list = function(key, input)
 				local temp = input:gsub('[|%s]', ''):lower()
-				if default[key].list:find(temp) then
+				if types[key].list:find(temp) then
 					return temp
 				else
 					return false
@@ -224,8 +229,8 @@ function LoadEvents(FileTable)
 
 		for key, value in line:gmatch('(%a+)="([^"]+)"') do
 			local nkey = key:sub(1, 6):lower()
-			if default[nkey] then
-				tbl[nkey] = funcs[(default[nkey].ktype)](nkey, value:gsub('&([^;]+);', escape):gsub('\r?\n', ' '))
+			if types[nkey] then
+				tbl[nkey] = funcs[(types[nkey].ktype)](nkey, value:gsub('&([^;]+);', escape):gsub('\r?\n', ' '))
 			else
 				ErrMsg(nil, 'Invalid key %s=%q in %s', key, value, source)
 			end
@@ -241,21 +246,34 @@ function LoadEvents(FileTable)
 		File:close()
 
 		test(open:match('%S+'):lower() == 'eventfile' and close:lower() == '/eventfile', 'Invalid Event File: %s', fName)
-		local eFile, eSet = Keys(open, fName), {}
+		local eFile, eSet = Keys(open, fName, default), {}
 			
 		for tag, line in content:gmatch('<([^%s>]+)([^>]*)>') do
 			local ntag = tag:lower()
 
-			if ntag == 'set' then
-				table.insert(eSet, Keys(line, fName))
+			if ntag == 'variable' then
+				local Tmp = Keys(line, fName, vtypes)
+				
+				if not Variables then
+					Variables = {}
+				end
+				
+				if not Variables[fName] then
+					Variables[fName] = {}
+				end
+				
+				Variables[fName][Tmp.name:lower()] = Tmp.select
+			elseif ntag == 'set' then
+				table.insert(eSet, Keys(line, fName, default))
 			elseif ntag == '/set' then
 				table.remove(eSet)
 			elseif ntag == 'event' then
-				local Tmp, dSet, tbl = Keys(line, fName), {}, {}
+				local Tmp, dSet, tbl = Keys(line, fName, default), {}, {}
 				for _, column in ipairs(eSet) do
 					for key, value in pairs(column) do dSet[key] = value end
 				end
 				for k, v in pairs(default) do tbl[k] = Tmp[k] or dSet[k] or eFile[k] or v.value end
+				tbl.fname = fName
 				if not tbl.inacti then table.insert(hFile, tbl) end
 			else
 				ErrMsg(nil, 'Invalid Event Tag <%s> in %s', tag, fName)
@@ -310,14 +328,14 @@ function Events() -- Parse Events table.
 		end
 	end
 	
-	local formula = function(input, source) return SKIN:ParseFormula(('(%s)'):format(Vars(input, source))) end
+	local formula = function(input, source, fname) return SKIN:ParseFormula(('(%s)'):format(Vars(input, source, fname))) end
 	local tstamp = function(d, m, y) return os.time{day = d, month = m, year= y, isdst = false} end
 
 	for _, event in ipairs(hFile or {}) do
-		local eMonth = formula(event.month, event.descri)
+		local eMonth = formula(event.month, event.descri, event.fname)
 		if  eMonth == Time.show.month or event['repeat'] then
-			local day = formula(event.day, event.descri) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
-			local desc = event.descri .. '%s' .. (event.title and ' -' .. event.title or '')
+			local day = formula(event.day, event.descri, event.fname) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
+			local desc = Vars(event.descri .. '%s' .. (event.title and ' -' .. event.title or ''), event.descri, event.fname)
 
 			local nrepeat = event['repeat']:lower()
 
@@ -470,7 +488,7 @@ function Easter(year) -- Returns a timestamp representing easter of the current 
 	return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = year}
 end -- Easter
 
-function Vars(line, source) -- Makes allowance for {Variables}
+function Vars(line, source, fname) -- Makes allowance for {Variables}
 	local tbl = setmetatable({mname = MLabels(Time.show.month), year = Time.show.year, today = LZero(Time.curr.day), month = Time.show.month},
 		{ __index = function(_, input)
 			local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
@@ -488,6 +506,7 @@ function Vars(line, source) -- Makes allowance for {Variables}
 				return ErrMsg(0, 'Invalid Variable {%s} in %s', input, source)
 			end
 		end})
+
 	-- Built in Events
 	local SetVar = function(name, timestamp)
 		local temp = os.date('*t', timestamp)
@@ -501,7 +520,14 @@ function Vars(line, source) -- Makes allowance for {Variables}
 	SetVar('ashwednesday', sEaster - 46 * day)
 	SetVar('mardigras', sEaster - 47 * day)
 
-	return line:gsub('{%$([^}]+)}', function(variable) return tbl[variable:gsub('%s', ''):lower()] end)
+	return line:gsub('{%$([^}]+)}', function(variable)
+		local var = variable:gsub('%s', ''):lower()
+		if (Variables or {})[fname or ''] then
+			return Variables[fname][var] or tbl[var]
+		else
+			return tbl[var]
+		end
+	end)
 end -- Vars
 
 function rotate(value) -- Makes allowance for StartOnMonday
