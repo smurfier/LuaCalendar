@@ -251,83 +251,76 @@ function Events() -- Parse Events table.
 		elseif cs == 'upper' then
 			desc = desc:upper()
 		elseif cs == 'title' then
-			desc = desc:gsub('%w+', function(word)
-				local first, rest = word:match('(.)(.*)')
-				return first:upper() .. rest:lower()
-			end)
+			desc = desc:gsub('(%S)(%S*)', function(first, rest) return first:upper() .. rest:lower() end)
 		elseif cs == 'sentence' then
-			desc = desc:gsub('[^.]+', function(sentence)
+			desc = desc:gsub('[^.!?]+', function(sentence)
 				local space, first, rest = sentence:match('(%s*)(.)(.*)')	
-				return space .. first:upper() .. rest:lower():gsub('%si%s', ' I ')
+				return space .. first:upper() .. rest:lower():gsub("%si([%s'])", ' I%1')
 			end)
 		end
 
-		if not skip:find(('%02d%02d%04d'):format(day, Time.show.month, Time.show.year)) then
-			if Hol[day] then
-				table.insert(Hol[day].text, desc)
-				table.insert(Hol[day].color, color)
-			else
-				Hol[day] = {text = {desc}, color = {color},}
-			end
+		if skip:find(('%02d%02d%04d'):format(day, Time.show.month, Time.show.year)) then
+			-- Do Nothing	
+		elseif Hol[day] then
+			table.insert(Hol[day].text, desc)
+			table.insert(Hol[day].color, color)
+		else
+			Hol[day] = {text = {desc}, color = {color},}
 		end
 	end
 
 	local tstamp = function(d, m, y) return os.time{day = d, month = m, year= y, isdst = false} end
 
 	for _, event in ipairs(hFile or {}) do
-		local eMonth = Parse.Number(event.month, 0, event.fname)
+		local eMonth = Parse.Number(event.month, false, event.fname)
 		local eRepeat = Parse.List(event['repeat'], 'none', event.fname, 'none|week|year|month')
-		if  eMonth == Time.show.month or eRepeat ~= 'none' then
-			local day = Parse.Number(event.day, 0, event.fname) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
+		if  (eMonth or 0) == Time.show.month or eRepeat ~= 'none' then
+			local day = Parse.Number(event.day, false, event.fname) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
 			local title = Parse.String(event.title, '', event.fname, true)
 			local desc = Parse.String(event.descri .. '%s' .. (title ~= '' and ' -' .. title or ''), '', event.fname, true)
 			local color = Parse.Color(event.color, event.fname)
 			local case = Parse.List(event.case, 'none', event.fname, 'none|lower|upper|title|sentence')
-			local year = Parse.Number(event.year, 0, event.fname)
+			local year = Parse.Number(event.year, false, event.fname)
 			local skip = Parse.String(event.skip, '', event.fname)
 			local multip = Parse.Number(event.multip, 0, event.fname, 0)
 			local annive = Parse.Boolean(event.annive, event.fname)
 
-			if not Parse.Boolean(event.inacti, event.fname) then
-				if eRepeat == 'week' then
-					if eMonth and year and day then
-						local stamp = tstamp(day, eMonth, year)
-						local test = tstamp(day, Time.show.month, Time.show.year) >= stamp
-						local mstart = tstamp(1, Time.show.month, Time.show.year)
-						local multi = multip * 604800
-						local first = mstart + ((stamp - mstart) % multi)
+			if Parse.Boolean(event.inacti, event.fname) then
+				-- Do Nothing
+			elseif eRepeat == 'week' and eMonth and year and day then
+				local stamp = tstamp(day, eMonth, year)
+				local test = tstamp(day, Time.show.month, Time.show.year) >= stamp
+				local mstart = tstamp(1, Time.show.month, Time.show.year)
+				local multi = multip * 604800
+				local first = mstart + ((stamp - mstart) % multi)
 
-						for a = 0, 4 do
-							local tstamp = first + a * multi
-							local temp = os.date('*t', tstamp)
-							if temp.month == Time.show.month and test then
-								AddEvn(temp.day, desc, color, annive and ((tstamp - stamp) / multi + 1) or false, case, skip)
-							end
+				for a = 0, 4 do
+					local tstamp = first + a * multi
+					local temp = os.date('*t', tstamp)
+					if temp.month == Time.show.month and test then
+						AddEvn(temp.day, desc, color, annive and ((tstamp - stamp) / multi + 1) or false, case, skip)
+					end
+				end
+			elseif eRepeat == 'year' then
+				if eMonth == Time.show.month and ((year and multip > 1) and ((Time.show.year - year) % multip) or 0) == 0 then
+					AddEvn(day, desc, color, annive and (Time.show.year - year / multip) or false, case, skip)
+				end
+			elseif eRepeat == 'month' then
+				if eMonth and year then
+					if Time.show.year >= year then
+						local ydiff = Time.show.year - year - 1
+						local mdiff = ydiff == -1 and (Time.show.month - eMonth) or ((12 - eMonth) + Time.show.month + (ydiff * 12))
+						local estamp, mstart = tstamp(1, eMonth, year), tstamp(1, Time.show.month, Time.show.year)
+
+						if (mdiff % multip) == 0 and mstart >= estamp then
+							AddEvn(day, desc, color, annive and (mdiff / multip + 1) or false, case, skip)
 						end
 					end
-				elseif eRepeat == 'year' then
-					local test = (year and multip > 1) and ((Time.show.year - year) % multip) or 0
-
-					if eMonth == Time.show.month and test == 0 then
-						AddEvn(day, desc, color, annive and (Time.show.year - year / multip) or false, case, skip)
-					end
-				elseif eRepeat == 'month' then
-					if eMonth and year then
-						if Year >= year then
-							local ydiff = Time.show.year - year - 1
-							local mdiff = ydiff == -1 and (Time.show.month - eMonth) or ((12 - eMonth) + Time.show.month + (ydiff * 12))
-							local estamp, mstart = tstamp(1, eMonth, year), tstamp(1, Time.show.month, Time.show.year)
-
-							if (mdiff % multip) == 0 and mstart >= estamp then
-								AddEvn(day, desc, color, annive and (mdiff / multip + 1) or false, case, skip)
-							end
-						end
-					else
-						AddEvn(day, desc, color, false, case, skip)
-					end
-				elseif year == Time.show.year then
+				else
 					AddEvn(day, desc, color, false, case, skip)
 				end
+			elseif year == Time.show.year then
+				AddEvn(day, desc, color, false, case, skip)
 			end
 		end
 	end
@@ -439,77 +432,95 @@ function Easter(year) -- Returns a timestamp representing easter of the current 
 	return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = year}
 end -- Easter
 
-function Vars(line, fname) -- Makes allowance for {Variables}
-	local tbl = setmetatable({mname = MLabels(Time.show.month), year = Time.show.year, today = LZero(Time.curr.day), month = Time.show.month},
-		{ __index = function(_, input)
+function Vars(line, fname, esub) -- Makes allowance for {$Variables}
+	local tbl = {mname = MLabels(Time.show.month), year = Time.show.year, today = LZero(Time.curr.day), month = Time.show.month}
+
+	-- Built in Events
+	local BuiltIn = {
+		easter = function() return Easter(Time.show.year) end,
+		goodfriday = function() return Easter(Time.show.year) - 2 * 86400 end,
+		ashwednesday = function() return Easter(Time.show.year) - 46 * 86400 end,
+		mardigras = function() return Easter(Time.show.year) - 47 * 86400 end,
+	}
+
+	return (line:gsub('{%$([^}]+)}', function(variable)
+		local var = variable:gsub('%s', ''):lower()
+		if BuiltIn[var:match('([^:]+):') or ''] then
+			local name, vtype = var:match('^([^:]+):(.+)')
+			return os.date('*t', BuiltIn[name]())[vtype] or ErrMsg(esub, 'Invalid Variable {$%s}', var)
+		elseif ((Variables or {})[fname or ''] or {})[var] then
+			return Variables[fname][var]
+		elseif tbl[var] then
+			return tbl[var]
+		else
 			local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
-			local v1, v2 = input:match('(.+)(...)')
+			local v1, v2 = var:match('(.+)(...)')
 			if not (W[v1 or ''] and D[v2 or '']) then -- Error
-				return ErrMsg(0, 'Invalid Variable {$%s}', input)
+				return ErrMsg(esub, 'Invalid Variable {$%s}', var)
 			elseif v1 == 'last' then -- Last Day
 				local L = 36 + D[v2] - Time.stats.startday
 				return L - math.ceil((L - Time.stats.clength) / 7) * 7
 			else -- Variable Day
 				return rotate(D[v2]) + 1 - Time.stats.startday + (Time.stats.startday > rotate(D[v2]) and 7 or 0) + 7 * W[v1]
 			end
-		end})
-
-	-- Built in Events
-	local SetVar = function(name, timestamp)
-		local temp = os.date('*t', timestamp)
-		tbl[name:lower() .. 'month'] = temp.month
-		tbl[name:lower() .. 'day'] = temp.day
-	end
-	
-	local sEaster, day = Easter(Time.show.year), 86400
-	SetVar('easter', sEaster)
-	SetVar('goodfriday', sEaster - 2 * day)
-	SetVar('ashwednesday', sEaster - 46 * day)
-	SetVar('mardigras', sEaster - 47 * day)
-	return line:gsub('{%$([^}]+)}', function(variable)
-		local var = variable:gsub('%s', ''):lower()
-		if (Variables or {})[fname or ''] then
-			return Variables[fname][var] or tbl[var]
-		else
-			return tbl[var]
 		end
-	end)
+	end))
 end -- Vars
 
 Parse = {
 	Number = function(line, default, fname, round)
-		line = Vars(line, fname):gsub('%s', '')
-		local num = line == '' and default or SKIN:ParseFormula('(' .. line ..')')
-		return round and tonumber(('%.' .. round .. 'f'):format(num)) or num
+		local num = Vars(line, fname, 0):gsub('%s', '')
+		if num == '' then
+			return default
+		else
+			num = SKIN:ParseFormula('(' .. num .. ')')
+			if num then
+				return round and tonumber(('%.' .. round .. 'f'):format(num)) or num
+			else
+				return default
+			end
+		end
 	end, -- Number
 
 	Boolean = function(line, fname)
-		line = Vars(line, fname):gsub('%s', ''):lower()
-		return line == 'true'
+		return Vars(line, fname, ''):gsub('%s', ''):lower() == 'true'
 	end, -- Boolean
 
 	List = function(line, default, fname, list)
-		line = Vars(line, source, fname):gsub('[|%s]', ''):lower()
+		line = Vars(line, fname, ''):gsub('[|%s]', ''):lower()
 		return list:find(line) and line or default
 	end, -- List
 
 	String = function(line, default, fname, spaces)
-		line = Vars(line, fname)
+		line = Vars(line, fname, '')
+		if line == '' then line = default end
 		return spaces and line or line:gsub('%s', '')
 	end, -- String
 
 	Color = function(line, fname)
-		line = Vars(line, fname):gsub('%s', '')
-		if line:len() == 0 then
+		line = Vars(line, fname, ''):gsub('%s', '')
+		local tbl = {}
+		if line == '' then
 			return false
 		elseif line:match(',') then
-			local hex = {}
-			for rgb in line:gmatch('%d+') do table.insert(hex, ('%02X'):format(tonumber(rgb))) end
-			for i = #hex, 4 do table.insert(hex, 'FF') end
-			return table.concat(hex)
+			for rgb in line:gmatch('[^,]+') do
+				if not tonumber(rgb) then
+					return false
+				else
+					table.insert(tbl, ('%02X'):format(tonumber(rgb)))
+				end
+			end
 		else
-			return line
+			for hex in line:gmatch('%S%S') do
+				if not tonumber(hex, 16) then
+					return false
+				else
+					table.insert(tbl, hex:upper())
+				end
+			end
 		end
+		for i = #tbl, 4 do table.insert(tbl, 'FF') end
+		return table.concat(tbl)
 	end, -- Color
 }
 
