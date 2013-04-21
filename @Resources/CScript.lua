@@ -179,7 +179,7 @@ function LoadEvents(FileTable)
 		local escape = {quot='"', lt='<', gt='>', amp='&',} -- XML escape characters
 
 		for key, value in line:gmatch('(%a+)="([^"]+)"') do
-			tbl[key:sub(1, 6):lower()] = value:gsub('&([^;]+);', escape):gsub('\r?\n', ' '):match('^%s*(.-)%s*$')
+			tbl[key:lower()] = value:gsub('&([^;]+);', escape):gsub('\r?\n', ' '):match('^%s*(.-)%s*$')
 		end
 	
 		return tbl
@@ -216,7 +216,7 @@ function LoadEvents(FileTable)
 				for _, column in ipairs(eSet) do
 					for key, value in pairs(column) do dSet[key] = value end
 				end
-				for _, v in pairs{'month', 'day', 'year', 'descri', 'title', 'color', 'repeat', 'multip', 'annive', 'inacti', 'case', 'skip'} do
+				for _, v in pairs{'month', 'day', 'year', 'description', 'title', 'color', 'repeat', 'multiplier', 'anniversary', 'inactive', 'case', 'skip'} do
 					tbl[v] = Tmp[v] or dSet[v] or eFile[v] or ''
 				end
 				tbl.fname = fName
@@ -243,84 +243,81 @@ function Events() -- Parse Events table.
 		return table.concat(Evns, '\n')
 	end})
 
-	local AddEvn = function(day, desc, color, ann, cs, skip)
-		desc = desc:format(ann and (' (%s)'):format(ann) or '')
-		
-		if cs == 'lower' then
-			desc = desc:lower()
-		elseif cs == 'upper' then
-			desc = desc:upper()
-		elseif cs == 'title' then
-			desc = desc:gsub('(%S)(%S*)', function(first, rest) return first:upper() .. rest:lower() end)
-		elseif cs == 'sentence' then
-			desc = desc:gsub('[^.!?]+', function(sentence)
-				local space, first, rest = sentence:match('(%s*)(.)(.*)')	
-				return space .. first:upper() .. rest:lower():gsub("%si([%s'])", ' I%1')
-			end)
-		end
-
-		if skip:find(('%02d%02d%04d'):format(day, Time.show.month, Time.show.year)) then
-			-- Do Nothing	
-		elseif Hol[day] then
-			table.insert(Hol[day].text, desc)
-			table.insert(Hol[day].color, color)
-		else
-			Hol[day] = {text = {desc}, color = {color},}
-		end
-	end
-
 	local tstamp = function(d, m, y) return os.time{day = d, month = m, year= y, isdst = false} end
 
 	for _, event in ipairs(hFile or {}) do
 		local eMonth = Parse.Number(event.month, false, event.fname)
 		local eRepeat = Parse.List(event['repeat'], 'none', event.fname, 'none|week|year|month')
 		if  (eMonth or 0) == Time.show.month or eRepeat ~= 'none' then
-			local day = Parse.Number(event.day, false, event.fname) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
-			local title = Parse.String(event.title, '', event.fname, true)
-			local desc = Parse.String(event.descri .. '%s' .. (title ~= '' and ' -' .. title or ''), '', event.fname, true)
-			local color = Parse.Color(event.color, event.fname)
-			local case = Parse.List(event.case, 'none', event.fname, 'none|lower|upper|title|sentence')
-			local year = Parse.Number(event.year, false, event.fname)
-			local skip = Parse.String(event.skip, '', event.fname)
-			local multip = Parse.Number(event.multip, 0, event.fname, 0)
-			local annive = Parse.Boolean(event.annive, event.fname)
+			
+			local AddEvn = function(day, ann)
+				local desc = Parse.String(event.description, '', event.fname, true)
+				if Parse.Boolean(event.anniversary, event.fname) and ann then desc = desc .. (' (%s)'):format(ann) end
+				local title = Parse.String(event.title, '', event.fname, true)
+				if title ~= '' then desc = ' -' .. title end
 
-			if Parse.Boolean(event.inacti, event.fname) then
+				local color = Parse.Color(event.color, event.fname)
+				
+				local case = Parse.List(event.case, 'none', event.fname, 'none|lower|upper|title|sentence')
+				if case == 'lower' then
+					desc = desc:lower()
+				elseif case == 'upper' then
+					desc = desc:upper()
+				elseif case == 'title' then
+					desc = desc:gsub('(%S)(%S*)', function(first, rest) return first:upper() .. rest:lower() end)
+				elseif case == 'sentence' then
+					desc = desc:gsub('[^.!?]+', function(sentence)
+						local space, first, rest = sentence:match('(%s*)(.)(.*)')	
+						return space .. first:upper() .. rest:lower():gsub("%si([%s'])", ' I%1')
+					end)
+				end
+
+				if Parse.String(event.skip, '', event.fname):find(('%02d%02d%04d'):format(day, Time.show.month, Time.show.year)) then
+					-- Do Nothing	
+				elseif Hol[day] then
+					table.insert(Hol[day].text, desc)
+					table.insert(Hol[day].color, color)
+				else
+					Hol[day] = {text = {desc}, color = {color},}
+				end
+			end
+
+			local day = Parse.Number(event.day, false, event.fname) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
+			local year = Parse.Number(event.year, false, event.fname)
+			local multip = Parse.Number(event.multiplier, 1, event.fname, 0)
+
+			if Parse.Boolean(event.inactive, event.fname) then
 				-- Do Nothing
 			elseif eRepeat == 'week' and eMonth and year and day then
 				local stamp = tstamp(day, eMonth, year)
-				local test = tstamp(day, Time.show.month, Time.show.year) >= stamp
-				local mstart = tstamp(1, Time.show.month, Time.show.year)
-				local multi = multip * 604800
-				local first = mstart + ((stamp - mstart) % multi)
+				if tstamp(day, Time.show.month, Time.show.year) >= stamp then
+					local mstart = tstamp(1, Time.show.month, Time.show.year)
+					local multi = multip * 604800
+					local first = mstart + ((stamp - mstart) % multi)
 
-				for a = 0, 4 do
-					local tstamp = first + a * multi
-					local temp = os.date('*t', tstamp)
-					if temp.month == Time.show.month and test then
-						AddEvn(temp.day, desc, color, annive and ((tstamp - stamp) / multi + 1) or false, case, skip)
-					end
-				end
-			elseif eRepeat == 'year' then
-				if eMonth == Time.show.month and ((year and multip > 1) and ((Time.show.year - year) % multip) or 0) == 0 then
-					AddEvn(day, desc, color, annive and (Time.show.year - year / multip) or false, case, skip)
-				end
-			elseif eRepeat == 'month' then
-				if eMonth and year then
-					if Time.show.year >= year then
-						local ydiff = Time.show.year - year - 1
-						local mdiff = ydiff == -1 and (Time.show.month - eMonth) or ((12 - eMonth) + Time.show.month + (ydiff * 12))
-						local estamp, mstart = tstamp(1, eMonth, year), tstamp(1, Time.show.month, Time.show.year)
-
-						if (mdiff % multip) == 0 and mstart >= estamp then
-							AddEvn(day, desc, color, annive and (mdiff / multip + 1) or false, case, skip)
+					for a = 0, 4 do
+						local tstamp = first + a * multi
+						local temp = os.date('*t', tstamp)
+						if temp.month == Time.show.month then
+							AddEvn(temp.day, (tstamp - stamp) / multi + 1)
 						end
 					end
-				else
-					AddEvn(day, desc, color, false, case, skip)
+				end
+			elseif eRepeat == 'year' and eMonth == Time.show.month and ((year and multip > 1) and ((Time.show.year - year) % multip) or 0) == 0 then
+				AddEvn(day, year and Time.show.year - year / multip)
+			elseif eRepeat == 'month' then
+				if not eMonth and year then
+					AddEvn(day)
+				elseif Time.show.year >= year then
+					local ydiff = Time.show.year - year - 1
+					local mdiff = ydiff == -1 and (Time.show.month - eMonth) or ((12 - eMonth) + Time.show.month + (ydiff * 12))
+
+					if (mdiff % multip) == 0 and tstamp(1, Time.show.month, Time.show.year) >= tstamp(1, eMonth, year) then
+						AddEvn(day, mdiff / multip + 1)
+					end
 				end
 			elseif year == Time.show.year then
-				AddEvn(day, desc, color, false, case, skip)
+				AddEvn(day)
 			end
 		end
 	end
@@ -349,20 +346,18 @@ function Draw() -- Sets all meter properties and calculates days
 			table.insert(Styles, Meters.Days.Styles.NewWeek)
 		end
 		-- Holiday ToolTip and Style
-		if Hol then
-			if day > 0 and day <= Time.stats.clength and Hol[day] then
-				event = table.concat(Hol[day].text, '\n')
-				table.insert(Styles, Meters.Days.Styles.Holiday)
+		if (Hol or {})[day] and day > 0 and day <= Time.stats.clength then
+			event = table.concat(Hol[day].text, '\n')
+			table.insert(Styles, Meters.Days.Styles.Holiday)
 
-				for _, value in ipairs(Hol[day].color) do
-					if value then
-						if not color then
-							color = value
-						elseif color ~= value then
-							color = ''
-							break
-						end
-					end
+			for _, value in ipairs(Hol[day].color) do
+				if not value then
+					-- Do Nothing
+				elseif not color then
+					color = value
+				elseif color ~= value then
+					color = ''
+					break
 				end
 			end
 		end
@@ -551,9 +546,12 @@ function ReturnError() -- Used to prevent duplicate error messages
 			for k2, v2 in ipairs(temp) do
 				if v == v2 then count = count +1 end
 			end
-			if count == 0 then table.insert(temp, v) end
+			if count == 0 then
+				SKIN:Bang('!Log', Settings.Name .. ': ' .. v, 'ERROR')
+				table.insert(temp, v)
+			end
 		end
-		for k, v in ipairs(temp) do print(Settings.Name .. ': ' .. v) end
+		--for k, v in ipairs(temp) do SKIN:Bang('!Log', Settings.Name .. ': ' .. v, 'ERROR') end
 		Error, rMessage = rMessage[#rMessage], nil
 		return Error
 	else
