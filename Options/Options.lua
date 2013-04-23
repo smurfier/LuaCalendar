@@ -16,6 +16,7 @@ function Initialize()
 		StartOnMonday = 0,
 		UseLocalMonths = 1,
 		NextFormat = '',
+		ShowMoonPhases = 1,
 	}
 end -- Initialize
 

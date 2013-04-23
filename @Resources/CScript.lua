@@ -10,6 +10,7 @@ function Initialize()
 	Settings.NextFormat = GetOption('NextFormat', '{$day}: {$desc}')
 	Settings.Locale = GetNumberOption('UseLocalMonths') > 0
 	Settings.MonthNames = Delim(GetOption('MonthLabels'))
+	Settings.MoonPhases = GetNumberOption('ShowMoonPhases') > 0
 	-- Weekday labels text
 	SetLabels(Delim(GetOption('DayLabels', 'S|M|T|W|T|F|S')))
 	--Events File
@@ -59,6 +60,7 @@ Settings = setmetatable({}, {
 		NextFormat = '{$day}: {$desc}', -- String
 		Locale = false, -- Boolean
 		MonthNames = {}, -- Table
+		MoonPhases = false, -- Boolean
 	},
 	__newindex = function(_, key, value)
 		local tbl = getmetatable(Settings).__index
@@ -337,6 +339,24 @@ function Draw() -- Sets all meter properties and calculates days
 		SKIN:Bang('!SetOption', Meters.Labels.Name:format(wday), 'MeterStyle', table.concat(Styles, '|'))
 	end
 
+	local moon = {}
+	for i = 1, Settings.MoonPhases and Time.stats.clength or 0 do
+		local phase = GetPhaseNumber(Time.show.year, Time.show.month, i)
+		if (phase == 1 or phase == 5) and not moon[i - 1] then
+			moon[i] = phase == 1 and 'New Moon' or 'Full Moon'
+		end
+	end
+
+	for k, v in pairs(moon) do
+		if not Hol then
+			Hol = {[k] = {text = {v}, color = {false,},},}
+		elseif not Hol[k] then
+			Hol[k] = {text = {v}, color = {false,},}
+		else
+			table.insert(Hol[k].text, v)
+		end
+	end
+
 	for meter = 1, Range[Settings.Range].days do -- Calculate and set day meters
 		local Styles, day, event, color = {Meters.Days.Styles.Normal}, Range[Settings.Range].formula(meter)
 
@@ -588,3 +608,69 @@ function GetVariable(option, default) -- Allows for existing but empty variables
 		return input
 	end
 end -- GetVariable
+
+function GetPhaseNumber(year, month, day)
+	-- Helper functions
+	local fixangle = function(a) return a - 360 * math.floor(a / 360) end
+	-- Deg->Rad
+	local torad = function(d) return d * (math.pi / 180) end
+	-- Rad->Deg
+	local todeg = function(d) return d * (180 / math.pi) end
+
+	-- Convert Gregorian Date into Julian Date
+	local gregorian = year >= 1583
+	if month == 1 or month == 2 then
+		year, month = (year - 1), (month + 12)
+	end
+	local a = math.floor(year / 100)
+	local b = gregorian and (2 - a + math.floor(a / 4)) or 0
+	local Jday = math.floor(365.25 * (year + 4716)) + math.floor(30.6001 * (month + 1)) + day + b - 1524.5 + ((60 * (60 * 12)) / 86400)	
+
+	local eccent, Day, M, Ec, Lambdasun, ml, Ev, Ae, MM, MmP, mEc, lP, lPP, MoonAge, MoonPhase
+	eccent = 0.016718 -- Eccentricity of Earth's orbit
+	Day = Jday - 2444238.5 -- Date within epoch
+	M = fixangle(fixangle((360 / 365.2422) * Day) - 3.762863) -- Convert from perigee co-ordinates to epoch 1980.0
+	
+	-- Solve Kepler equation
+	EPSILON = 1E-6
+	local e = torad(M)
+	local m2 = torad(M)
+	local delta = e - eccent * math.sin(e) - m2
+	while math.abs(delta) > EPSILON do
+		delta = e - eccent * math.sin(e) - m2
+		e = e - delta / (1 - eccent * math.cos(e))
+	end
+
+	Ec = math.sqrt((1 + eccent) / (1 - eccent)) * math.tan(e / 2)
+	Ec = 2 * todeg(math.atan(Ec)) -- True anomaly
+	Lambdasun = fixangle(Ec + 282.596403) -- Sun's geocentric ecliptic Longitude
+	ml = fixangle(13.1763966 * Day + 64.975464) -- Moon's mean Longitude
+	MM = fixangle(ml - 0.1114041 * Day - 348.383063) -- Moon's mean anomaly
+	Ev = 1.2739 * math.sin(torad(2 * (ml - Lambdasun) - MM)) -- Evection
+	Ae = 0.1858 * math.sin(torad(M)) -- Annual equation
+	MmP = MM + Ev - Ae - (0.37 * math.sin(torad(M))) -- Corrected anomaly
+	mEc = 6.2886 * math.sin(torad(MmP)) -- Correction for the equation of the centre
+	lP = ml + Ev + mEc - Ae + (0.214 * math.sin(torad(2 * MmP))) -- Corrected Longitude
+	lPP = lP + (0.6583 * math.sin(torad(2 * (lP - Lambdasun)))) -- True Longitude
+	MoonAge = lPP - Lambdasun  -- Age of moon   
+	MoonPhase = (1 - math.cos(torad(MoonAge))) / 2 -- Phase of the Moon   
+	local PhaseNum = fixangle(MoonAge)
+
+	if PhaseNum >10 and PhaseNum <= 85 then
+		return 2 -- Waxing Crescent
+	elseif PhaseNum >85 and PhaseNum <= 95 then
+		return 3 -- First Quarter
+	elseif PhaseNum >95 and PhaseNum <= 170 then
+		return 4 -- Waxing Gibbous
+	elseif PhaseNum >170 and PhaseNum <= 190 then
+		return 5 -- Full Moon
+	elseif PhaseNum >190 and PhaseNum <= 265 then
+		return 6 -- Waning Gibbous
+	elseif PhaseNum >265 and PhaseNum <= 275 then
+		return 7 -- Last Quarter
+	elseif PhaseNum >275 and PhaseNum <= 350 then
+		return 8 -- Waning Crescent
+	else
+		return 1 -- New Moon
+	end
+end  -- function GetPhaseNumber

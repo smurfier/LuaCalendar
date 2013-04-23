@@ -32,3 +32,6 @@ UseLocalMonths=1
 ;The format for the list of upcomming events. {day} and {desc} are valid variables.
 NextFormat=
 
+;Show the Moon Phases as events
+ShowMoonPhases=1
+
