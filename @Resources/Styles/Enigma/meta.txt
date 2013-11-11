@@ -2,3 +2,28 @@
 Name=Enigma
 Author=Smurfier and Kaelri
 Info=A clone of the Enigma calendar (v4.0) with a couple small additions.
+
+[Clr.hrl]
+Input=Color
+Label=Date Indicator Color
+Default=128,192,255,160
+
+[Clr.Brd]
+Input=Color
+Label=Border Color
+Default=192,192,192,64
+
+[HideBordersTop]
+Input=Radio
+Label=Hide Top Border
+Default=0
+
+[HideBordersBottom]
+Input=Radio
+Label=Hide Bottom Border
+Default=1
+
+[cWidth]
+Input=Text
+Label=Calendar Width
+Default=200

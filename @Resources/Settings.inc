@@ -1,4 +1,4 @@
-; Please visit http://smurfier.github.com/LuaCalendar for detailed descriptions of the features listed below.
+; Please visit http://smurfier.github.io/LuaCalendar for detailed descriptions of the features listed below.
 
 [Variables]
 ;Name of the Style Sheet
@@ -12,7 +12,7 @@ HideLastWeek=0
 
 ;Holidays File names
 ;Note: For Holiday file names, multiple sources can be used by uisng the pipe delimiter (|).
-EventFile=D:\John\Documents\Programs\Rainmeter\Skins\LuaCalendar\@Resources\Calendars\Holidays.xml
+EventFile=#@#Calendars\Holidays.xml
 
 ;Custom Text formatting for Month Labels. See Readme for details.
 LabelText=
@@ -34,4 +34,7 @@ NextFormat=
 
 ;Show the Moon Phases as events
 ShowMoonPhases=1
+
+;Color to use for the Moon Phases Events
+MoonColor=
 

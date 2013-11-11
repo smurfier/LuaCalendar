@@ -3,18 +3,19 @@
 
 function Initialize()
 	Settings.Color = 'FontColor'
-	Settings.HideLastWeek = GetNumberOption('HideLastWeek') > 0
-	Settings.LeadingZeroes = GetNumberOption('LeadingZeroes') > 0
-	Settings.StartOnMonday = GetNumberOption('StartOnMonday') > 0
-	Settings.LabelFormat = GetOption('LabelText', '{$MName}, {$Year}')
-	Settings.NextFormat = GetOption('NextFormat', '{$day}: {$desc}')
-	Settings.Locale = GetNumberOption('UseLocalMonths') > 0
-	Settings.MonthNames = Delim(GetOption('MonthLabels'))
-	Settings.MoonPhases = GetNumberOption('ShowMoonPhases') > 0
+	Settings.HideLastWeek = Get.NumberVariable('HideLastWeek') > 0
+	Settings.LeadingZeroes = Get.NumberVariable('LeadingZeroes') > 0
+	Settings.StartOnMonday = Get.NumberVariable('StartOnMonday') > 0
+	Settings.LabelFormat = Get.Variable('LabelText', '{$MName}, {$Year}')
+	Settings.NextFormat = Get.Variable('NextFormat', '{$day}: {$desc}')
+	Settings.Locale = Get.NumberVariable('UseLocalMonths') > 0
+	Settings.MonthNames = Delim(Get.Variable('MonthLabels'))
+	Settings.MoonPhases = Get.NumberVariable('ShowMoonPhases') > 0
+	Settings.MoonColor = Parse.Color(Get.Variable('MoonColor', ''))
 	-- Weekday labels text
-	SetLabels(Delim(GetOption('DayLabels', 'S|M|T|W|T|F|S')))
+	SetLabels(Delim(Get.Variable('DayLabels', 'S|M|T|W|T|F|S')))
 	--Events File
-	LoadEvents(ExpandFolder(Delim(GetOption('EventFile'))))
+	LoadEvents(ExpandFolder(Delim(Get.Variable('EventFile'))))
 end -- Initialize
 
 function Update()
@@ -46,7 +47,7 @@ function CombineScroll(input)
 	else
 		Scroll = Scroll + input
 	end
-end
+end -- CombineScroll
 
 Settings = setmetatable({}, {
 	__index = {
@@ -61,6 +62,7 @@ Settings = setmetatable({}, {
 		Locale = false, -- Boolean
 		MonthNames = {}, -- Table
 		MoonPhases = false, -- Boolean
+		MoonColor = '', -- String
 	},
 	__newindex = function(_, key, value)
 		local tbl = getmetatable(Settings).__index
@@ -68,7 +70,8 @@ Settings = setmetatable({}, {
 			if type(value) == type(tbl[key]) then
 				rawset(Settings, key, value)
 			else
-				ErrMsg(nil, 'Invalid Setting type. %s expected, received %s instead.', type(tbl[key]), type(value))
+				local title = function(input) return (type(input):gsub('(.)(.*)', function(first, rest) return first:upper() .. rest:lower() end)) end
+				ErrMsg(nil, '%s: Invalid Setting type. %s expected, received %s instead.', key, title(tbl[key]), title(value))
 			end
 		else
 			ErrMsg(nil, 'Setting does not exist: %s', key)
@@ -126,7 +129,7 @@ Range = setmetatable({ -- Makes allowance for either Month or Week ranges
 		week = function() return math.ceil((Time.curr.day + Time.stats.startday) / 7) end,
 	},
 	week = {
-		formula = function(input) return Time.curr.day +((input - 1) - rotate(Time.curr.wday - 1)) end,
+		formula = function(input) return Time.curr.day + ((input - 1) - rotate(Time.curr.wday - 1)) end,
 		days = 7,
 		week = function() return 1 end,
 		nomove = true,
@@ -178,7 +181,7 @@ function LoadEvents(FileTable)
 	local Keys = function(line)
 		local tbl = {}
 	
-		local escape = {quot='"', lt='<', gt='>', amp='&',} -- XML escape characters
+		local escape = {quot = '"', lt = '<', gt = '>', amp = '&',} -- XML escape characters
 
 		for key, value in line:gmatch('(%a+)="([^"]+)"') do
 			tbl[key:lower()] = value:gsub('&([^;]+);', escape):gsub('\r?\n', ' '):match('^%s*(.-)%s*$')
@@ -203,12 +206,12 @@ function LoadEvents(FileTable)
 				local Tmp = Keys(line)
 				
 				if not Variables then
-					Variables = {[fName] = {},}
+					Variables = {[fName] = {[Tmp.name:lower()] = Tmp.select,},}
 				elseif not Variables[fName] then
-					Variables[fName] = {}
+					Variables[fName] = {[Tmp.name:lower()] = Tmp.select,}
+				else
+					Variables[fname][Tmp.name:lower()] = Tmp.select
 				end
-				
-				Variables[fName][Tmp.name:lower()] = Tmp.select
 			elseif ntag == 'set' then
 				table.insert(eSet, Keys(line))
 			elseif ntag == '/set' then
@@ -218,7 +221,7 @@ function LoadEvents(FileTable)
 				for _, column in ipairs(eSet) do
 					for key, value in pairs(column) do dSet[key] = value end
 				end
-				for _, v in pairs{'month', 'day', 'year', 'description', 'title', 'color', 'repeat', 'multiplier', 'anniversary', 'inactive', 'case', 'skip'} do
+				for _, v in pairs{'month', 'day', 'year', 'description', 'title', 'color', 'repeat', 'multiplier', 'anniversary', 'inactive', 'case', 'skip', 'timestamp'} do
 					tbl[v] = Tmp[v] or dSet[v] or eFile[v] or ''
 				end
 				tbl.fname = fName
@@ -237,7 +240,7 @@ function Events() -- Parse Events table.
 		for day = Time.stats.inmonth and Time.curr.day or 1, Time.stats.clength do -- Parse through month days to keep days in order
 			if self[day] then
 				local tbl = setmetatable({day = day, desc = table.concat(self[day]['text'], ', ')},
-					{ __index = function(_, input) return ErrMsg('', 'Invalid NextFormat variable {%s}', input) end,})
+					{ __index = function(_, input) return ErrMsg('', 'Invalid NextFormat variable {$%s}', input) end,})
 				table.insert(Evns, (Settings.NextFormat:gsub('{%$([^}]+)}', function(variable) return tbl[variable:lower()] end)) )
 			end
 		end
@@ -245,12 +248,33 @@ function Events() -- Parse Events table.
 		return table.concat(Evns, '\n')
 	end})
 
-	local tstamp = function(d, m, y) return os.time{day = d, month = m, year= y, isdst = false} end
+	local tstamp = function(d, m, y) return os.time{day = d, month = m, year = y, isdst = false} end
+
+	local DefineEvent = function(d, e, c)
+		if not Hol[d] then
+			Hol[d] = {text = {e}, color = {c},}
+		else
+			table.insert(Hol[d].text, e)
+			table.insert(Hol[d].color, c)
+		end
+	end
 
 	for _, event in ipairs(hFile or {}) do
-		local eMonth = Parse.Number(event.month, false, event.fname)
-		local eRepeat = Parse.List(event['repeat'], 'none', event.fname, 'none|week|year|month')
-		if  (eMonth or 0) == Time.show.month or eRepeat ~= 'none' then
+		
+		-- Parse necesssary options
+		local dtbl = {stamp = Parse.Number(event.timestamp, false, event.fname)}
+		if dtbl.stamp then
+			dtbl = os.date('*t', dtbl.stamp)
+		else
+			dtbl.month = Parse.Number(event.month, false, event.fname)
+			dtbl.day = Parse.Number(event.day, false, event.fname) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.description)
+			dtbl.year = Parse.Number(event.year, false, event.fname)
+		end
+		dtbl.multip = Parse.Number(event.multiplier, 1, event.fname, 0)
+		dtbl.erepeat = Parse.List(event['repeat'], 'none', event.fname, 'none|week|year|month')
+
+		-- Find matching events
+		if  (dtbl.month or 0) == Time.show.month and not Parse.Boolean(event.inactive, event.fname) then
 			
 			local AddEvn = function(day, ann)
 				local desc = Parse.String(event.description, '', event.fname, true)
@@ -274,27 +298,15 @@ function Events() -- Parse Events table.
 					end)
 				end
 
-				if Parse.String(event.skip, '', event.fname):find(('%02d%02d%04d'):format(day, Time.show.month, Time.show.year)) then
-					-- Do Nothing	
-				elseif Hol[day] then
-					table.insert(Hol[day].text, desc)
-					table.insert(Hol[day].color, color)
-				else
-					Hol[day] = {text = {desc}, color = {color},}
+				if not Parse.String(event.skip, '', event.fname):find(('%02d%02d%04d'):format(day, Time.show.month, Time.show.year)) then
+					DefineEvent(day, desc, color)
 				end
 			end
 
-			local day = Parse.Number(event.day, false, event.fname) or ErrMsg(0, 'Invalid Event Day %s in %s', event.day, event.descri)
-			local year = Parse.Number(event.year, false, event.fname)
-			local multip = Parse.Number(event.multiplier, 1, event.fname, 0)
-
-			if Parse.Boolean(event.inactive, event.fname) then
-				-- Do Nothing
-			elseif eRepeat == 'week' and eMonth and year and day then
-				local stamp = tstamp(day, eMonth, year)
+			if dtbl.erepeat == 'week' and dtbl.month and dtbl.year and dtbl.day then
+				local stamp = tstamp(dtbl.day, dtbl.month, dtbl.year)
 				if tstamp(day, Time.show.month, Time.show.year) >= stamp then
-					local mstart = tstamp(1, Time.show.month, Time.show.year)
-					local multi = multip * 604800
+					local mstart, multi = tstamp(1, Time.show.month, Time.show.year), dtbl.multip * 604800
 					local first = mstart + ((stamp - mstart) % multi)
 
 					for a = 0, 4 do
@@ -305,22 +317,37 @@ function Events() -- Parse Events table.
 						end
 					end
 				end
-			elseif eRepeat == 'year' and eMonth == Time.show.month and ((year and multip > 1) and ((Time.show.year - year) % multip) or 0) == 0 then
-				AddEvn(day, year and Time.show.year - year / multip)
-			elseif eRepeat == 'month' then
-				if not eMonth and year then
-					AddEvn(day)
-				elseif Time.show.year >= year then
-					local ydiff = Time.show.year - year - 1
-					local mdiff = ydiff == -1 and (Time.show.month - eMonth) or ((12 - eMonth) + Time.show.month + (ydiff * 12))
+			elseif dtbl.erepeat == 'year' and dtbl.month == Time.show.month and ((dtbl.year and dtbl.multip > 1) and ((Time.show.year - dtbl.year) % dtbl.multip) or 0) == 0 then
+				AddEvn(dtbl.day, dtbl.year and Time.show.year - dtbl.year / dtbl.multip)
+			elseif dtbl.erepeat == 'month' then
+				if not dtbl.month and dtbl.year then
+					AddEvn(dtbl.day)
+				elseif Time.show.year >= dtbl.year then
+					local ydiff = Time.show.year - dtbl.year - 1
+					local mdiff = ydiff == -1 and (Time.show.month - dtbl.month) or ((12 - dtbl.month) + Time.show.month + (ydiff * 12))
 
-					if (mdiff % multip) == 0 and tstamp(1, Time.show.month, Time.show.year) >= tstamp(1, eMonth, year) then
-						AddEvn(day, mdiff / multip + 1)
+					if (mdiff % dtbl.multip) == 0 and tstamp(1, Time.show.month, Time.show.year) >= tstamp(1, dtbl.month, dtbl.year) then
+						AddEvn(dtbl.day, mdiff / dtbl.multip + 1)
 					end
 				end
-			elseif year == Time.show.year then
-				AddEvn(day)
+			elseif dtbl.erepeat =='none' and dtbl.year == Time.show.year then
+				AddEvn(dtbl.day)
 			end
+		end
+	end
+
+	-- Find the Moon Phases for the Month
+	if type(GetPhaseNumber) == 'function' and Settings.MoonPhases then
+		local moon, names = {}, {[1] = 'New Moon', [5] = 'Full Moon',}
+		for i = 1, Time.stats.clength do
+			local phase = GetPhaseNumber(Time.show.year, Time.show.month, i)
+			if names[phase] and not moon[i - 1] then
+				moon[i] = names[phase]
+			end
+		end
+		-- Apply the Moon Phases to the Hol table
+		for k, v in pairs(moon) do
+			DefineEvent(k, v, Settings.MoonColor)
 		end
 	end
 end -- Events
@@ -339,24 +366,6 @@ function Draw() -- Sets all meter properties and calculates days
 		SKIN:Bang('!SetOption', Meters.Labels.Name:format(wday), 'MeterStyle', table.concat(Styles, '|'))
 	end
 
-	local moon = {}
-	for i = 1, Settings.MoonPhases and Time.stats.clength or 0 do
-		local phase = GetPhaseNumber(Time.show.year, Time.show.month, i)
-		if (phase == 1 or phase == 5) and not moon[i - 1] then
-			moon[i] = phase == 1 and 'New Moon' or 'Full Moon'
-		end
-	end
-
-	for k, v in pairs(moon) do
-		if not Hol then
-			Hol = {[k] = {text = {v}, color = {false,},},}
-		elseif not Hol[k] then
-			Hol[k] = {text = {v}, color = {false,},}
-		else
-			table.insert(Hol[k].text, v)
-		end
-	end
-
 	for meter = 1, Range[Settings.Range].days do -- Calculate and set day meters
 		local Styles, day, event, color = {Meters.Days.Styles.Normal}, Range[Settings.Range].formula(meter)
 
@@ -371,7 +380,7 @@ function Draw() -- Sets all meter properties and calculates days
 			table.insert(Styles, Meters.Days.Styles.Holiday)
 
 			for _, value in ipairs(Hol[day].color) do
-				if not value then
+				if value == '' then
 					-- Do Nothing
 				elseif not color then
 					color = value
@@ -403,8 +412,13 @@ function Draw() -- Sets all meter properties and calculates days
 			[Settings.Color] = color or '',
 		} do SKIN:Bang('!SetOption', Meters.Days.Name:format(meter), k, v) end
 	end
+
+	-- Week Numbers for the current month
+	local FirstWeek = os.time{day = (6 - Time.stats.startday), month = Time.show.month, year = Time.show.year}
+	local GetWeek = function(i) return math.ceil(os.date('%j', FirstWeek + i * 604800) / 7) end
 	
-	local sVars = { -- Define skin variables
+	-- Define skin variables
+	for k, v in pairs{
 		ThisWeek = Range[Settings.Range].week(),
 		Week = rotate(Time.curr.wday - 1),
 		Today = LZero(Time.curr.day),
@@ -413,12 +427,13 @@ function Draw() -- Sets all meter properties and calculates days
 		MonthLabel = Vars(Settings.LabelFormat),
 		LastWkHidden = LastWeek and 1 or 0,
 		NextEvent = Hol and Hol() or '',
-	}
-	-- Week Numbers for the current month
-	local FirstWeek = os.time{day = (6 - Time.stats.startday), month = Time.show.month, year = Time.show.year}
-	for i = 0, 5 do sVars['WeekNumber' .. (i + 1)] = math.ceil(tonumber(os.date('%j', (FirstWeek + (i * 604800)))) / 7) end
-	-- Set Skin Variables
-	for k, v in pairs(sVars) do SKIN:Bang('!SetVariable', k, v) end
+		WeekNumber1 = GetWeek(0),
+		WeekNumber2 = GetWeek(1),
+		WeekNumber3 = GetWeek(2),
+		WeekNumber4 = GetWeek(3),
+		WeekNumber5 = GetWeek(4),
+		WeekNumber6 = GetWeek(5),
+	} do SKIN:Bang('!SetVariable', k, v) end
 end -- Draw
 
 function Move(value) -- Move calendar through the months
@@ -437,37 +452,35 @@ function Move(value) -- Move calendar through the months
 	SKIN:Bang('!SetVariable', 'NotCurrentMonth', Time.stats.inmonth and 0 or 1)
 end -- Move
 
-function Easter(year) -- Returns a timestamp representing easter of the current year
-	local a, b, c, h, L, m = (year % 19), math.floor(year / 100), (year % 100), 0, 0, 0
-	local d, e, f, i, k = math.floor(b/4), (b % 4), math.floor((b + 8) / 25), math.floor(c / 4), (c % 4)
-	h = (19 * a + b - d - math.floor((b - f + 1) / 3) + 15) % 30
-	L = (32 + 2 * e + 2 * i - h - k) % 7
-	m = math.floor((a + 11 * h + 22 * L) / 451)
-	
-	return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = year}
-end -- Easter
+BuiltIn = {
+	easter = function()
+		local a, b, c, h, L, m = (Time.show.year % 19), math.floor(Time.show.year / 100), (Time.show.year % 100), 0, 0, 0
+		local d, e, f, i, k = math.floor(b/4), (b % 4), math.floor((b + 8) / 25), math.floor(c / 4), (c % 4)
+		h = (19 * a + b - d - math.floor((b - f + 1) / 3) + 15) % 30
+		L = (32 + 2 * e + 2 * i - h - k) % 7
+		m = math.floor((a + 11 * h + 22 * L) / 451)
+		
+		return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = Time.show.year}
+	end
+} -- BuiltIn
 
 function Vars(line, fname, esub) -- Makes allowance for {$Variables}
 	local tbl = {mname = MLabels(Time.show.month), year = Time.show.year, today = LZero(Time.curr.day), month = Time.show.month}
 
-	-- Built in Events
-	local BuiltIn = {
-		easter = function() return Easter(Time.show.year) end,
-		goodfriday = function() return Easter(Time.show.year) - 2 * 86400 end,
-		ashwednesday = function() return Easter(Time.show.year) - 46 * 86400 end,
-		mardigras = function() return Easter(Time.show.year) - 47 * 86400 end,
-	}
-
 	return (line:gsub('{%$([^}]+)}', function(variable)
 		local var = variable:gsub('%s', ''):lower()
-		if BuiltIn[var:match('([^:]+):') or ''] then
+		if (BuiltIn or {})[var:match('([^:]+):') or ''] then -- BuiltIn Event
 			local name, vtype = var:match('^([^:]+):(.+)')
-			return os.date('*t', BuiltIn[name]())[vtype] or ErrMsg(esub, 'Invalid Variable {$%s}', var)
-		elseif ((Variables or {})[fname or ''] or {})[var] then
+			if vtype == 'stamp' then
+				return BuiltIn[name]()
+			else
+				return os.date('*t', BuiltIn[name]())[vtype] or ErrMsg(esub, 'Invalid Variable {$%s}', var)
+			end
+		elseif ((Variables or {})[fname or ''] or {})[var] then -- Event File Variable
 			return Variables[fname][var]
-		elseif tbl[var] then
+		elseif tbl[var] then -- Script Variable
 			return tbl[var]
-		else
+		else -- Variable Day
 			local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
 			local v1, v2 = var:match('(.+)(...)')
 			if not (W[v1 or ''] and D[v2 or '']) then -- Error
@@ -484,21 +497,23 @@ end -- Vars
 
 Parse = {
 	Number = function(line, default, fname, round)
-		local num = Vars(line, fname, 0):gsub('%s', '')
-		if num == '' then
+		line = Vars(line, fname, 0):gsub('%s', ''):gsub('(%b())', function(input) return SKIN:ParseFormula(input) end)
+		if line == '' or not line then
 			return default
+		elseif round then
+			return tonumber(('%.' .. round .. 'f'):format(line))
 		else
-			num = SKIN:ParseFormula('(' .. num .. ')')
-			if num then
-				return round and tonumber(('%.' .. round .. 'f'):format(num)) or num
-			else
-				return default
-			end
+			return tonumber(line)
 		end
 	end, -- Number
 
 	Boolean = function(line, fname)
-		return Vars(line, fname, ''):gsub('%s', ''):lower() == 'true'
+		line = Vars(line, fname, ''):gsub('%s', ''):gsub('(%b())', function(input) return SKIN:ParseFormula(input) end)
+		if tonumber(line) then
+			return tonumber(line) > 0
+		else
+			return line:lower() == 'true'
+		end
 	end, -- Boolean
 
 	List = function(line, default, fname, list)
@@ -513,14 +528,14 @@ Parse = {
 	end, -- String
 
 	Color = function(line, fname)
-		line = Vars(line, fname, ''):gsub('%s', '')
+		line = Vars(line, fname, 0):gsub('%s', ''):gsub('(%b())', function(input) return SKIN:ParseFormula(input) end)
 		local tbl = {}
 		if line == '' then
-			return false
+			return ''
 		elseif line:match(',') then
 			for rgb in line:gmatch('[^,]+') do
 				if not tonumber(rgb) then
-					return false
+					return ''
 				else
 					table.insert(tbl, ('%02X'):format(tonumber(rgb)))
 				end
@@ -528,13 +543,12 @@ Parse = {
 		else
 			for hex in line:gmatch('%S%S') do
 				if not tonumber(hex, 16) then
-					return false
+					return ''
 				else
 					table.insert(tbl, hex:upper())
 				end
 			end
 		end
-		for i = #tbl, 4 do table.insert(tbl, 'FF') end
 		return table.concat(tbl)
 	end, -- Color
 }
@@ -564,14 +578,13 @@ function ReturnError() -- Used to prevent duplicate error messages
 		for k, v in ipairs(rMessage) do
 			local count = 0
 			for k2, v2 in ipairs(temp) do
-				if v == v2 then count = count +1 end
+				if v == v2 then count = count + 1 end
 			end
 			if count == 0 then
 				SKIN:Bang('!Log', Settings.Name .. ': ' .. v, 'ERROR')
 				table.insert(temp, v)
 			end
 		end
-		--for k, v in ipairs(temp) do SKIN:Bang('!Log', Settings.Name .. ': ' .. v, 'ERROR') end
 		Error, rMessage = rMessage[#rMessage], nil
 		return Error
 	else
@@ -587,35 +600,44 @@ function test(...) -- clone of assert
 	return rvalue
 end -- test
 
-function GetOption(option, default) -- Allows for existing but empty string options.
-	local input = SELF:GetOption(option)
-	if input == '' then
-		return default or ''
-	else
-		return input
-	end
-end -- GetOption
+Get = {
+	Option = function(option, default) -- Allows for existing but empty string options.
+		local input = SELF:GetOption(option)
+		if input == '' then
+			return default or ''
+		else
+			return input
+		end
+	end, -- GetOption
 
-function GetNumberOption(option, default) -- Allows for existing but empty number options.
-	return tonumber(SELF:GetOption(option)) or default or 0
-end -- GetNumberOption
+	NumberOption = function(option, default) -- Allows for existing but empty number options.
+		return tonumber(SELF:GetOption(option)) or default or 0
+	end, -- GetNumberOption
 
-function GetVariable(option, default) -- Allows for existing but empty variables.
-	local input = SKIN:GetVariable(option)
-	if input == '' then
-		return default or ''
-	else
-		return input
-	end
-end -- GetVariable
+	Variable = function(option, default) -- Allows for existing but empty variables.
+		local input = SKIN:GetVariable(option) or default
+		if default and input == '' then
+			return default
+		else
+			return input
+		end
+	end, -- GetVariable
+	
+	NumberVariable = function(option, default) -- Allows for existing but empty numeric variables.
+		local input = SKIN:GetVariable(option) or default or 0
+		if default and input == '' then
+			input = default
+		end
+		return SKIN:ParseFormula(input) or default or 0
+	end, -- GetNumberVariable
+}
 
+-- Function provided by Mordasius, tweaked by Smurfier
 function GetPhaseNumber(year, month, day)
 	-- Helper functions
-	local fixangle = function(a) return a - 360 * math.floor(a / 360) end
+	local fixangle = function(a) return a % 360 end
 	-- Deg->Rad
 	local torad = function(d) return d * (math.pi / 180) end
-	-- Rad->Deg
-	local todeg = function(d) return d * (180 / math.pi) end
 
 	-- Convert Gregorian Date into Julian Date
 	local gregorian = year >= 1583
@@ -626,23 +648,20 @@ function GetPhaseNumber(year, month, day)
 	local b = gregorian and (2 - a + math.floor(a / 4)) or 0
 	local Jday = math.floor(365.25 * (year + 4716)) + math.floor(30.6001 * (month + 1)) + day + b - 1524.5 + ((60 * (60 * 12)) / 86400)	
 
-	local eccent, Day, M, Ec, Lambdasun, ml, Ev, Ae, MM, MmP, mEc, lP, lPP, MoonAge, MoonPhase
+	local eccent, Day, M, Ec, Lambdasun, ml, Ev, Ae, MM, MmP, mEc, lP
 	eccent = 0.016718 -- Eccentricity of Earth's orbit
 	Day = Jday - 2444238.5 -- Date within epoch
 	M = fixangle(fixangle((360 / 365.2422) * Day) - 3.762863) -- Convert from perigee co-ordinates to epoch 1980.0
 	
 	-- Solve Kepler equation
-	EPSILON = 1E-6
-	local e = torad(M)
-	local m2 = torad(M)
+	local e, m2 = torad(M), torad(M)
 	local delta = e - eccent * math.sin(e) - m2
-	while math.abs(delta) > EPSILON do
+	while math.abs(delta) > 1E-6 do
 		delta = e - eccent * math.sin(e) - m2
 		e = e - delta / (1 - eccent * math.cos(e))
 	end
 
-	Ec = math.sqrt((1 + eccent) / (1 - eccent)) * math.tan(e / 2)
-	Ec = 2 * todeg(math.atan(Ec)) -- True anomaly
+	Ec = 2 * ((math.atan(math.sqrt((1 + eccent) / (1 - eccent)) * math.tan(e / 2))) * (180 / math.pi)) -- True anomaly
 	Lambdasun = fixangle(Ec + 282.596403) -- Sun's geocentric ecliptic Longitude
 	ml = fixangle(13.1763966 * Day + 64.975464) -- Moon's mean Longitude
 	MM = fixangle(ml - 0.1114041 * Day - 348.383063) -- Moon's mean anomaly
@@ -651,24 +670,21 @@ function GetPhaseNumber(year, month, day)
 	MmP = MM + Ev - Ae - (0.37 * math.sin(torad(M))) -- Corrected anomaly
 	mEc = 6.2886 * math.sin(torad(MmP)) -- Correction for the equation of the centre
 	lP = ml + Ev + mEc - Ae + (0.214 * math.sin(torad(2 * MmP))) -- Corrected Longitude
-	lPP = lP + (0.6583 * math.sin(torad(2 * (lP - Lambdasun)))) -- True Longitude
-	MoonAge = lPP - Lambdasun  -- Age of moon   
-	MoonPhase = (1 - math.cos(torad(MoonAge))) / 2 -- Phase of the Moon   
-	local PhaseNum = fixangle(MoonAge)
+	local PhaseNum = fixangle((lP + (0.6583 * math.sin(torad(2 * (lP - Lambdasun))))) - Lambdasun)
 
-	if PhaseNum >10 and PhaseNum <= 85 then
+	if PhaseNum > 10 and PhaseNum <= 85 then
 		return 2 -- Waxing Crescent
-	elseif PhaseNum >85 and PhaseNum <= 95 then
+	elseif PhaseNum > 85 and PhaseNum <= 95 then
 		return 3 -- First Quarter
-	elseif PhaseNum >95 and PhaseNum <= 170 then
+	elseif PhaseNum > 95 and PhaseNum <= 170 then
 		return 4 -- Waxing Gibbous
-	elseif PhaseNum >170 and PhaseNum <= 190 then
+	elseif PhaseNum > 170 and PhaseNum <= 190 then
 		return 5 -- Full Moon
-	elseif PhaseNum >190 and PhaseNum <= 265 then
+	elseif PhaseNum > 190 and PhaseNum <= 265 then
 		return 6 -- Waning Gibbous
-	elseif PhaseNum >265 and PhaseNum <= 275 then
+	elseif PhaseNum > 265 and PhaseNum <= 275 then
 		return 7 -- Last Quarter
-	elseif PhaseNum >275 and PhaseNum <= 350 then
+	elseif PhaseNum > 275 and PhaseNum <= 350 then
 		return 8 -- Waning Crescent
 	else
 		return 1 -- New Moon

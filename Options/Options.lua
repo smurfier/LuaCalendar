@@ -1,23 +1,28 @@
-function Initialize()
-	Scroll = {
-		Position = 1,
-		ItemHeight = 0,
-		Folders = {},
-	}
+Scroll = {
+	Position = 1,
+	ItemHeight = 0,
+	Folders = {},
+}
 
-	Variables = {
-		Style = 'Default',
-		DayLabels = '',
-		HideLastWeek = 0,
-		EventFile = '#@#Calendars\\Holidays.xml',
-		LabelText = '',
-		LeadingZeroes = 0,
-		MonthLabels = '',
-		StartOnMonday = 0,
-		UseLocalMonths = 1,
-		NextFormat = '',
-		ShowMoonPhases = 1,
-	}
+Variables = {
+	Style = 'Default',
+	DayLabels = '',
+	HideLastWeek = 0,
+	EventFile = '#**@**#Calendars\\Holidays.xml',
+	LabelText = '',
+	LeadingZeroes = 0,
+	MonthLabels = '',
+	StartOnMonday = 0,
+	UseLocalMonths = 1,
+	NextFormat = '',
+	ShowMoonPhases = 1,
+	MoonColor = '',
+}
+
+function Initialize()
+	if SKIN:GetVariable('MoonColor') == '' then
+		SKIN:Bang('!SetOption', 'MoonColorFill', 'LineColor', '0,0,0,1')
+	end
 end -- Initialize
 
 function Update()
@@ -30,6 +35,14 @@ function Update()
 		return fullpath:match('(.+)[/\\]$') .. '\\'
 	end
 end -- Update
+
+function SetColor(name, color)
+	if name == 'MoonColor' then
+		SKIN:Bang('!SetOption', 'MoonColorFill', 'LineColor', '#*MoonColor*#')
+	end
+	SKIN:Bang('!SetVariable', name, color)
+	SKIN:Bang('!Update')
+end -- SetColor
 
 -- ========== START SCROLLBOX ==========
 
@@ -54,11 +67,9 @@ function DrawItems()
 end -- DrawItems
 
 function UnpackList(input)
-	local path = SKIN:GetVariable('@') .. 'Styles\\%s\\meta.txt'
-
 	for _, word in ipairs(delim(input)) do
 		local temp = {folder = word, name = word, author = '', info = '',}
-		local ini = ReadIni(SKIN:ReplaceVariables(path:format(word)))
+		local ini = ReadIni(SKIN:ReplaceVariables(('#@#Styles\\%s\\meta.txt'):format(word)))
 		if ini.metadata then
 			temp = {
 				folder = word,
@@ -186,15 +197,14 @@ end -- MessageOutput
 
 function TablePosition(tbl, key, func)
 	for i, v in ipairs(tbl) do
-		if func then v = func(v) end
-		if v == key then
+		if (func and func(v) or v) == key then
 			return i
 		end
 	end
 	return nil
 end -- TablePosition
 
-function delim(input, sep)
+function delim(input)
 	local temp = {}
 	for word in input:gmatch('[^|]+') do table.insert(temp, word) end
 	return temp
