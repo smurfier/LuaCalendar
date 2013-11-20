@@ -279,10 +279,10 @@ function Events() -- Parse Events table.
 			dtbl.year = Parse.Number(event.year, false, event.fname)
 		end
 		dtbl.multip = Parse.Number(event.multiplier, 1, event.fname, 0)
-		dtbl.erepeat = Parse.List(event['repeat'], 'none', event.fname, 'none|week|year|month')
+		dtbl.erepeat = Parse.List(event['repeat'], 'none', event.fname, 'none|week|year|month|custom')
 
 		-- Find matching events
-		if  (dtbl.month or 0) == Time.show.month and not Parse.Boolean(event.inactive, event.fname) then
+		if not Parse.Boolean(event.inactive, event.fname) then
 			
 			local AddEvn = function(day, ann)
 				local desc = Parse.String(event.description, '', event.fname, true)
@@ -311,20 +311,31 @@ function Events() -- Parse Events table.
 				end
 			end
 
-			if dtbl.erepeat == 'week' and dtbl.month and dtbl.year and dtbl.day then
-				local stamp = tstamp(dtbl.day, dtbl.month, dtbl.year)
-				if tstamp(day, Time.show.month, Time.show.year) >= stamp then
-					local mstart, multi = tstamp(1, Time.show.month, Time.show.year), dtbl.multip * 604800
-					local first = mstart + ((stamp - mstart) % multi)
-
-					for a = 0, 4 do
-						local tstamp = first + a * multi
-						local temp = os.date('*t', tstamp)
-						if temp.month == Time.show.month then
-							AddEvn(temp.day, (tstamp - stamp) / multi + 1)
+			local frame = function(period)
+				local start, current = tstamp(dtbl.day, dtbl.month, dtbl.year), tstamp(1, Time.show.month, Time.show.year)
+				
+				if (current + Time.stats.clength * 86400) >= start and period > 0 then
+					local mod = (current - start) % period
+					local first = current + (mod > 0 and period - mod or 0)
+					
+					while true do
+						if first >= start then
+							local temp = os.date('*t', first)
+							if temp.month == Time.show.month and temp.year == Time.show.year then
+								AddEvn(temp.day, (first - start) / period + 1)
+							else
+								break
+							end
 						end
+						first = first + period
 					end
 				end
+			end
+
+			if dtbl.erepeat == 'custom' and dtbl.year and dtbl.month and dtbl.day and dtbl.multip >= 86400 then
+				frame(dtbl.multip)
+			elseif dtbl.erepeat == 'week' and dtbl.month and dtbl.year and dtbl.day then
+				frame(dtbl.multip * 604800)
 			elseif dtbl.erepeat == 'year' and dtbl.month == Time.show.month and ((dtbl.year and dtbl.multip > 1) and ((Time.show.year - dtbl.year) % dtbl.multip) or 0) == 0 then
 				AddEvn(dtbl.day, dtbl.year and Time.show.year - dtbl.year / dtbl.multip)
 			elseif dtbl.erepeat == 'month' then
