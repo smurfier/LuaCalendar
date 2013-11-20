@@ -100,10 +100,10 @@ All settings can be found in Settings.inc
 
 <a name="hol"></a>
 <div class="balloon" id="holiday"><h1>Using Event Files</h1>
-<p>To use Event Files set EventFile to the path of a text file on the calendar measure. Multiple files can be aggregated together using a pipe delimiter.<br/>
+<p>To use Event Files set EventFile to the path of a text file on the calendar measure. Multiple files can be aggregated together using a pipe delimiter and all files must be in the same folder which is the first item in the list.<br/>
 <b><i>Examples</i></b>
-<ul class="none"><li><code>EventFile=Holidays\Holidays.hol</code></li>
-<li><code>EventFile=Holidays\Holidays.hol|Holidays\BDays.hol</code></li></ul>
+<ul class="none"><li><code>EventFile=Holidays\Holidays.xml</code></li>
+<li><code>EventFile=Holidays|Holidays.xml|BDays.xml</code></li></ul>
 
 <p>There is no limit to the number of Events used. Event files must be formatted in the following XML style format, indents not required.</p>
 <pre>&lt;EventFile Title="Holidays" Repeat="Year">
