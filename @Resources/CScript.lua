@@ -460,16 +460,21 @@ function Move(value) -- Move calendar through the months
 	SKIN:Bang('!SetVariable', 'NotCurrentMonth', Time.stats.inmonth and 0 or 1)
 end -- Move
 
+function Easter()
+	local a, b, c, h, L, m = (Time.show.year % 19), math.floor(Time.show.year / 100), (Time.show.year % 100), 0, 0, 0
+	local d, e, f, i, k = math.floor(b/4), (b % 4), math.floor((b + 8) / 25), math.floor(c / 4), (c % 4)
+	h = (19 * a + b - d - math.floor((b - f + 1) / 3) + 15) % 30
+	L = (32 + 2 * e + 2 * i - h - k) % 7
+	m = math.floor((a + 11 * h + 22 * L) / 451)
+	
+	return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = Time.show.year}
+end
+
 BuiltIn = {
-	easter = function()
-		local a, b, c, h, L, m = (Time.show.year % 19), math.floor(Time.show.year / 100), (Time.show.year % 100), 0, 0, 0
-		local d, e, f, i, k = math.floor(b/4), (b % 4), math.floor((b + 8) / 25), math.floor(c / 4), (c % 4)
-		h = (19 * a + b - d - math.floor((b - f + 1) / 3) + 15) % 30
-		L = (32 + 2 * e + 2 * i - h - k) % 7
-		m = math.floor((a + 11 * h + 22 * L) / 451)
-		
-		return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = Time.show.year}
-	end
+	easter = function() return Easter() end,
+	goodfriday = function() return Easter() - 2 * 86400 end,
+	ashwednesday = function() return Easter() - 46 * 86400 end,
+	mardigras = function() return Easter() - 47 * 86400 end,
 } -- BuiltIn
 
 function Vars(line, fname, esub) -- Makes allowance for {$Variables}
@@ -482,8 +487,12 @@ function Vars(line, fname, esub) -- Makes allowance for {$Variables}
 			if vtype == 'stamp' then
 				return BuiltIn[name]()
 			else
-				return os.date('*t', BuiltIn[name]())[vtype] or ErrMsg(esub, 'Invalid Variable {$%s}', var)
+				return os.date('*t', BuiltIn[name]())[vtype] or ErrMsg(esub, 'Invalid Variable {$%s}', variable)
 			end
+		elseif BuiltIn[var:match('(.+)month$') or var:match('(.+)day$') or ''] then
+			local name = var:match('(.+)month$') or var:match('(.+)day$')
+			local vtype = var:match('^' .. name .. '(.+)')
+			return os.date('*t', BuiltIn[name]())[vtype]
 		elseif ((Variables or {})[fname or ''] or {})[var] then -- Event File Variable
 			return Variables[fname][var]
 		elseif tbl[var] then -- Script Variable
@@ -492,7 +501,7 @@ function Vars(line, fname, esub) -- Makes allowance for {$Variables}
 			local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
 			local v1, v2 = var:match('(.+)(...)')
 			if not (W[v1 or ''] and D[v2 or '']) then -- Error
-				return ErrMsg(esub, 'Invalid Variable {$%s}', var)
+				return ErrMsg(esub, 'Invalid Variable {$%s}', variable)
 			elseif v1 == 'last' then -- Last Day
 				local L = 36 + D[v2] - Time.stats.startday
 				return L - math.ceil((L - Time.stats.clength) / 7) * 7
@@ -505,13 +514,12 @@ end -- Vars
 
 Parse = {
 	Number = function(line, default, fname, round)
-		line = Vars(line, fname, 0):gsub('%s', ''):gsub('(%b())', function(input) return SKIN:ParseFormula(input) end)
-		if line == '' or not line then
+		line = Vars(line, fname, 0):gsub('%s', '')
+		if line == '' then
 			return default
-		elseif round then
-			return tonumber(('%.' .. round .. 'f'):format(line))
 		else
-			return tonumber(line)
+			local number = SKIN:ParseFormula('(' .. line .. ')') or default
+			return tonumber(round and ('%.' .. round .. 'f'):format(number) or number)
 		end
 	end, -- Number
 
