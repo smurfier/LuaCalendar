@@ -127,11 +127,13 @@ Time = { -- Used to store and call date functions and statistics
 Range = setmetatable({ -- Makes allowance for either Month or Week ranges
 	month = {
 		formula = function(input) return input - Time.stats.startday end,
+		adjustment = function(input) return input end,
 		days = 42,
 		week = function() return math.ceil((Time.curr.day + Time.stats.startday) / 7) end,
 	},
 	week = {
 		formula = function(input) return Time.curr.day + ((input - 1) - rotate(Time.curr.wday - 1)) end,
+		adjustment = function(input) return input % 7 end,
 		days = 7,
 		week = function() return 1 end,
 		nomove = true,
@@ -397,7 +399,7 @@ function Draw() -- Sets all meter properties and calculates days
 			end
 		end
 		
-		if (Time.curr.day + Time.stats.startday) == meter and Time.stats.inmonth then
+		if Range[Settings.Range].adjustment(Time.curr.day + Time.stats.startday) == meter and Time.stats.inmonth then
 			table.insert(Styles, Meters.Days.Styles.Current)
 		elseif meter > 35 and LastWeek then
 			table.insert(Styles, Meters.Days.Styles.LastWk)
