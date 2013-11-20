@@ -31,6 +31,7 @@ Version 5.0 Beta 4<br>
 	<li class="add">Added the ability to define Event File Variables.</li>
 	<li class="add">Added the ability to change the string case of Event names.</li>
 	<li class="add">Added the Skip option to repeating events.</li>
+	<li class="add">Added the Timestamp option to Event files.</li>
 	<li class="change">Formulas are now allowed in all Event File number options.</li>
 	<li class="change">Variables can now be used in all Event File options.</li>
 	<li class="add">Added Custom repeating events.</li>
@@ -125,7 +126,9 @@ All settings can be found in Settings.inc
 	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({$FirstMon}+1)*(({$Year}%2)=0)" Repeat="Year" Description="Election Day"/></code></li>
 			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li>
 <li><b>Year</b>*<br/>
-	The Year the event occurs on.
+	The Year the event occurs on.</li>
+<li><b>TimeStamp</b>*<br/>
+	A Lua Timestamp representing a specific date. This option overrides any provided Day, Month, or Year options.</li>
 <li><b>Description</b><br/>
 	The description of the event.</li>
 <li><b>Color</b>*<br/>
@@ -280,6 +283,7 @@ These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command(
 	<li class="add">Added the ability to define Event File Variables.</li>
 	<li class="add">Added the ability to change the string case of Event names.</li>
 	<li class="add">Added the Skip option to repeating events.</li>
+	<li class="add">Added the Timestamp option to Event files.</li>
 	<li class="change">Formulas are now allowed in all Event File number options.</li>
 	<li class="change">Variables can now be used in all Event File options.</li>
 	<li class="add">Added Custom repeating events.</li>
