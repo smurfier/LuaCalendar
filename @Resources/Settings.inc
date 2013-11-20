@@ -38,3 +38,6 @@ ShowMoonPhases=1
 ;Color to use for the Moon Phases Events
 MoonColor=
 
+;Set to 0 to hide all calendar events including the Moon Phases
+ShowEvents=1
+

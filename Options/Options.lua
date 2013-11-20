@@ -17,6 +17,7 @@ Variables = {
 	NextFormat = '',
 	ShowMoonPhases = 1,
 	MoonColor = '',
+	ShowEvents = 1,
 }
 
 function Initialize()
@@ -162,6 +163,15 @@ function CheckELFormat(input)
 		SKIN:Bang('!SetVariable', 'NextFormat', input)
 	end
 end -- CheckELFormat
+
+function SetEvents(path)
+	for _, var in ipairs{'@', 'ROOTCONFIGPATH', 'SKINSPATH'} do
+		local value = SKIN:GetVariable(var)
+		path = path:gsub(value, ('#*%s*#'):format(var))
+	end
+	SKIN:Bang('!SetVariable', 'EventFile', path)
+	SKIN:Bang('!Update')
+end -- SetEvents
 
 -- ========== HELPER FUNCTIONS ==========
 

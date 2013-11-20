@@ -12,6 +12,7 @@ function Initialize()
 	Settings.MonthNames = Delim(Get.Variable('MonthLabels'))
 	Settings.MoonPhases = Get.NumberVariable('ShowMoonPhases') > 0
 	Settings.MoonColor = Parse.Color(Get.Variable('MoonColor', ''))
+	Settings.ShowEvents = Get.NumberVariable('ShowEvents') > 0
 	-- Weekday labels text
 	SetLabels(Delim(Get.Variable('DayLabels', 'S|M|T|W|T|F|S')))
 	--Events File
@@ -63,6 +64,7 @@ Settings = setmetatable({}, {
 		MonthNames = {}, -- Table
 		MoonPhases = false, -- Boolean
 		MoonColor = '', -- String
+		ShowEvents = true, -- Boolean
 	},
 	__newindex = function(_, key, value)
 		local tbl = getmetatable(Settings).__index
@@ -175,6 +177,10 @@ end -- SetLabels
 
 function LoadEvents(FileTable)
 	test(type(FileTable) == 'table', 'LoadEvents: input must be a table. Received %s instead.', type(FileTable))
+	
+	if not Settings.ShowEvents then
+		FileTable = {}
+	end
 
 	hFile = {}
 
@@ -337,7 +343,7 @@ function Events() -- Parse Events table.
 	end
 
 	-- Find the Moon Phases for the Month
-	if type(GetPhaseNumber) == 'function' and Settings.MoonPhases then
+	if type(GetPhaseNumber) == 'function' and Settings.MoonPhases and Settings.ShowEvents then
 		local moon, names = {}, {[1] = 'New Moon', [5] = 'Full Moon',}
 		for i = 1, Time.stats.clength do
 			local phase = GetPhaseNumber(Time.show.year, Time.show.month, i)
