@@ -111,7 +111,7 @@ Meters = setmetatable({}, {
 Time = { -- Used to store and call date functions and statistics
 	curr = setmetatable({}, {__index = function(_, index) return os.date('*t')[index] end,}),
 	old = {day = 0, month = 0, year = 0,},
-	show = {month = 0, year = 0,},
+	show = os.date('*t'),
 	stats = setmetatable({inmonth = true,}, {__index = function(_, index)
 		local tstart = os.time{day = 1, month = Time.show.month, year = Time.show.year, isdst = false,}
 		local nstart = os.time{day = 1, month = (Time.show.month % 12 + 1), year = (Time.show.year + (Time.show.month == 12 and 1 or 0)), isdst = false,}
