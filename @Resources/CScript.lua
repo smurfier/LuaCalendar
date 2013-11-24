@@ -133,7 +133,7 @@ Range = setmetatable({ -- Makes allowance for either Month or Week ranges
 	},
 	week = {
 		formula = function(input) return Time.curr.day + ((input - 1) - rotate(Time.curr.wday - 1)) end,
-		adjustment = function(input) return input % 7 end,
+		adjustment = function(input) local num = input % 7 return num == 0 and 7 or num end,
 		days = 7,
 		week = function() return 1 end,
 		nomove = true,
