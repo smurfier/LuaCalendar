@@ -678,10 +678,10 @@ function GetPhaseNumber(year, month, day)
 	local eccent, Day, M, Ec, Lambdasun, ml, Ev, Ae, MM, MmP, mEc, lP
 	eccent = 0.016718 -- Eccentricity of Earth's orbit
 	Day = Jday - 2444238.5 -- Date within epoch
-	M = fixangle(fixangle((360 / 365.2422) * Day) - 3.762863) -- Convert from perigee co-ordinates to epoch 1980.0
+	M = torad(fixangle(fixangle((360 / 365.2422) * Day) - 3.762863)) -- Convert from perigee co-ordinates to epoch 1980.0
 	
 	-- Solve Kepler equation
-	local e, m2 = torad(M), torad(M)
+	local e, m2 = M, M
 	local delta = e - eccent * math.sin(e) - m2
 	while math.abs(delta) > 1E-6 do
 		delta = e - eccent * math.sin(e) - m2
@@ -693,10 +693,10 @@ function GetPhaseNumber(year, month, day)
 	ml = fixangle(13.1763966 * Day + 64.975464) -- Moon's mean Longitude
 	MM = fixangle(ml - 0.1114041 * Day - 348.383063) -- Moon's mean anomaly
 	Ev = 1.2739 * math.sin(torad(2 * (ml - Lambdasun) - MM)) -- Evection
-	Ae = 0.1858 * math.sin(torad(M)) -- Annual equation
-	MmP = MM + Ev - Ae - (0.37 * math.sin(torad(M))) -- Corrected anomaly
-	mEc = 6.2886 * math.sin(torad(MmP)) -- Correction for the equation of the centre
-	lP = ml + Ev + mEc - Ae + (0.214 * math.sin(torad(2 * MmP))) -- Corrected Longitude
+	Ae = 0.1858 * math.sin(M) -- Annual equation
+	MmP = torad(MM + Ev - Ae - (0.37 * math.sin(M))) -- Corrected anomaly
+	mEc = 6.2886 * math.sin(MmP) -- Correction for the equation of the centre
+	lP = ml + Ev + mEc - Ae + (0.214 * math.sin(2 * MmP)) -- Corrected Longitude
 	local PhaseNum = fixangle((lP + (0.6583 * math.sin(torad(2 * (lP - Lambdasun))))) - Lambdasun)
 
 	if PhaseNum > 10 and PhaseNum <= 85 then
