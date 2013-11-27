@@ -22,18 +22,21 @@
 <p>One of the major features of the skin is the abiltiy to display events that are defined by the user. This was a long requested feature of the existing calendar skins. All of the easily configured settings and features are listed below.</p>
 
 <h1>Release Notes</h1>
-<table><tr><td style="width:210px;"><a href="https://github.com/downloads/smurfier/LuaCalendar/LuaCalendar_4.1.rmskin" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
-Download from GitHub.<br>
-Version 4.1<br>
-11/4/2012</a></td>
+<table><tr><td style="width:210px;"><a href="http://smurfier.deviantart.com/art/LuaCalendar-5-0-280738925" style="text-decoration:none;font-size:0.8em;"><img src="Rainstaller.png" align="left">
+Download from DeviantArt.<br>
+Version 5.0<br>
+11/27/2013</a></td>
 <td><ul style="margin-top:0;padding-left:0;">
-	<li class="fix">Fixed a fatal error when no Repeat was set for an event.</li>
-	<li class="change">Made the script more modular.</li>
-	<li class="change">Changed variables to use XML standard syntax.</li>
-	<li class="change">Updated the Enigma style.</li>
-	<li class="add">Added support for the new MouseScroll actions introduced in the Rainmeter 2.5 beta.</li>
-	<li class="add">Added option for SingleFolder option.</li>
-	<li class="add">Reinstated Range option for displaying Month or Week range.</li>
+	<li class="add">Added the Options skin.</li>
+	<li class="add">Added the ability to define Event File Variables.</li>
+	<li class="add">Added the ability to change the string case of Event names.</li>
+	<li class="add">Added the Skip option to repeating events.</li>
+	<li class="add">Added the Timestamp option to Event files.</li>
+	<li class="change">Formulas are now allowed in all Event File number options.</li>
+	<li class="change">Variables can now be used in all Event File options.</li>
+	<li class="add">Added Custom repeating events.</li>
+	<li class="fix">Fixed an issue with Week range where current day style was not being applied.</li>
+	<li class="fix">Fixed an issue where custom month names would break the calendar.</li>
 </ul>
 <a href="#changes">See more changes</a>
 </td></tr></table>
@@ -84,6 +87,15 @@ All settings can be found in Settings.inc
 <li class="space"><b>SingleFolder</b>
 	<ul><li>When set to 1, the first item in the EventFile list is used as the path for all items following it.</li>
 	<li>Default to <code>0</code></li></li></ul>
+<li class="space"><b>ShowMoonPhases</b>
+	<ul><li>When set to 1, the Moon Phases of Full and New will be shown for the current month. The date for these phases may be off by a day.</li>
+	<li>Default to <code>1</code></li></li></ul>
+<li class="space"><b>MoonColor</b>
+	<ul><li>The RGB or HEX color used for displayed Moon Phases. When set to "" the color used is defined by the style sheet.</li>
+	<li>Default to <code>""</code></li></li></ul>
+<li class="space"><b>ShowEvents</b>
+	<ul><li>When set to 1, the Events from all Event Files and Moon Phases will be shown on the calendar.</li>
+	<li>Default to <code>1</code></li></li></ul>
 </ul>
 </div>
 
@@ -98,13 +110,14 @@ All settings can be found in Settings.inc
 
 <a name="hol"></a>
 <div class="balloon" id="holiday"><h1>Using Event Files</h1>
-<p>To use Event Files set EventFile to the path of a text file on the calendar measure. Multiple files can be aggregated together using a pipe delimiter.<br/>
+<p>To use Event Files set EventFile to the path of a text file on the calendar measure. Multiple files can be aggregated together using a pipe delimiter and all files must be in the same folder which is the first item in the list.<br/>
 <b><i>Examples</i></b>
-<ul class="none"><li><code>EventFile=Holidays\Holidays.hol</code></li>
-<li><code>EventFile=Holidays\Holidays.hol|Holidays\BDays.hol</code></li></ul>
+<ul class="none"><li><code>EventFile=Holidays\Holidays.xml</code></li>
+<li><code>EventFile=Holidays|Holidays.xml|BDays.xml</code></li></ul>
 
 <p>There is no limit to the number of Events used. Event files must be formatted in the following XML style format, indents not required.</p>
 <pre>&lt;EventFile Title="Holidays" Repeat="Year">
+	&lt;Variable Name="Variable Name" Case="Variable Value"/>
 	&lt;Event Month="1" Day="10" Description="Event Description"/>
 	&lt;Set Month="2">
 		&lt;Event Day="12" Description="Some Other Event"/>
@@ -112,21 +125,23 @@ All settings can be found in Settings.inc
 &lt;!--This is a comment.-->
 &lt;/EventFile>
 </pre>
-<p style="padding-top:15px;">The complete contents of the Event file must be enclosed in <code>&lt;EventFile>&lt;/EventFile></code> tags. The following settings may be set on each tag and are overridden by those nested within them.</p>
+<p style="padding-top:15px;">The complete contents of the Event file must be enclosed in <code>&lt;EventFile>&lt;/EventFile></code> tags. The following settings may be set on each EventFile, Event, or Set tag and are overridden by those nested within them.</p>
 <ul><li><b>Title</b>*<br/>
 	The title of the event which is displayed after the events.</li>
 <li><b>Month</b><br/>
-	The month in which the event occurs. This setting allows the use of formulas and <a href="#vars">Variables</a>.</li>
+	The month in which the event occurs.</li>
 <li><b>Day</b><br/>
-	The day on which the event occurs. This setting allows the use of formulas and <a href="#vars">Variables</a>.<br/>
+	The day on which the event occurs.<br/>
 	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="11" Day="({$FirstMon}+1)*(({$Year}%2)=0)" Repeat="Year" Description="Election Day"/></code></li>
 			<li>Election day is defined as the Tuesday folllowing the First Monday in November every even numbered Year.</li></ul></li>
 <li><b>Year</b>*<br/>
-	The Year the event occurs on.
+	The Year the event occurs on.</li>
+<li><b>TimeStamp</b>*<br/>
+	A Lua Timestamp representing a specific date. This option overrides any provided Day, Month, or Year options.</li>
 <li><b>Description</b><br/>
 	The description of the event.</li>
 <li><b>Color</b>*<br/>
-	The RGB or HEX color to be used for the specified event(s).<br/>
+	The RGB or HEX color to be used for the specified event(s). Formulas can be used in this setting but must be enclosed in parenthesis.<br/>
 	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Color="FF0000FF" Repeat="Year" Description="Smurfier's BDay"/></code></li></ul></li>
 <li><b>Repeat</b>*<br/>
 	When used, this option allows an event to repeat using a specified pattern.
@@ -138,24 +153,39 @@ All settings can be found in Settings.inc
 	</li>
 	<li><b>Week</b><br/>
 		The event repeats on a weekly basis. A full date must be specified.
+	</li>
+	<li><b>Custom</b><br/>
+		The event will repeat based on the number of seconds specified in the Multiplier option. A number greater than 86400 must be used. <b>Note:</b> A single day is represented as 86400.
 	</li></ul></li>
 <li><b>Multiplier</b>*<br/>
 	The frequency an event repeats.
 </li>
 <li><b>Anniversary</b>*<br/>
-	When set to <code>true</code> the number of times the event has repeated will be shown.<br/>
+	When set to <code>true</code> the number of times the event has repeated will be shown. The value can also be represented by a number. Any value over 0 is interpreted as true. A formula can be used but must be enclosed in parenthesis.<br/>
 	<b><i>Example:</i></b><ul><li><code>&lt;Event Month="1" Day="4" Year="1986" Repeat="Year" Anniversary="true" Description="Smurfier's BDay"/></code></li>
 			<li>Appears as: <code>Smurfier's BDay (26)</code></li></ul></li></li>
 </li>
 <li><b>Inactive</b>*<br/>
 	When set to <code>true</code> the event is skipped when parsing the Event File.
 </li>
+<li><b>Case</b>*<br/>
+	Can be used to change the case of an event desciption. Can be set to Lower, Upper, Title, Sentence, or None.
+</li>
+<li><b>Skip</b>*<br/>
+	Can be used to skip occurances of a repeating event. The format is a list of dates presented as DDMMYYYY using the pipe delimiter to separate dates.<br/>
+	<b><i>Example:</i></b><ul><li><code>Skip="01042014|01042015"</code></li></ul>
+</li>
 </ul>
 <i style="font-size:0.8em;">*This field is optional.</i>
+<p style="padding-top:15px;">Variables can be created that are specific to the the Event File that it is created in. The variable can then be used in all options in the event file. The format is as follows:<br/>
+<code>&lt;Variable Name="Variable Name" Case="Variable Value"/></code>
+</p>
+
+
 </div>
 <a name="vars"></a>
 <div class="balloon" id="vars"><h1>Variables</h1>
-<p>There are two instances when certain Variables can be used with LuaCalendar settings. The first being LabelText and the other being in the Day parameter of Holiday Files. Variables are surrounded by {$Curly Brackets} with the dollar sign in front of the variable name, and are case insensitive.</p>
+<p>There are a few instances when certain Variables can be used with LuaCalendar settings. The first being LabelText and the others being in the options of the Holiday Files. Variables are surrounded by {$Curly Brackets} with the dollar sign in front of the variable name, and are case insensitive.</p>
 <div style="float:left;width:48%;padding-right:1%;"><b>Static Variables</b>
 <ul style="margin-top:0px;"><li><code>{$MName}</code>
 <ul><li>The name of the current month. If a name is not provided the month number is used.</li></ul></li>
@@ -244,7 +274,7 @@ These variable are created and updated by the script.
 <li><b>Script Functions</b><br>
 These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command()"</code> to control the calendar.
 	<ul><li>Move(<i>number</i>)
-		<ul><li>Moves the calendar <i>number</i> of months. The <i>number</i> parameter must be a whole integer and can be either positive or negative.</li></ul></li>
+		<ul><li>Moves the calendar <i>number</i> of months. The <i>number</i> parameter must be a whole integer and can be either positive or negative. Using 0 will reset the Calendar to the current month.</li></ul></li>
 	</ul>
 </li>
 
@@ -256,6 +286,19 @@ These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command(
 <li class="change">Change</li>
 <li class="fix">Fix</li>
 <li class="remove">Remove</li></ul>
+
+<b>5.0</b> (11/27/2013)
+	<ul><li class="add">Added the Options skin.</li>
+	<li class="add">Added the ability to define Event File Variables.</li>
+	<li class="add">Added the ability to change the string case of Event names.</li>
+	<li class="add">Added the Skip option to repeating events.</li>
+	<li class="add">Added the Timestamp option to Event files.</li>
+	<li class="change">Formulas are now allowed in all Event File number options.</li>
+	<li class="change">Variables can now be used in all Event File options.</li>
+	<li class="add">Added Custom repeating events.</li>
+	<li class="fix">Fixed an issue with Week range where current day style was not being applied.</li>
+	<li class="fix">Fixed an issue where custom month names would break the calendar.</li>
+	</ul>
 
 <b>4.1</b> (11/27/2012)
 	<ul><li class="fix">Fixed a fatal error when no Repeat was set for an event.</li>
@@ -383,4 +426,3 @@ These functions can be used with <code>!CommandMeasure "ScriptMeasure" "Command(
 </div>
 </body>
 </html>
-
