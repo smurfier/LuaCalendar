@@ -13,6 +13,7 @@ function Initialize()
 	Settings.MoonPhases = Get.NumberVariable('ShowMoonPhases') > 0
 	Settings.MoonColor = Parse.Color(Get.Variable('MoonColor', ''))
 	Settings.ShowEvents = Get.NumberVariable('ShowEvents') > 0
+	Settings.DisableScroll = Get.NumberVariable('DisableScroll') > 0
 	-- Weekday labels text
 	SetLabels(Delim(Get.Variable('DayLabels', 'S|M|T|W|T|F|S')))
 	--Events File
@@ -40,7 +41,9 @@ function Update()
 end -- Update
 
 function CombineScroll(input)
-	if input and not Scroll then
+	if Settings.DisableScroll then
+		-- Do Nothing
+	elseif input and not Scroll then
 		Scroll = input
 	elseif Scroll ~= 0 and input == 0 then
 		Move(Scroll / math.abs(Scroll))
@@ -65,6 +68,7 @@ Settings = setmetatable({}, {
 		MoonPhases = false, -- Boolean
 		MoonColor = '', -- String
 		ShowEvents = true, -- Boolean
+		DisableScroll = false; -- Boolean
 	},
 	__newindex = function(_, key, value)
 		local tbl = getmetatable(Settings).__index
@@ -349,7 +353,7 @@ function Events() -- Parse Events table.
 						AddEvn(dtbl.day, mdiff / dtbl.multip + 1)
 					end
 				end
-			elseif dtbl.erepeat =='none' and dtbl.year == Time.show.year then
+			elseif dtbl.erepeat =='none' and dtbl.year == Time.show.year and dtbl.month == Time.show.month then
 				AddEvn(dtbl.day)
 			end
 		end

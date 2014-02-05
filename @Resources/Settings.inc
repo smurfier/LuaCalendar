@@ -41,3 +41,5 @@ MoonColor=
 ;Set to 0 to hide all calendar events including the Moon Phases
 ShowEvents=1
 
+;Set to 1 to disable scroll actions for changing the month
+DisableScroll=0

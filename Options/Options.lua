@@ -18,6 +18,7 @@ Variables = {
 	ShowMoonPhases = 1,
 	MoonColor = '',
 	ShowEvents = 1,
+	DisableScroll = 0,
 }
 
 function Initialize()
