@@ -492,39 +492,70 @@ BuiltIn = {
 	mardigras = function() return Easter() - 47 * 86400 end,
 } -- BuiltIn
 
+Functions = {
+	timestamp = function(day, month, year) return os.time{day = tonumber(day), month = tonumber(month), year = tonumber(year), isdst = false,} end,
+} -- Functions
+
 function Vars(line, fname, esub) -- Makes allowance for {$Variables}
 	local tbl = {mname = MLabels(Time.show.month), year = Time.show.year, today = LZero(Time.curr.day), month = Time.show.month}
+	local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
 
-	return (line:gsub('{%$([^}]+)}', function(variable)
+	local value = function(variable)
 		local var = variable:gsub('%s', ''):lower()
-		if (BuiltIn or {})[var:match('([^:]+):') or ''] then -- BuiltIn Event
+		
+		-- Function
+		if (Functions or {})[var:match('([^:]+):') or ''] then
 			local name, vtype = var:match('^([^:]+):(.+)')
-			if vtype == 'stamp' then
-				return BuiltIn[name]()
-			else
-				return os.date('*t', BuiltIn[name]())[vtype] or ErrMsg(esub, 'Invalid Variable {$%s}', variable)
-			end
+			return Functions[name](unpack(Delim(vtype, ',')))
+		
+		-- BuiltIn Event
+		elseif (BuiltIn or {})[var:match('([^:]+):.+') or ''] then
+			local name, vtype = var:match('^([^:]+):(.+)')
+			local stamp = BuiltIn[name]()
+			return vtype == 'stamp' and stamp or os.date('*t', stamp)[vtype]
+		
+		-- Make allowance for old BuiltIn style
 		elseif BuiltIn[var:match('(.+)month$') or var:match('(.+)day$') or ''] then
 			local name = var:match('(.+)month$') or var:match('(.+)day$')
 			local vtype = var:match('^' .. name .. '(.+)')
 			return os.date('*t', BuiltIn[name]())[vtype]
-		elseif ((Variables or {})[fname or ''] or {})[var] then -- Event File Variable
+		
+		-- Event File Variable
+		elseif ((Variables or {})[fname or ''] or {})[var] then
 			return Variables[fname][var]
-		elseif tbl[var] then -- Script Variable
+		
+		-- Script Variable
+		elseif tbl[var] then
 			return tbl[var]
-		else -- Variable Day
-			local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
+		
+		-- Variable Day
+		elseif W[var:match('(.+)...$') or ''] or D[var:match('.+(...)$') or ''] then
 			local v1, v2 = var:match('(.+)(...)')
-			if not (W[v1 or ''] and D[v2 or '']) then -- Error
-				return ErrMsg(esub, 'Invalid Variable {$%s}', variable)
-			elseif v1 == 'last' then -- Last Day
+			if v1 == 'last' then -- Last Day
 				local L = 36 + D[v2] - Time.stats.startday
 				return L - math.ceil((L - Time.stats.clength) / 7) * 7
 			else -- Variable Day
 				return rotate(D[v2]) + 1 - Time.stats.startday + (Time.stats.startday > rotate(D[v2]) and 7 or 0) + 7 * W[v1]
 			end
 		end
-	end))
+	end -- value
+
+	-- Allows for nested variables. IE: {$Var{$OtherVar}}
+	-- In order to get around an issue where the function needed to be global,
+	-- the function must be passed itself as an argument.
+	local nested = function(string, self)
+		return (string:gsub('%b{}', function(input)
+			local newline = self(input:match('^{(.-)}$'), self)
+			local name = newline:match('%$(.+)')
+			if (name or '') ~= '' then
+				return value(name) or ErrMsg(esub, 'Invalid Variable {$%s}', name)
+			else
+				return ('{%s}'):format(newline)
+			end
+		end))
+	end -- nested
+
+	return nested(line, nested)
 end -- Vars
 
 Parse = {
