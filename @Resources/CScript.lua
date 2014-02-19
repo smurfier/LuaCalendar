@@ -8,8 +8,7 @@ function Initialize()
 	Settings.StartOnMonday = Get.NumberVariable('StartOnMonday') > 0
 	Settings.LabelFormat = Get.Variable('LabelText', '{$MName}, {$Year}')
 	Settings.NextFormat = Get.Variable('NextFormat', '{$day}: {$desc}')
-	Settings.Locale = Get.NumberVariable('UseLocalMonths') > 0
-	Settings.MonthNames = Delim(Get.Variable('MonthLabels'))
+	Settings.MonthNames = MLabels(Get.NumberVariable('UseLocalMonths') > 0, Get.Variable('MonthLabels', ''))
 	Settings.MoonPhases = Get.NumberVariable('ShowMoonPhases') > 0
 	Settings.MoonColor = Parse.Color(Get.Variable('MoonColor', ''))
 	Settings.ShowEvents = Get.NumberVariable('ShowEvents') > 0
@@ -66,7 +65,6 @@ Settings = setmetatable(
 			StartOnMonday = false, -- Boolean
 			LabelFormat = '{$MName}, {$Year}', -- String
 			NextFormat = '{$day}: {$desc}', -- String
-			Locale = false, -- Boolean
 			MonthNames = {}, -- Table
 			MoonPhases = false, -- Boolean
 			MoonColor = '', -- String
@@ -152,14 +150,16 @@ Range = setmetatable({ -- Makes allowance for either Month or Week ranges
 	}, { __index = function(tbl, index) return ErrMsg(tbl.month, 'Invalid Range: %s', index) end,
 }) -- Range
 
-function MLabels(input) -- Makes allowance for Month Names
-	if Settings.Locale then
+function MLabels(locale, string) -- Makes allowance for Month Names
+	if locale then
+		local tbl = {}
+		
 		os.setlocale('', 'time')
-		return os.date('%B', os.time{year = 2000, month = input, day = 1})
-	elseif Settings.MonthNames then
-		return Settings.MonthNames[input] or ErrMsg(input, 'Not enough indices in MonthNames')
-	else
-		return input
+		for i = 1, 12 do table.insert(tbl, os.date('%B', os.time{year = 2000, month = i, day = 1})) end
+
+		return tbl
+	elseif test(type(string) == 'string', 'MLabels: input #2 must be a string. Received %s instead.', type(string)) then
+		return Delim(string)
 	end
 end -- MLabels
 
@@ -495,7 +495,7 @@ function Draw() -- Sets all meter properties and calculates days
 		ThisWeek = Range[Settings.Range].week(),
 		Week = rotate(Time.curr.wday - 1),
 		Today = LZero(Time.curr.day),
-		Month = MLabels(Time.show.month),
+		Month = Settings.MonthNames[Time.show.month] or Time.show.month,
 		Year = Time.show.year,
 		MonthLabel = Vars(Settings.LabelFormat),
 		LastWkHidden = LastWeek and 1 or 0,
@@ -547,7 +547,7 @@ Functions = {
 } -- Functions
 
 function Vars(line, fname, esub) -- Makes allowance for {$Variables}
-	local tbl = {mname = MLabels(Time.show.month), year = Time.show.year, today = LZero(Time.curr.day), month = Time.show.month}
+	local tbl = {mname = Settings.MonthNames[Time.show.month] or Time.show.month, year = Time.show.year, today = LZero(Time.curr.day), month = Time.show.month}
 	local D, W = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6}, {first = 0, second = 1, third = 2, fourth = 3, last = 4}
 
 	local value = function(variable)
