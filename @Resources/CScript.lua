@@ -463,7 +463,7 @@ function Draw() -- Sets all meter properties and calculates days
 			Text = LZero(day),
 			MeterStyle = table.concat(Styles, '|'),
 			ToolTipText = event or '',
-			[Settings.Color] = color or '',
+			[Settings.Color or 'FontColor'] = color or '',
 		} do SKIN:Bang('!SetOption', Meters.Days.Name:format(meter), k, v) end
 	end
 
@@ -638,8 +638,9 @@ Parse = {
 
 	String = function(line, default, fname, spaces)
 		line = Vars(line, fname, '')
-		if line == '' then line = default end
-		if spaces or not tostring(line) then
+		if line == '' then
+			return default
+		elseif spaces then
 			return line
 		else
 			return line:gsub('%s', '')
