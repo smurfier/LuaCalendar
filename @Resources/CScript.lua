@@ -190,23 +190,36 @@ end -- SetLabels
 function LoadEvents(FileTable)
 	test(type(FileTable) == 'table', 'LoadEvents: input must be a table. Received %s instead.', type(FileTable))
 	
-	if not Settings.ShowEvents then
-		FileTable = {}
-	end
+	if not Settings.ShowEvents then FileTable = {} end
 
 	hFile = {}
-
-	local Keys = function(line)
-		local tbl = {}
 	
-		local escape = {quot = '"', lt = '<', gt = '>', amp = '&',} -- XML escape characters
+	-- Define valid key names
+	local KeyNames = {
+		'month',
+		'day',
+		'year',
+		'description',
+		'title',
+		'color',
+		'repeat',
+		'multiplier',
+		'anniversary',
+		'inactive',
+		'case',
+		'skip',
+		'timestamp',
+	}
+
+	local Keys = function(line, default)
+		local tbl, escape = default or {}, {quot = '"', amp = '&', lt = '<', gt = '>', apos = "'",}
 
 		for key, value in line:gmatch('(%a+)="([^"]+)"') do
 			tbl[key:lower()] = value:gsub('&([^;]+);', escape):gsub('\r?\n', ' '):match('^%s*(.-)%s*$')
 		end
 	
 		return tbl
-	end
+	end -- Keys
 
 	for _, FileName in ipairs(FileTable) do
 		local File, fName = test(io.open(FileName, 'r'), 'File Read Error: %s', fName), FileName:match('[^/\\]+$')
@@ -215,12 +228,31 @@ function LoadEvents(FileTable)
 		File:close()
 
 		test(open:match('%S+'):lower() == 'eventfile' and close:lower() == '/eventfile', 'Invalid Event File: %s', fName)
-		local eFile, eSet = Keys(open), {}
+		local eFile, eSet, queue = Keys(open), {}
+		
+		local AddEvn = function(options)
+			local dSet, tbl = {}, {fname = fName,}
+			-- Collapse set matrix into a single table
+			for _, column in ipairs(eSet) do
+				for key, value in pairs(column) do dSet[key] = value end
+			end
+			-- Work through all tables to add option to temporary table
+			for _, v in pairs(KeyNames) do
+				tbl[v] = options[v] or dSet[v] or eFile[v] or ''
+			end
+			-- Add temporary table to main Holidays table
+			table.insert(hFile, tbl)
+		end -- AddEvn
 			
-		for tag, line in content:gmatch('<([^%s>]+)([^>]*)>') do
-			local ntag = tag:lower()
+		for tag, line, contents in content:gmatch('<%s-([^%s>]+)([^>]*)>([^<]*)') do
+			local ntag, contents = tag:lower(), contents:gsub('%s+', ' ')
 
-			if ntag == 'variable' then
+			if queue then
+				if test(ntag == '/event',  'Event tags may not have nested tags. File: %s', fName) then
+					AddEvn(Keys(queue.line, {description = queue.contents,}))
+				end
+				queue = nil
+			elseif ntag == 'variable' then
 				local Tmp = Keys(line)
 				
 				if not Variables then
@@ -228,26 +260,29 @@ function LoadEvents(FileTable)
 				elseif not Variables[fName] then
 					Variables[fName] = {[Tmp.name:lower()] = Tmp.select,}
 				else
-					Variables[fname][Tmp.name:lower()] = Tmp.select
+					Variables[fName][Tmp.name:lower()] = Tmp.select
 				end
 			elseif ntag == 'set' then
 				table.insert(eSet, Keys(line))
 			elseif ntag == '/set' then
 				table.remove(eSet)
 			elseif ntag == 'event' then
-				local Tmp, dSet, tbl = Keys(line), {}, {}
-				for _, column in ipairs(eSet) do
-					for key, value in pairs(column) do dSet[key] = value end
-				end
-				for _, v in pairs{'month', 'day', 'year', 'description', 'title', 'color', 'repeat', 'multiplier', 'anniversary', 'inactive', 'case', 'skip', 'timestamp'} do
-					tbl[v] = Tmp[v] or dSet[v] or eFile[v] or ''
-				end
-				tbl.fname = fName
-				table.insert(hFile, tbl)
+				-- inline closing event tag
+				if line:match('/%s-$') then
+					AddEvn(Keys(line))
+				-- Tag is open, create queue
+				elseif contents:gsub('[\t\n\r%s]', '') ~= '' then
+					queue = {line = line, contents = contents:gsub('\r?\n', ' '),}
+				-- Error
+				else
+					ErrMsg(nil, 'Open Event tag detected without contents. File: %s', fName)
+				end	
 			else
-				ErrMsg(nil, 'Invalid Event Tag <%s> in %s', tag, fName)
+				ErrMsg(nil, 'Invalid Tag <%s> in %s', tag, fName)
 			end
 		end
+
+		if queue or #eSet > 0 then ErrMsg(nil, 'Unmatched %s tag detected in %s', queue and 'Event' or 'Set', fName) end
 	end
 end -- LoadEvents
 
