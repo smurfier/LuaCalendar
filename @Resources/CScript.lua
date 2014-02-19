@@ -209,6 +209,7 @@ function LoadEvents(FileTable)
 		'case',
 		'skip',
 		'timestamp',
+		'finish'
 	}
 
 	local Keys = function(line, default)
@@ -298,11 +299,11 @@ function Events() -- Parse Events table.
 			table.insert(Hol[d].text, e)
 			table.insert(Hol[d].color, c)
 		end
-	end
+	end -- DefineEvent
 
 	for _, event in ipairs(hFile or {}) do
 		
-		-- Parse necesssary options
+		-- Parse necessary options
 		local dtbl = {stamp = Parse.Number(event.timestamp, false, event.fname)}
 		if dtbl.stamp then
 			dtbl = os.date('*t', dtbl.stamp)
@@ -313,9 +314,10 @@ function Events() -- Parse Events table.
 		end
 		dtbl.multip = Parse.Number(event.multiplier, 1, event.fname, 0)
 		dtbl.erepeat = Parse.List(event['repeat'], 'none', event.fname, 'none|week|year|month|custom')
+		dtbl.finish = Parse.Number(event.finish, Time.stats.nmonth, event.fname)
 
 		-- Find matching events
-		if not Parse.Boolean(event.inactive, event.fname) then
+		if dtbl.finish >= Time.stats.cmonth and not Parse.Boolean(event.inactive, event.fname) then
 			
 			local AddEvn = function(day, ann)
 				local desc = Parse.String(event.description, false, event.fname, true) or ErrMsg('', 'Event detected with no Description.')
@@ -357,7 +359,7 @@ function Events() -- Parse Events table.
 				if Time.stats.nmonth >= start then
 					local first = Time.stats.cmonth > start and (Time.stats.cmonth + (period - ((Time.stats.cmonth - start) % period))) or start
 					
-					for i = first, Time.stats.nmonth, period do
+					for i = first, (dtbl.finish < Time.stats.nmonth and dtbl.finish or Time.stats.nmonth), period do
 						AddEvn(tonumber(os.date('%d', i)), (i - start) / period + 1)
 					end
 				end
@@ -367,9 +369,11 @@ function Events() -- Parse Events table.
 				frame(dtbl.multip)
 			elseif dtbl.erepeat == 'week' and dtbl.month and dtbl.year and dtbl.day and dtbl.multip >= 1 then
 				frame(dtbl.multip * 604800)
-			elseif dtbl.erepeat == 'year' and dtbl.month == Time.show.month and ((dtbl.year and dtbl.multip > 1) and ((Time.show.year - dtbl.year) % dtbl.multip) or 0) == 0 then
-				AddEvn(dtbl.day, dtbl.year and Time.show.year - dtbl.year / dtbl.multip)
-			elseif dtbl.erepeat == 'month' then
+			elseif dtbl.erepeat == 'year' and tstamp(dtbl.day, dtbl.month, Time.show.year) <= dtbl.finish then
+				if dtbl.month == Time.show.month and ((dtbl.year and dtbl.multip > 1) and ((Time.show.year - dtbl.year) % dtbl.multip) or 0) == 0 then
+					AddEvn(dtbl.day, dtbl.year and Time.show.year - dtbl.year / dtbl.multip)
+				end
+			elseif dtbl.erepeat == 'month' and tstamp(dtbl.day, dtbl.month or Time.show.month, dtbl.year or Time.show.year) <= dtbl.finish then
 				if not dtbl.month and dtbl.year then
 					AddEvn(dtbl.day)
 				elseif Time.show.year >= dtbl.year then
