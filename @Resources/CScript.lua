@@ -614,7 +614,7 @@ Parse = {
 		elseif line:match(',') then
 			for rgb in line:gmatch('[^,]+') do
 				if not tonumber(rgb) then
-					return ''
+					return ErrMsg('', 'Invalid RGB color code found in %s.', fname)
 				else
 					table.insert(tbl, ('%02X'):format(tonumber(rgb)))
 				end
@@ -622,7 +622,7 @@ Parse = {
 		else
 			for hex in line:gmatch('%S%S') do
 				if not tonumber(hex, 16) then
-					return ''
+					return ErrMsg('', 'Invalid HEX color code found in %s.', fname)
 				else
 					table.insert(tbl, hex:upper())
 				end
