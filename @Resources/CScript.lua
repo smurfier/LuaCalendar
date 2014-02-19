@@ -30,6 +30,7 @@ function Update()
 	
 	if Time.show.month ~= Time.old.month or Time.show.year ~= Time.old.year then -- Recalculate and Redraw if Month and/or Year changes
 		Time.old = {month = Time.show.month, year = Time.show.year, day = Time.curr.day}
+		Time.stats() -- Set all Time.stats values for the current month.
 		Events()
 		Draw()
 	elseif Time.curr.day ~= Time.old.day then -- Redraw if Today changes
@@ -115,17 +116,23 @@ Meters = setmetatable({}, {
 Time = { -- Used to store and call date functions and statistics
 	curr = setmetatable({}, {__index = function(_, index) return os.date('*t')[index] end,}),
 	old = {day = 0, month = 0, year = 0,},
-	show = os.date('*t'),
-	stats = setmetatable({inmonth = true,}, {__index = function(_, index)
-		local tstart = os.time{day = 1, month = Time.show.month, year = Time.show.year, isdst = false,}
-		local nstart = os.time{day = 1, month = (Time.show.month % 12 + 1), year = (Time.show.year + (Time.show.month == 12 and 1 or 0)), isdst = false,}
-		
-		return ({
-			clength = ((nstart - tstart) / 86400),
-			plength = (tonumber(os.date('%d', tstart - 86400))),
-			startday = rotate(tonumber(os.date('%w', tstart))),
-		})[index]
-	end,}),
+	show = os.date('*t'), -- Needs to be initialized with current values.
+	stats = setmetatable({inmonth = true,},
+		{__call = function(t, index)
+			local tstart = os.time{day = 1, month = Time.show.month, year = Time.show.year, isdst = false,}
+			local nstart = os.time{day = 1, month = (Time.show.month % 12 + 1), year = (Time.show.year + (Time.show.month == 12 and 1 or 0)), isdst = false,}
+			
+			local values = {
+				nmonth = nstart, -- Timestamp for the first day of the following month.
+				cmonth = tstart, -- Timestamp for the first day of the current month.
+				clength = (nstart - tstart) / 86400, -- Number of days in the current month.
+				plength = tonumber(os.date('%d', tstart - 86400)), -- Number of days in the previous month.
+				startday = rotate(tonumber(os.date('%w', tstart))), -- Day code for the first day of the current month.
+			}
+			
+			for k, v in pairs(values) do rawset(t, k, v) end
+		end,}
+	),
 } -- Time
 
 Range = setmetatable({ -- Makes allowance for either Month or Week ranges
