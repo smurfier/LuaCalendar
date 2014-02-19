@@ -646,24 +646,21 @@ function ErrMsg(...) -- Used to display errors
 	if not rMessage then
 		rMessage = {msg}
 	else
-		table.insert(rMessage, msg)
+		local unique = true
+		for _, v in ipairs(rMessage) do
+			if v == msg then
+				unique = false
+				break
+			end
+		end
+		if unique then table.insert(rMessage, msg) end
 	end
 	return value
 end -- ErrMsg
 
 function ReturnError() -- Used to prevent duplicate error messages
 	if rMessage then
-		local temp = {}
-		for k, v in ipairs(rMessage) do
-			local count = 0
-			for k2, v2 in ipairs(temp) do
-				if v == v2 then count = count + 1 end
-			end
-			if count == 0 then
-				SKIN:Bang('!Log', Settings.Name .. ': ' .. v, 'ERROR')
-				table.insert(temp, v)
-			end
-		end
+		for _, v in ipairs(rMessage) do SKIN:Bang('!Log', v, 'ERROR') end
 		Error, rMessage = rMessage[#rMessage], nil
 		return Error
 	else
