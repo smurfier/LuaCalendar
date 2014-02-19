@@ -15,7 +15,7 @@ function Initialize()
 	Settings.DisableScroll = Get.NumberVariable('DisableScroll') > 0
 	-- Weekday labels text
 	SetLabels(Delim(Get.Variable('DayLabels', 'S|M|T|W|T|F|S')))
-	--Events File
+	-- Events File
 	LoadEvents(ExpandFolder(Delim(Get.Variable('EventFile'))))
 end -- Initialize
 
@@ -32,7 +32,7 @@ function Update()
 		Time.stats() -- Set all Time.stats values for the current month.
 		Events()
 		Draw()
-	elseif Time.curr.day ~= Time.old.day then -- Redraw if Today changes
+	elseif Time.curr.day ~= Time.old.day and Time.stats.inmonth then -- Redraw if Today changes
 		Time.old.day = Time.curr.day
 		Draw()
 	end
@@ -81,7 +81,7 @@ Settings = setmetatable(
 					ErrMsg(nil, '%s: Invalid Setting type. %s expected, received %s instead.', key, type(tbl[key]), type(value))
 				end
 			end
-		end
+		end,
 	}
 ) -- Settings
 
@@ -147,8 +147,7 @@ Range = setmetatable({ -- Makes allowance for either Month or Week ranges
 		week = function() return 1 end,
 		nomove = true,
 	},
-	}, { __index = function(tbl, index) return ErrMsg(tbl.month, 'Invalid Range: %s', index) end,
-}) -- Range
+}, { __index = function(tbl, index) return ErrMsg(tbl.month, 'Invalid Range: %s', index) end, }) -- Range
 
 function MLabels(locale, string) -- Makes allowance for Month Names
 	if locale then
@@ -182,10 +181,10 @@ function ExpandFolder(input) -- Makes allowance for when the first value in a ta
 end -- ExpandFolder
 
 function SetLabels(tbl) -- Sets weekday labels
-	local res = test(type(tbl) == 'table', 'SetLabels must receive a table')
-	if res then res = test(#tbl >= 7, 'SetLabels must receive a table with seven indicies') end
-	if not res then tbl = {'S', 'M', 'T', 'W', 'T', 'F', 'S'} end
-	for a = 1, 7 do SKIN:Bang('!SetOption', Meters.Labels.Name:format(a), 'Text', tbl[Settings.StartOnMonday and (a % 7 + 1) or a]) end
+	local res = test(type(tbl) == 'table', 'SetLabels must receive a table. Received %s instead.', type(tbl))
+	if res and not test(#tbl >= 7, 'SetLabels must receive a table with seven indicies.') then tbl = {'S', 'M', 'T', 'W', 'T', 'F', 'S'} end
+	if Settings.StartOnMonday then table.insert(tbl, table.remove(tbl, 1)) end
+	for k, v in ipairs(tbl) do SKIN:Bang('!SetOption', Meters.Labels.Name:format(k), 'Text', v) end
 end -- SetLabels
 
 function LoadEvents(FileTable)
@@ -210,7 +209,7 @@ function LoadEvents(FileTable)
 		'case',
 		'skip',
 		'timestamp',
-		'finish'
+		'finish',
 	}
 
 	local Keys = function(line, default)
@@ -408,7 +407,7 @@ function Events() -- Parse Events table.
 end -- Events
 
 function Draw() -- Sets all meter properties and calculates days
-	local LastWeek = Settings.HideLastWeek and math.ceil((Time.stats.startday + Time.stats.clength) / 7) < 6
+	local HideLastWeek = Settings.HideLastWeek and math.ceil((Time.stats.startday + Time.stats.clength) / 7) < 6
 	
 	for wday = 1, 7 do -- Set Weekday Labels styles
 		local Styles = {Meters.Labels.Styles.Normal}
@@ -448,7 +447,7 @@ function Draw() -- Sets all meter properties and calculates days
 		
 		if Range[Settings.Range].adjustment(Time.curr.day + Time.stats.startday) == meter and Time.stats.inmonth then
 			table.insert(Styles, Meters.Days.Styles.Current)
-		elseif meter > 35 and LastWeek then
+		elseif meter > 35 and HideLastWeek then
 			table.insert(Styles, Meters.Days.Styles.LastWk)
 		elseif day < 1 then
 			day = day + Time.stats.plength
@@ -490,8 +489,7 @@ function Draw() -- Sets all meter properties and calculates days
 		return table.concat(Evns, '\n')
 	end -- EventList
 	
-	-- Define skin variables
-	for k, v in pairs{
+	for k, v in pairs{ -- Define skin variables
 		ThisWeek = Range[Settings.Range].week(),
 		Week = rotate(Time.curr.wday - 1),
 		Today = LZero(Time.curr.day),
@@ -513,9 +511,7 @@ function Move(value) -- Move calendar through the months
 	if value then test(type(value) == 'number', 'Move: input must be a number. Received %s instead.', type(value)) end
 	if Range[Settings.Range].nomove or not value then
 		Time.show = Time.curr
-	elseif math.ceil(value) ~= value then
-		ErrMsg(nil, 'Invalid Move Parameter %s', value)
-	else
+	elseif test(math.ceil(value) == value, 'Invalid Move Parameter %s', value) then
 		local mvalue = Time.show.month + value - (math.modf(value / 12)) * 12
 		local mchange = value < 0 and (mvalue < 1 and 12 or 0) or (mvalue > 12 and -12 or 0)
 		Time.show = {month = (mvalue + mchange), year = (Time.show.year + (math.modf(value / 12)) - mchange / 12),}
@@ -537,13 +533,20 @@ end
 
 BuiltIn = {
 	easter = function() return Easter() end,
-	goodfriday = function() return Easter() - 2 * 86400 end,
-	ashwednesday = function() return Easter() - 46 * 86400 end,
-	mardigras = function() return Easter() - 47 * 86400 end,
+	goodfriday = function() return Easter() - 2 * 86400 end, -- Old style format. To be removed later
+	ashwednesday = function() return Easter() - 46 * 86400 end, -- Old style format. To be removed later
+	mardigras = function() return Easter() - 47 * 86400 end, -- Old style format. To be removed later
 } -- BuiltIn
 
+-- It is the developers responsibility to validate all variables.
+-- Have the function return nil in the event of an error.
+-- Each variable is passed to the function as a string.
 Functions = {
-	timestamp = function(day, month, year) return os.time{day = tonumber(day), month = tonumber(month), year = tonumber(year), isdst = false,} end,
+	timestamp = function(day, month, year)
+		if tonumber(day or '') and tonumber(month or '') and tonumber(year or '') then
+			return os.time{day = tonumber(day), month = tonumber(month), year = tonumber(year), isdst = false,}
+		end
+	end,
 } -- Functions
 
 function Vars(line, fname, esub) -- Makes allowance for {$Variables}
@@ -554,9 +557,9 @@ function Vars(line, fname, esub) -- Makes allowance for {$Variables}
 		local var = variable:gsub('%s', ''):lower()
 		
 		-- Function
-		if (Functions or {})[var:match('([^:]+):') or ''] then
-			local name, vtype = var:match('^([^:]+):(.+)')
-			return Functions[name](unpack(Delim(vtype, ',')))
+		if (Functions or {})[var:match('[^:]+:.+') or ''] then
+			local name, vtype = variable:gsub('%s', ''):match('^([^:]+):(.+)')
+			return Functions[name:lower()](unpack(Delim(vtype, ',')))
 		
 		-- BuiltIn Event
 		elseif (BuiltIn or {})[var:match('([^:]+):.+') or ''] then
@@ -707,9 +710,7 @@ end -- ReturnError
 
 function test(...) -- clone of assert
 	local rvalue = table.remove(arg, 1)
-	if not rvalue then
-		ErrMsg(nil, unpack(arg))
-	end
+	if not rvalue then ErrMsg(nil, unpack(arg)) end
 	return rvalue
 end -- test
 
