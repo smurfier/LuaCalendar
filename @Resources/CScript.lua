@@ -289,10 +289,17 @@ function Events() -- Parse Events table.
 		if not Parse.Boolean(event.inactive, event.fname) then
 			
 			local AddEvn = function(day, ann)
-				local desc = Parse.String(event.description, '', event.fname, true)
-				if Parse.Boolean(event.anniversary, event.fname) and ann then desc = desc .. (' (%s)'):format(ann) end
-				local title = Parse.String(event.title, '', event.fname, true)
-				if title ~= '' then desc = ' -' .. title end
+				local desc = Parse.String(event.description, false, event.fname, true) or ErrMsg('', 'Event detected with no Description.')
+				local useann =  Parse.Boolean(event.anniversary, event.fname) and ann
+				local title = Parse.String(event.title, false, event.fname, true)
+
+				if useann and title then
+					desc = ('%s (%s) -%s'):format(desc, ann, title)
+				elseif useann then
+					desc = ('%s (%s)'):format(desc, ann)
+				elseif title then
+					desc = ('%s -%s'):format(desc, title)
+				end
 
 				local color = Parse.Color(event.color, event.fname)
 				
