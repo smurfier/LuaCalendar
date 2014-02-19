@@ -252,19 +252,7 @@ function LoadEvents(FileTable)
 end -- LoadEvents
 
 function Events() -- Parse Events table.
-	Hol = setmetatable({}, { __call = function(self) -- Returns a list of events
-		local Evns = {}
-	
-		for day = Time.stats.inmonth and Time.curr.day or 1, Time.stats.clength do -- Parse through month days to keep days in order
-			if self[day] then
-				local tbl = setmetatable({day = day, desc = table.concat(self[day]['text'], ', ')},
-					{ __index = function(_, input) return ErrMsg('', 'Invalid NextFormat variable {$%s}', input) end,})
-				table.insert(Evns, (Settings.NextFormat:gsub('{%$([^}]+)}', function(variable) return tbl[variable:lower()] end)) )
-			end
-		end
-	
-		return table.concat(Evns, '\n')
-	end})
+	Hol = {}
 
 	local tstamp = function(d, m, y) return os.time{day = d, month = m, year = y, isdst = false} end
 
@@ -453,6 +441,24 @@ function Draw() -- Sets all meter properties and calculates days
 	local FirstWeek = os.time{day = (6 - Time.stats.startday), month = Time.show.month, year = Time.show.year}
 	local GetWeek = function(i) return math.ceil(os.date('%j', FirstWeek + i * 604800) / 7) end
 	
+	function EventList(self) -- Returns a list of events
+		local Evns = {}
+	
+		for day = Time.stats.inmonth and Time.curr.day or 1, Time.stats.clength do -- Parse through month days to keep days in order
+			if self[day] then
+				local names = {day = day, desc = table.concat(self[day].text, ', ')}
+				
+				local line = Settings.NextFormat:gsub('{%$([^}]+)}', function(variable)
+					return names[variable:lower()] or ErrMsg('', 'Invalid NextFormat variable {$%s}', variable)
+				end)
+				
+				table.insert(Evns, line)
+			end
+		end
+	
+		return table.concat(Evns, '\n')
+	end -- EventList
+	
 	-- Define skin variables
 	for k, v in pairs{
 		ThisWeek = Range[Settings.Range].week(),
@@ -462,7 +468,7 @@ function Draw() -- Sets all meter properties and calculates days
 		Year = Time.show.year,
 		MonthLabel = Vars(Settings.LabelFormat),
 		LastWkHidden = LastWeek and 1 or 0,
-		NextEvent = Hol and Hol() or '',
+		NextEvent = Hol and EventList(Hol) or '',
 		WeekNumber1 = GetWeek(0),
 		WeekNumber2 = GetWeek(1),
 		WeekNumber3 = GetWeek(2),
