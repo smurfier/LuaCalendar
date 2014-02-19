@@ -54,36 +54,38 @@ function CombineScroll(input)
 	end
 end -- CombineScroll
 
-Settings = setmetatable({}, {
-	__index = {
-		Name = 'LuaCalendar', -- String
-		Color = '', -- String
-		Range = 'month', -- String
-		HideLastWeek = false, -- Boolean
-		LeadingZeroes = false, -- Boolean
-		StartOnMonday = false, -- Boolean
-		LabelFormat = '{$MName}, {$Year}', -- String
-		NextFormat = '{$day}: {$desc}', -- String
-		Locale = false, -- Boolean
-		MonthNames = {}, -- Table
-		MoonPhases = false, -- Boolean
-		MoonColor = '', -- String
-		ShowEvents = true, -- Boolean
-		DisableScroll = false; -- Boolean
-	},
-	__newindex = function(_, key, value)
-		local tbl = getmetatable(Settings).__index
-		if tbl[key] ~= nil then
-			if type(value) == type(tbl[key]) then
-				rawset(Settings, key, value)
-			else
-				local title = function(input) return (type(input):gsub('(.)(.*)', function(first, rest) return first:upper() .. rest:lower() end)) end
-				ErrMsg(nil, '%s: Invalid Setting type. %s expected, received %s instead.', key, title(tbl[key]), title(value))
+Settings = setmetatable(
+	{}, -- Start with an empty settings table. Force the use of __newindex in the metatable.
+	{
+		-- Use __index metatable to set up default settings.
+		__index = {
+			Name = 'LuaCalendar', -- String
+			Color = '', -- String
+			Range = 'month', -- String
+			HideLastWeek = false, -- Boolean
+			LeadingZeroes = false, -- Boolean
+			StartOnMonday = false, -- Boolean
+			LabelFormat = '{$MName}, {$Year}', -- String
+			NextFormat = '{$day}: {$desc}', -- String
+			Locale = false, -- Boolean
+			MonthNames = {}, -- Table
+			MoonPhases = false, -- Boolean
+			MoonColor = '', -- String
+			ShowEvents = true, -- Boolean
+			DisableScroll = false; -- Boolean
+		},
+		-- Use __newindex to validate setting values.
+		__newindex = function(t, key, value)
+			local tbl = getmetatable(Settings).__index
+			if test(tbl[key] ~= nil, 'Setting does not exist: %s', key) then
+				if type(value) == type(tbl[key]) then
+					rawset(t, key, value)
+				else
+					ErrMsg(nil, '%s: Invalid Setting type. %s expected, received %s instead.', key, type(tbl[key]), type(value))
+				end
 			end
-		else
-			ErrMsg(nil, 'Setting does not exist: %s', key)
 		end
-	end}
+	}
 ) -- Settings
 
 -- Set meter names/formats here.
