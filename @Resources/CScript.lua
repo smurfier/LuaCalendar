@@ -586,7 +586,11 @@ Parse = {
 	String = function(line, default, fname, spaces)
 		line = Vars(line, fname, '')
 		if line == '' then line = default end
-		return spaces and line or line:gsub('%s', '')
+		if spaces or not tostring(line) then
+			return line
+		else
+			return line:gsub('%s', '')
+		end
 	end, -- String
 
 	Color = function(line, fname)
