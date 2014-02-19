@@ -317,25 +317,16 @@ function Events() -- Parse Events table.
 			end
 
 			local frame = function(period)
-				local start, current = tstamp(dtbl.day, dtbl.month, dtbl.year), tstamp(1, Time.show.month, Time.show.year)
+				local start = tstamp(dtbl.day, dtbl.month, dtbl.year)
 				
-				if (current + Time.stats.clength * 86400) >= start and period > 0 then
-					local mod = (current - start) % period
-					local first = current + (mod > 0 and period - mod or 0)
+				if Time.stats.nmonth >= start then
+					local first = Time.stats.cmonth > start and (Time.stats.cmonth + (period - ((Time.stats.cmonth - start) % period))) or start
 					
-					while true do
-						if first >= start then
-							local temp = os.date('*t', first)
-							if temp.month == Time.show.month and temp.year == Time.show.year then
-								AddEvn(temp.day, (first - start) / period + 1)
-							else
-								break
-							end
-						end
-						first = first + period
+					for i = first, Time.stats.nmonth, period do
+						AddEvn(tonumber(os.date('%d', i)), (i - start) / period + 1)
 					end
 				end
-			end
+			end -- frame
 
 			if dtbl.erepeat == 'custom' and dtbl.year and dtbl.month and dtbl.day and dtbl.multip >= 86400 then
 				frame(dtbl.multip)
