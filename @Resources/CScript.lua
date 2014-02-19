@@ -733,10 +733,9 @@ function GetPhaseNumber(year, month, day)
 	M = torad(fixangle(fixangle((360 / 365.2422) * Day) - 3.762863)) -- Convert from perigee co-ordinates to epoch 1980.0
 	
 	-- Solve Kepler equation
-	local e, m2 = M, M
-	local delta = e - eccent * math.sin(e) - m2
+	local e, delta = M, - eccent * math.sin(M)
 	while math.abs(delta) > 1E-6 do
-		delta = e - eccent * math.sin(e) - m2
+		delta = e - eccent * math.sin(e) - M
 		e = e - delta / (1 - eccent * math.cos(e))
 	end
 
