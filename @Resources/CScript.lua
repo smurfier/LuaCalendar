@@ -86,32 +86,31 @@ Settings = setmetatable({}, {
 	end}
 ) -- Settings
 
-Meters = setmetatable({}, {
-	__index = {
-		Labels = { -- Week Day Labels
-			Name = 'l%d',
-			Styles = {
-				Normal = 'LblTxtSty',
-				First = 'LblTxtStart',
-				Current = 'LblCurrSty',
-			},
-		},
-		Days = { -- Month Days
-			Name = 'mDay%d',
-			Styles = {
-				Normal = 'TextStyle',
-				FirstDay = 'FirstDay',
-				NewWeek = 'NewWk',
-				Current = 'CurrentDay',
-				LastWk = 'LastWeek',
-				PrevMnth = 'PreviousMonth',
-				NxtMnth = 'NextMonth',
-				Wknd = 'WeekendStyle',
-				Holiday = 'HolidayStyle',
-			},
+-- Set meter names/formats here.
+Meters = {
+	Labels = { -- Week Day Labels
+		Name = 'l%d',
+		Styles = {
+			Normal = 'LblTxtSty',
+			First = 'LblTxtStart',
+			Current = 'LblCurrSty',
 		},
 	},
-}) -- Meters
+	Days = { -- Month Days
+		Name = 'mDay%d',
+		Styles = {
+			Normal = 'TextStyle',
+			FirstDay = 'FirstDay',
+			NewWeek = 'NewWk',
+			Current = 'CurrentDay',
+			LastWk = 'LastWeek',
+			PrevMnth = 'PreviousMonth',
+			NxtMnth = 'NextMonth',
+			Wknd = 'WeekendStyle',
+			Holiday = 'HolidayStyle',
+		},
+	},
+} -- Meters
 
 Time = { -- Used to store and call date functions and statistics
 	curr = setmetatable({}, {__index = function(_, index) return os.date('*t')[index] end,}),
