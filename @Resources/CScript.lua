@@ -330,7 +330,7 @@ function Events() -- Parse Events table.
 
 			if dtbl.erepeat == 'custom' and dtbl.year and dtbl.month and dtbl.day and dtbl.multip >= 86400 then
 				frame(dtbl.multip)
-			elseif dtbl.erepeat == 'week' and dtbl.month and dtbl.year and dtbl.day then
+			elseif dtbl.erepeat == 'week' and dtbl.month and dtbl.year and dtbl.day and dtbl.multip >= 1 then
 				frame(dtbl.multip * 604800)
 			elseif dtbl.erepeat == 'year' and dtbl.month == Time.show.month and ((dtbl.year and dtbl.multip > 1) and ((Time.show.year - dtbl.year) % dtbl.multip) or 0) == 0 then
 				AddEvn(dtbl.day, dtbl.year and Time.show.year - dtbl.year / dtbl.multip)
@@ -341,7 +341,7 @@ function Events() -- Parse Events table.
 					local ydiff = Time.show.year - dtbl.year - 1
 					local mdiff = ydiff == -1 and (Time.show.month - dtbl.month) or ((12 - dtbl.month) + Time.show.month + (ydiff * 12))
 
-					if (mdiff % dtbl.multip) == 0 and tstamp(1, Time.show.month, Time.show.year) >= tstamp(1, dtbl.month, dtbl.year) then
+					if (mdiff % dtbl.multip) == 0 and Time.stats.cmonth >= tstamp(1, dtbl.month, dtbl.year) then
 						AddEvn(dtbl.day, mdiff / dtbl.multip + 1)
 					end
 				end
