@@ -59,7 +59,6 @@ Settings = setmetatable(
 	{
 		-- Use __index metatable to set up default settings.
 		__index = {
-			Name = 'LuaCalendar', -- String
 			Color = '', -- String
 			Range = 'month', -- String
 			HideLastWeek = false, -- Boolean
