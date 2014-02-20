@@ -88,7 +88,7 @@ Settings = setmetatable(
 -- Set meter names/formats here.
 Meters = {
 	Labels = { -- Week Day Labels
-		Name = 'l%d',
+		Name = 'l%d', -- Use %d to denote the number (1-7) of the meter.
 		Styles = {
 			Normal = 'LblTxtSty',
 			First = 'LblTxtStart',
@@ -96,7 +96,7 @@ Meters = {
 		},
 	},
 	Days = { -- Month Days
-		Name = 'mDay%d',
+		Name = 'mDay%d', -- Use %d to denote the number (1-42) of the meter.
 		Styles = {
 			Normal = 'TextStyle',
 			FirstDay = 'FirstDay',
@@ -283,7 +283,7 @@ function LoadEvents(FileTable)
 			end
 		end
 
-		if queue or #eSet > 0 then ErrMsg(nil, 'Unmatched %s tag detected in %s', queue and 'Event' or 'Set', fName) end
+		if queue or #eSet > 0 then ErrMsg(nil, 'Unmatched Event or Set tag detected in %s', fName) end
 	end
 end -- LoadEvents
 
@@ -302,7 +302,6 @@ function Events() -- Parse Events table.
 	end -- DefineEvent
 
 	for _, event in ipairs(hFile or {}) do
-		
 		-- Parse necessary options
 		local dtbl = {stamp = Parse.Number(event.timestamp, false, event.fname)}
 		if dtbl.stamp then
@@ -331,8 +330,6 @@ function Events() -- Parse Events table.
 				elseif title then
 					desc = ('%s -%s'):format(desc, title)
 				end
-
-				local color = Parse.Color(event.color, event.fname)
 				
 				local case = Parse.List(event.case, 'none', event.fname, 'none|lower|upper|title|sentence')
 				if case == 'lower' then
@@ -348,10 +345,12 @@ function Events() -- Parse Events table.
 					end)
 				end
 
+				local color = Parse.Color(event.color, event.fname)
+
 				if not Parse.String(event.skip, '', event.fname):find(('%02d%02d%04d'):format(day, Time.show.month, Time.show.year)) then
 					DefineEvent(day, desc, color)
 				end
-			end
+			end -- AddEvn
 
 			local frame = function(period)
 				local start = tstamp(dtbl.day, dtbl.month, dtbl.year)
@@ -529,7 +528,7 @@ function Easter()
 	m = math.floor((a + 11 * h + 22 * L) / 451)
 	
 	return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = Time.show.year}
-end
+end -- Easter
 
 BuiltIn = {
 	easter = function() return Easter() end,
