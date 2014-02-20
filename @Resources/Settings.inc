@@ -26,9 +26,6 @@ MonthLabels=
 ;Set to 1 to have the week start on Monday
 StartOnMonday=0
 
-;Set to 1 to pull month names from the Localization Settings of your computer. Overrides Custom Month Labels.
-UseLocalMonths=1
-
 ;The format for the list of upcomming events. {day} and {desc} are valid variables.
 NextFormat=
 

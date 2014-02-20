@@ -13,7 +13,6 @@ Variables = {
 	LeadingZeroes = 0,
 	MonthLabels = '',
 	StartOnMonday = 0,
-	UseLocalMonths = 1,
 	NextFormat = '',
 	ShowMoonPhases = 1,
 	MoonColor = '',
@@ -117,7 +116,9 @@ end -- SetStyle
 function Save()
 	MessageOutput()
 	file = SKIN:ReplaceVariables('#@#Settings.inc')
-	for k, _ in pairs(Variables) do SKIN:Bang('!WriteKeyValue', 'Variables', k, SKIN:GetVariable(k):gsub('#([^#]+)#', '#*%1*#'), file) end
+	for k, _ in pairs(Variables) do
+		SKIN:Bang('!WriteKeyValue', 'Variables', k, Encode(SKIN:GetVariable(k):gsub('#([^#]+)#', '#*%1*#')), file)
+	end
 	SKIN:Bang('!Refresh', 'LuaCalendar')
 end -- Save
 
@@ -166,15 +167,20 @@ function CheckELFormat(input)
 end -- CheckELFormat
 
 function SetEvents(path)
-	for _, var in ipairs{'@', 'ROOTCONFIGPATH', 'SKINSPATH'} do
-		local value = SKIN:GetVariable(var)
-		path = path:gsub(value, ('#*%s*#'):format(var))
-	end
-	SKIN:Bang('!SetVariable', 'EventFile', path)
+	SKIN:Bang('!SetVariable', 'EventFile', Encode(path))
 	SKIN:Bang('!Update')
 end -- SetEvents
 
 -- ========== HELPER FUNCTIONS ==========
+
+function Encode(line)
+	for _, var in ipairs{'@', 'ROOTCONFIGPATH', 'SKINSPATH'} do
+		local value = SKIN:GetVariable(var)
+		line = line:gsub(value, ('#*%s*#'):format(var))
+	end
+
+	return line
+end -- Encode
 
 function lengthcheck(line, num, msg)
 	MessageOutput()

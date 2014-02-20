@@ -8,7 +8,7 @@ function Initialize()
 	Settings.StartOnMonday = Get.NumberVariable('StartOnMonday') > 0
 	Settings.LabelFormat = Get.Variable('LabelText', '{$MName}, {$Year}')
 	Settings.NextFormat = Get.Variable('NextFormat', '{$day}: {$desc}')
-	Settings.MonthNames = MLabels(Get.NumberVariable('UseLocalMonths') > 0, Get.Variable('MonthLabels', ''))
+	Settings.MonthNames = Delim(Get.Variable('MonthLabels', ''))
 	Settings.MoonPhases = Get.NumberVariable('ShowMoonPhases') > 0
 	Settings.MoonColor = Parse.Color(Get.Variable('MoonColor', ''))
 	Settings.ShowEvents = Get.NumberVariable('ShowEvents') > 0
@@ -148,19 +148,6 @@ Range = setmetatable({ -- Makes allowance for either Month or Week ranges
 		nomove = true,
 	},
 }, { __index = function(tbl, index) return ErrMsg(tbl.month, 'Invalid Range: %s', index) end, }) -- Range
-
-function MLabels(locale, string) -- Makes allowance for Month Names
-	if locale then
-		local tbl = {}
-		
-		os.setlocale('', 'time')
-		for i = 1, 12 do table.insert(tbl, os.date('%B', os.time{year = 2000, month = i, day = 1})) end
-
-		return tbl
-	elseif test(type(string) == 'string', 'MLabels: input #2 must be a string. Received %s instead.', type(string)) then
-		return Delim(string)
-	end
-end -- MLabels
 
 function Delim(input, sep) -- Separates an input string by a delimiter
 	test(type(input) == 'string', 'Delim: input must be a string. Received %s instead', type(input))
@@ -475,7 +462,7 @@ function Draw() -- Sets all meter properties and calculates days
 	
 		for day = Time.stats.inmonth and Time.curr.day or 1, Time.stats.clength do -- Parse through month days to keep days in order
 			if self[day] then
-				local names = {day = day, desc = table.concat(self[day].text, ', ')}
+				local names = {day = day, desc = table.concat(self[day].text, ', '),}
 				
 				local line = Settings.NextFormat:gsub('{%$([^}]+)}', function(variable)
 					return names[variable:lower()] or ErrMsg('', 'Invalid NextFormat variable {$%s}', variable)
