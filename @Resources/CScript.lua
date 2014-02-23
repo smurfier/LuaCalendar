@@ -171,7 +171,7 @@ function SetLabels(tbl) -- Sets weekday labels
 	local res = test(type(tbl) == 'table', 'SetLabels must receive a table. Received %s instead.', type(tbl))
 	if res and not test(#tbl >= 7, 'SetLabels must receive a table with seven indicies.') then tbl = {'S', 'M', 'T', 'W', 'T', 'F', 'S'} end
 	if Settings.StartOnMonday then table.insert(tbl, table.remove(tbl, 1)) end
-	for k, v in ipairs(tbl) do SKIN:Bang('!SetOption', Meters.Labels.Name:format(k), 'Text', v) end
+	for k, v in ipairs(tbl) do SKIN:Bang('!SetOption', Meters.Labels.Name:format(k - 1), 'Text', v) end
 end -- SetLabels
 
 function LoadEvents(FileTable)
@@ -394,15 +394,12 @@ end -- Events
 
 function Draw() -- Sets all meter properties and calculates days
 	local HideLastWeek = Settings.HideLastWeek and math.ceil((Time.stats.startday + Time.stats.clength) / 7) < 6
-	
-	for wday = 1, 7 do -- Set Weekday Labels styles
+
+	local cday = rotate(Time.curr.wday - 1)
+	for wday = 0, 6 do -- Set Weekday Labels styles
 		local Styles = {Meters.Labels.Styles.Normal}
-		if wday == 1 then
-			table.insert(Styles, Meters.Labels.Styles.First)
-		end
-		if rotate(Time.curr.wday - 1) == (wday - 1) and Time.stats.inmonth then
-			table.insert(Styles, Meters.Labels.Styles.Current)
-		end
+		if wday == 0 then table.insert(Styles, Meters.Labels.Styles.First) end
+		if cday == wday and Time.stats.inmonth then table.insert(Styles, Meters.Labels.Styles.Current) end
 		SKIN:Bang('!SetOption', Meters.Labels.Name:format(wday), 'MeterStyle', table.concat(Styles, '|'))
 	end
 
