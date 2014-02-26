@@ -29,7 +29,7 @@ function Update()
 	
 	-- Recalculate and Redraw if Month and/or Year changes
 	if Time.show.month ~= Time.old.month or Time.show.year ~= Time.old.year then
-		Time.old = {month = Time.show.month, year = Time.show.year, day = Time.curr.day,}
+		Time.old = Time.show
 		Time.stats() -- Set all Time.stats values for the current month.
 		ParseEvents()
 		Draw()
