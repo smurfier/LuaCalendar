@@ -321,9 +321,11 @@ function ParseEvents() -- Parse Events table.
 		return os.time{day = d, month = m or Time.show.month, year = y or Time.show.year, isdst = false}
 	end -- tstamp
 	
-	local TestRequirements = function(...)
+	-- Requires a matrix for use.
+	-- {{test, error format, arguments,},}
+	local TestRequirements = function(tbl)
 		local State = true
-		for k, v in ipairs(arg) do State = State and v end
+		for k, v in ipairs(tbl) do State = State and TestError(unpack(v)) end
 		return State
 	end -- TestRequirements
 	
@@ -408,30 +410,30 @@ function ParseEvents() -- Parse Events table.
 			
 			-- Begin testing and adding events to table
 			if DateTable.erepeat == 'custom' then
-				local Results = TestRequirements(
-					TestError(DateTable.year, 'Year must be specified in %s when using Custom repeat.', event.description),
-					TestError(DateTable.month, 'Month must be specified in %s when using Custom repeat.', event.description),
-					TestError(DateTable.day, 'Day must be specified in %s when using Custom repeat.', event.description),
-					TestError(DateTable.multip >= 86400, 'Multiplier must be greater than or equal to 86400 in %s when using Custom repeat.', event.description)
-				)
+				local Results = TestRequirements{
+					{DateTable.year, 'Year must be specified in %s when using Custom repeat.', event.description},
+					{DateTable.month, 'Month must be specified in %s when using Custom repeat.', event.description},
+					{DateTable.day, 'Day must be specified in %s when using Custom repeat.', event.description},
+					{DateTable.multip >= 86400, 'Multiplier must be greater than or equal to 86400 in %s when using Custom repeat.', event.description},
+				}
 				
 				if Results then frame(DateTable.multip) end
 				
 			elseif DateTable.erepeat == 'week' then
-				local Results = TestRequirements(
-					TestError(DateTable.year, 'Year must be specified in %s when using Week repeat.', event.description),
-					TestError(DateTable.month, 'Month must be specified in %s when using Week repeat.', event.description),
-					TestError(DateTable.day, 'Day must be specified in %s when using Week repeat.', event.description),
-					TestError(DateTable.multip >= 1, 'Multiplier must be greater than or equal to 1 in %s when using Week repeat.', event.description)
-				)
+				local Results = TestRequirements{
+					{DateTable.year, 'Year must be specified in %s when using Week repeat.', event.description},
+					{DateTable.month, 'Month must be specified in %s when using Week repeat.', event.description},
+					{DateTable.day, 'Day must be specified in %s when using Week repeat.', event.description},
+					{DateTable.multip >= 1, 'Multiplier must be greater than or equal to 1 in %s when using Week repeat.', event.description},
+				}
 				
 				if Results then frame(DateTable.multip * 604800) end
 				
 			elseif DateTable.erepeat == 'year' then
-				local Results = TestRequirements(
-					TestError(DateTable.day, 'Day must be specified in %s when using Year repeat.', event.description),
-					TestError(DateTable.month, 'Month must be specified in %s when using Year repeat.', event.description)
-				)
+				local Results = TestRequirements{
+					{DateTable.day, 'Day must be specified in %s when using Year repeat.', event.description},
+					{DateTable.month, 'Month must be specified in %s when using Year repeat.', event.description},
+				}
 				
 				if Results and tstamp(DateTable.day, DateTable.month, Time.show.year) <= DateTable.finish then
 					local TestYear = 0
@@ -465,7 +467,15 @@ function ParseEvents() -- Parse Events table.
 				end
 				
 			elseif DateTable.erepeat =='none' then
-				if DateTable.year == Time.show.year and DateTable.month == Time.show.month then
+				local Results = TestRequirements{
+					{DateTable.year, 'Year must be specified in %s.', event.description},
+					{DateTable.month, 'Month must be specified in %s.', event.description},
+					{DateTable.day, 'Day must be specified in %s.', event.description},
+				}
+				
+				if not Results then
+					-- Do Nothing
+				elseif DateTable.year == Time.show.year and DateTable.month == Time.show.month then
 					AddEvent(DateTable.day)
 				end
 			end
