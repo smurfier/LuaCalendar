@@ -123,7 +123,8 @@ Time = { -- Used to store and call date functions and statistics
 	stats = setmetatable({inmonth = true,},
 		{__call = function(t, index)
 			local tstart = os.time{day = 1, month = Time.show.month, year = Time.show.year, isdst = false,}
-			local nstart = os.time{day = 1, month = (Time.show.month % 12 + 1), year = (Time.show.year + (Time.show.month == 12 and 1 or 0)), isdst = false,}
+			local NextMonth = os.date('*t', tstart + 31 * 86400) -- Date table for 31 days after the current month
+			local nstart = os.time{day = 1, month = NextMonth.month, year = NextMonth.year, isdst = false,}
 			
 			local values = {
 				nmonth = nstart, -- Timestamp for the first day of the following month.
