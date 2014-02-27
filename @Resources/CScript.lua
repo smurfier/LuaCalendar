@@ -74,13 +74,13 @@ Settings = setmetatable(
 		},
 		-- Use __newindex to validate setting values.
 		__newindex = function(t, key, value)
+			ErrorSource = key
 			local tbl = getmetatable(Settings).__index
 			if tbl[key] == nil then
 				CreateError('Setting does not exist: %s', key)
 			elseif type(value) == type(tbl[key]) then
 				rawset(t, key, value)
 			else
-				ErrorSource = key
 				CreateError('Invalid Setting type. Expected %s, received %s instead.', key, type(tbl[key]), type(value))
 			end
 		end,
