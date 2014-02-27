@@ -504,7 +504,7 @@ function ParseEvents() -- Parse Events table.
 end -- ParseEvents
 
 function Draw() -- Sets all meter properties and calculates days
-	local HideLastWeek = Settings.HideLastWeek and math.ceil((Time.stats.startday + Time.stats.clength) / 7) < 6
+	local HideLastWeek = Settings.HideLastWeek and math.ceil((Time.stats.startday + Time.stats.clength) / 7) or 6
 	
 	-- Set Weekday Labels styles
 	local CurrentWeekDay = RotateDay(Time.curr.wday - 1)
@@ -546,7 +546,7 @@ function Draw() -- Sets all meter properties and calculates days
 		-- Regular MeterStyles
 		if CurrentDayMeter == MeterNumber and Time.stats.inmonth then
 			table.insert(Styles, Meters.Days.Styles.Current)
-		elseif MeterNumber > 35 and HideLastWeek then
+		elseif math.ceil(MeterNumber / 7) > HideLastWeek then
 			table.insert(Styles, Meters.Days.Styles.LastWeek)
 		elseif day < 1 then
 			day = day + Time.stats.plength
@@ -577,7 +577,7 @@ function Draw() -- Sets all meter properties and calculates days
 		Month = Settings.MonthNames[Time.show.month] or Time.show.month,
 		Year = Time.show.year,
 		MonthLabel = ParseVariables(Settings.LabelFormat),
-		LastWkHidden = HideLastWeek and 1 or 0,
+		LastWkHidden = 6 - HideLastWeek,
 		NextEvent = '',
 	}
 	

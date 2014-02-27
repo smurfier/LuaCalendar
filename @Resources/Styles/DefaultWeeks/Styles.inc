@@ -160,9 +160,10 @@ Text=#WeekNumber4#
 Meter=String
 MeterStyle=TextStyle | WeekStyle
 Text=#WeekNumber5#
+Hidden=(#LastWkHidden#>1)
 
 [Week6]
 Meter=String
 MeterStyle=TextStyle | WeekStyle
 Text=#WeekNumber6#
-Hidden=#LastWkHidden#
+Hidden=(#LastWkHidden#>0)
