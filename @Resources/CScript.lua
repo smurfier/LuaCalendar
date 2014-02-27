@@ -274,11 +274,30 @@ function LoadEvents(FileTable)
 		for TagName, KeyLine, Contents in FileContent:gmatch('<%s-([^%s>]+)([^>]*)>([^<]*)') do
 			TagName, Contents = TagName:lower(), Contents:gsub('%s+', ' ')
 			
-			if ContentQueue then
-				if TestError(TagName == '/event',  'Event tags may not have nested tags. File: %s', FileName) then
-					AddEvent(ParseKeys(ContentQueue.KeyLine, {description = ContentQueue.Contents,}))
+			local ParseContents = function()
+				if KeyLine:match('/%s-$') then
+					AddEvent(ParseKeys(KeyLine))
+				elseif Contents:gsub('[\t\n\r%s]', '') ~= '' then
+					ContentQueue = {KeyLine = KeyLine, Contents = Contents:gsub('\r?\n', ' '),}
+				else
+					CreateError('Event tag detected without contents. File: %s', FileName)
 				end
-				ContentQueue = nil
+			end
+			
+			if ContentQueue then
+				local CloseTag, name = TagName:match('(/?)(.+)')
+				AddEvent(ParseKeys(ContentQueue.KeyLine, {description = ContentQueue.Contents,}))
+				if CloseTag == '' and name == 'event' then
+					ParseContents()
+					CreateError('Unmatched Event tag detected. File: %s', FileName)
+				else
+					if CloseTag == '' then
+						CreateError('Event tags may not have nested tags. File: %s', FileName)
+					elseif CloseTag == '/' and name ~= 'event' then
+						CreateError('Unmatched Event tag detected. File: %s', FileName)
+					end
+					ContentQueue = nil
+				end
 			elseif TagName == 'variable' then
 				local Temp = Keys(KeyLine)
 				
@@ -294,16 +313,7 @@ function LoadEvents(FileTable)
 			elseif TagName == '/set' then
 				table.remove(SetTags)
 			elseif TagName == 'event' then
-				-- inline closing event tag
-				if KeyLine:match('/%s-$') then
-					AddEvent(ParseKeys(KeyLine))
-				-- Tag is open, create queue
-				elseif Contents:gsub('[\t\n\r%s]', '') ~= '' then
-					ContentQueue = {KeyLine = KeyLine, Contents = Contents:gsub('\r?\n', ' '),}
-				-- Error
-				else
-					CreateError('Event tag detected without contents. File: %s', FileName)
-				end	
+				ParseContents()
 			else
 				CreateError('Invalid Tag <%s> in %s', TagName, FileName)
 			end
