@@ -654,17 +654,6 @@ BuiltIn = {
 	mardigras = function() return Easter() - 47 * 86400 end, -- Old style format. To be removed later
 } -- BuiltIn
 
--- It is the developers responsibility to validate all variables.
--- Have the function return nil in the event of an error.
--- Each variable is passed to the function as a string.
-Functions = {
-	timestamp = function(day, month, year)
-		if tonumber(day or '') and tonumber(month or '') and tonumber(year or '') then
-			return os.time{day = tonumber(day), month = tonumber(month), year = tonumber(year), isdst = false,}
-		end
-	end,
-} -- Functions
-
 function ParseVariables(line, FileName, ErrorSubstitute) -- Makes allowance for {$Variables}
 	ErrorSource = 'ParseVariables'
 	local ScriptVariables = {
@@ -678,13 +667,8 @@ function ParseVariables(line, FileName, ErrorSubstitute) -- Makes allowance for 
 	local value = function(variable)
 		local var = variable:gsub('%s', ''):lower()
 		
-		-- Function
-		if (Functions or {})[var:match('([^:]+):.+') or ''] then
-			local name, vtype = variable:gsub('%s', ''):match('^([^:]+):(.+)')
-			return Functions[name:lower()](unpack(Delim(vtype, ',')))
-		
 		-- BuiltIn Event
-		elseif (BuiltIn or {})[var:match('([^:]+):.+') or ''] then
+		if (BuiltIn or {})[var:match('([^:]+):.+') or ''] then
 			local name, vtype = var:match('^([^:]+):(.+)')
 			local stamp = BuiltIn[name]()
 			return vtype == 'stamp' and stamp or os.date('*t', stamp)[vtype]
