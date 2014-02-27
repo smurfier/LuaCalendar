@@ -344,7 +344,7 @@ function ParseEvents() -- Parse Events table.
 		local DateTable = {
 			multip = Parse.Number(event.multiplier, 1, event.fname, 0),
 			erepeat = Parse.List(event['repeat'], 'none', event.fname, 'none|week|year|month|custom'),
-			finish = Parse.Number(event.finish, Time.stats.nmonth, event.fname),
+			finish = Parse.Date(event.finish, Time.stats.nmonth, event.fname),
 		}
 		
 		-- Find matching events
@@ -392,9 +392,15 @@ function ParseEvents() -- Parse Events table.
 				
 				local EventColor = Parse.Color(event.color, event.fname)
 				
-				if not Parse.String(event.skip, '', event.fname):find(string.format('%02d%02d%04d', EventDay, Time.show.month, Time.show.year)) then
-					DefineEvent(EventDay, EventDescription, EventColor)
+				local NotSkip = true
+				if event.stamp ~= '' then
+					local CurrentStamp, temp = tstamp(EventDay, Time.show.month, Time.show.year), Delim(event.skip)
+					for _, DateCode in ipairs(temp) do
+						NotSkip = NotSkip and Parse.Date(DateCode, 0, event.fname) ~= CurrentStamp
+					end
 				end
+				
+				if NotSkip then DefineEvent(EventDay, EventDescription, EventColor) end
 			end -- AddEvent
 			
 			local frame = function(period) -- Repeats an event based on a given number of seconds
@@ -826,6 +832,20 @@ Parse = {
 		end
 		return table.concat(tbl)
 	end, -- Color
+	
+	Date = function(line, default, FileName)
+		line = ParseVariables(line, FileName, '')
+		if line == '' then
+			return default
+		else
+			local DateTable = Delim(line, '/')
+			if #DateTable == 3 then
+				return os.time{day = DateTable[1], month = DateTable[2], year = DateTable[3], isdst = false}
+			else
+				return ReturnError(default, 'Invalid date code found in %s.', FileName)
+			end
+		end
+	end, -- Date
 }
 
 function RotateDay(value) -- Makes allowance for StartOnMonday
