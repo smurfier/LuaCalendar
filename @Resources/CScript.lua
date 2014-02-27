@@ -311,7 +311,9 @@ function LoadEvents(FileTable)
 			elseif TagName == 'set' then
 				table.insert(SetTags, ParseKeys(KeyLine))
 			elseif TagName == '/set' then
-				table.remove(SetTags)
+				if TestError(#SetTags > 0, 'Unmatched /Set tag detected. File: %s', FileName) then
+					table.remove(SetTags)
+				end
 			elseif TagName == 'event' then
 				ParseContents()
 			else
