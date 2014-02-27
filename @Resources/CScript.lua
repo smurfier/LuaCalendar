@@ -778,7 +778,7 @@ Parse = {
 	
 	List = function(line, default, FileName, FullList)
 		line = ParseVariables(line, FileName, ''):gsub('[|%s]', ''):lower()
-		return FullList:find(line) and line or default
+		return FullList:find(line) and line or ReturnError(default, 'Invalid list option found in %s.', FileName)
 	end, -- List
 	
 	String = function(line, default, FileName, AllowSpaces)
