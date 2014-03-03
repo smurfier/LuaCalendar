@@ -25,7 +25,9 @@ function Update()
 	local Current = Time.curr.all
 	local NewMonth = Time.stats.inmonth and Time.show.month ~= Current.month
 	local BrowsingMonth = (not Time.stats.inmonth) and Time.show.month == Current.month and Time.show.year == Current.year
-	if NewMonth or BrowsingMonth then Move() end
+	if NewMonth or BrowsingMonth then
+		Move()
+	end
 	
 	-- Recalculate and Redraw if Month and/or Year changes
 	if Time.show.month ~= Time.old.month or Time.show.year ~= Time.old.year then
@@ -134,7 +136,9 @@ Time = { -- Used to store and call date functions and statistics
 				startday = LeadingZero(tonumber(os.date('%w', tstart))), -- Day code for the first day of the current month.
 			}
 			
-			for k, v in pairs(values) do rawset(t, k, v) end
+			for k, v in pairs(values) do
+				rawset(t, k, v)
+			end
 		end,}
 	),
 } -- Time
@@ -167,7 +171,9 @@ function Delim(input, Separator) -- Separates an input string by a delimiter
 		if not MultiType(Separator, 'nil|string') then
 			Separator = ReturnError('|', 'Input #2 must be a string. Received %s instead. Using default value.', type(Separator))
 		end
-		for word in input:gmatch('[^' .. (Separator or '|') .. ']+') do table.insert(tbl, word:match('^%s*(.-)%s*$')) end
+		for word in input:gmatch('[^' .. (Separator or '|') .. ']+') do
+			table.insert(tbl, word:match('^%s*(.-)%s*$'))
+		end
 	end
 	return tbl
 end -- Delim
@@ -179,7 +185,9 @@ function ExpandFolder(input) -- Makes allowance for when the first value in a ta
 	else
 		if #input > 1 then
 			local FolderPath = table.remove(input, 1):match('(.-)[/\\]-$') .. '\\'
-			for Key, FileName in ipairs(input) do input[Key] = SKIN:MakePathAbsolute(FolderPath .. FileName) end
+			for Key, FileName in ipairs(input) do
+				input[Key] = SKIN:MakePathAbsolute(FolderPath .. FileName)
+			end
 		end
 		return input
 	end
@@ -191,8 +199,12 @@ function SetLabels(tbl) -- Sets weekday label text
 		if #tbl ~= 7 then
 			tbl = ReturnError({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Input must be a table with seven indicies. Using default table instead.')
 		end
-		if Settings.StartOnMonday then table.insert(tbl, table.remove(tbl, 1)) end
-		for Label, Text in ipairs(tbl) do SKIN:Bang('!SetOption', Meters.Labels.Name:format(Label - 1), 'Text', Text) end
+		if Settings.StartOnMonday then
+			table.insert(tbl, table.remove(tbl, 1))
+		end
+		for Label, Text in ipairs(tbl) do
+			SKIN:Bang('!SetOption', Meters.Labels.Name:format(Label - 1), 'Text', Text)
+		end
 	end
 end -- SetLabels
 
@@ -260,7 +272,9 @@ function LoadEvents(FileTable)
 			local dSet, tbl = {}, {fname = FileName,}
 			-- Collapse set matrix into a single table
 			for _, column in ipairs(SetTags) do
-				for key, value in pairs(column) do dSet[key] = value end
+				for key, value in pairs(column) do
+					dSet[key] = value
+				end
 			end
 			-- Work through all tables to add option to temporary table
 			for _, v in pairs(KeyNames) do
@@ -321,7 +335,9 @@ function LoadEvents(FileTable)
 			end
 		end
 		
-		if ContentQueue or #SetTags > 0 then CreateError('Unmatched Event or Set tag detected. File: %s', FileName) end
+		if ContentQueue or #SetTags > 0 then
+			CreateError('Unmatched Event or Set tag detected. File: %s', FileName)
+		end
 	end
 end -- LoadEvents
 
@@ -338,7 +354,9 @@ function ParseEvents() -- Parse Events table.
 	-- {{test, error format, arguments,},}
 	local TestRequirements = function(tbl)
 		local State = true
-		for k, v in ipairs(tbl) do State = State and TestError(unpack(v)) end
+		for k, v in ipairs(tbl) do
+			State = State and TestError(unpack(v))
+		end
 		return State
 	end -- TestRequirements
 	
@@ -365,14 +383,18 @@ function ParseEvents() -- Parse Events table.
 			local EventStamp = Parse.Number(event.timestamp, false, event.fname)
 			if EventStamp then
 				local temp = os.date('*t', EventStamp)
-				for k, v in pairs(temp) do DateTable[k] = v end
+				for k, v in pairs(temp) do
+					DateTable[k] = v
+				end
 			else
 				local temp = {
 					month = Parse.Number(event.month, false, event.fname),
 					day = Parse.Number(event.day, false, event.fname) or ReturnError(0, 'Invalid Day %s in %s', event.day, event.description),
 					year = Parse.Number(event.year, false, event.fname),
 				}
-				for k, v in pairs(temp) do DateTable[k] = v end
+				for k, v in pairs(temp) do
+					DateTable[k] = v
+				end
 			end
 			
 			local AddEvent = function(EventDay, AnniversaryNumber)
@@ -412,7 +434,9 @@ function ParseEvents() -- Parse Events table.
 					end
 				end
 				
-				if NotSkip then DefineEvent(EventDay, EventDescription, EventColor) end
+				if NotSkip then
+					DefineEvent(EventDay, EventDescription, EventColor)
+				end
 			end -- AddEvent
 			
 			local frame = function(period) -- Repeats an event based on a given number of seconds
@@ -436,7 +460,9 @@ function ParseEvents() -- Parse Events table.
 					{DateTable.multip >= 86400, 'Multiplier must be greater than or equal to 86400 in %s when using Custom repeat.', event.description},
 				}
 				
-				if Results then frame(DateTable.multip) end
+				if Results then
+					frame(DateTable.multip)
+				end
 				
 			elseif DateTable.erepeat == 'week' then
 				local Results = TestRequirements{
@@ -446,7 +472,9 @@ function ParseEvents() -- Parse Events table.
 					{DateTable.multip >= 1, 'Multiplier must be greater than or equal to 1 in %s when using Week repeat.', event.description},
 				}
 				
-				if Results then frame(DateTable.multip * 604800) end
+				if Results then
+					frame(DateTable.multip * 604800)
+				end
 				
 			elseif DateTable.erepeat == 'year' then
 				local Results = TestRequirements{
@@ -511,7 +539,9 @@ function ParseEvents() -- Parse Events table.
 			end
 		end
 		-- Apply the Moon Phases to the Events table
-		for PhaseDay, PhaseType in pairs(MoonPhases) do DefineEvent(PhaseDay, PhaseType, Settings.MoonColor) end
+		for PhaseDay, PhaseType in pairs(MoonPhases) do
+			DefineEvent(PhaseDay, PhaseType, Settings.MoonColor)
+		end
 	end
 end -- ParseEvents
 
@@ -522,8 +552,12 @@ function Draw() -- Sets all meter properties and calculates days
 	local CurrentWeekDay = RotateDay(Time.curr.wday - 1)
 	for WeekDay = 0, 6 do
 		local Styles = {Meters.Labels.Styles.Normal}
-		if WeekDay == 0 then table.insert(Styles, Meters.Labels.Styles.First) end
-		if CurrentWeekDay == WeekDay and Time.stats.inmonth then table.insert(Styles, Meters.Labels.Styles.Current) end
+		if WeekDay == 0 then
+			table.insert(Styles, Meters.Labels.Styles.First)
+		end
+		if CurrentWeekDay == WeekDay and Time.stats.inmonth then
+			table.insert(Styles, Meters.Labels.Styles.Current)
+		end
 		SKIN:Bang('!SetOption', Meters.Labels.Name:format(WeekDay), 'MeterStyle', table.concat(Styles, '|'))
 	end
 	
@@ -578,7 +612,9 @@ function Draw() -- Sets all meter properties and calculates days
 			ToolTipText = EventText or '',
 			[Settings.Color or 'FontColor'] = EventColor or '',
 		}
-		for Option, Value in pairs(MeterProperties) do SKIN:Bang('!SetOption', MeterName, Option, Value) end
+		for Option, Value in pairs(MeterProperties) do
+			SKIN:Bang('!SetOption', MeterName, Option, Value)
+		end
 	end
 	
 	-- Define skin variables
@@ -623,7 +659,9 @@ function Draw() -- Sets all meter properties and calculates days
 	end
 	
 	-- Set Skin Variables
-	for Name, Value in pairs(SkinVariables) do SKIN:Bang('!SetVariable', Name, Value) end
+	for Name, Value in pairs(SkinVariables) do
+		SKIN:Bang('!SetVariable', Name, Value)
+	end
 end -- Draw
 
 function Move(value) -- Move calendar through the months
@@ -859,7 +897,9 @@ end -- MultiType
 -- Begin all functions related to error checking
 function ReturnErrorMessage() -- Logs all queued error messages
 	if ErrorQueue then
-		for _, Message in ipairs(ErrorQueue) do SKIN:Bang('!Log', Message, 'ERROR') end
+		for _, Message in ipairs(ErrorQueue) do
+			SKIN:Bang('!Log', Message, 'ERROR')
+		end
 		ErrorMessage, ErrorQueue = ErrorQueue[#ErrorQueue], nil
 	end
 	return ErrorMessage or 'Success!'
@@ -891,7 +931,9 @@ end -- ReturnError
 
 function TestError(...) -- Clone of assert
 	local ReturnValue = table.remove(arg, 1)
-	if not ReturnValue then CreateError(unpack(arg)) end
+	if not ReturnValue then
+		CreateError(unpack(arg))
+	end
 	return ReturnValue
 end -- TestError
 
