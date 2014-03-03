@@ -380,18 +380,17 @@ function ParseEvents() -- Parse Events table.
 		-- Find matching events
 		if DateTable.finish >= Time.stats.cmonth and not Parse.Boolean(event.inactive, false, event.fname) then
 			-- More necessary options
-			local EventStamp = Parse.Number(event.timestamp, false, event.fname)
-			if EventStamp then
-				local temp = os.date('*t', EventStamp)
-				for k, v in pairs(temp) do
-					DateTable[k] = v
+			if true then -- Used to force the use of a local variable only in this context
+				local EventStamp, temp = Parse.Number(event.timestamp, false, event.fname)
+				if EventStamp then				
+					temp = os.date('*t', EventStamp)
+				else				
+					temp = {
+						month = Parse.Number(event.month, false, event.fname),
+						day = Parse.Number(event.day, false, event.fname) or ReturnError(0, 'Invalid Day %s in %s', event.day, event.description),
+						year = Parse.Number(event.year, false, event.fname),
+					}
 				end
-			else
-				local temp = {
-					month = Parse.Number(event.month, false, event.fname),
-					day = Parse.Number(event.day, false, event.fname) or ReturnError(0, 'Invalid Day %s in %s', event.day, event.description),
-					year = Parse.Number(event.year, false, event.fname),
-				}
 				for k, v in pairs(temp) do
 					DateTable[k] = v
 				end
