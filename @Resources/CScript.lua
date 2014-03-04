@@ -133,7 +133,7 @@ Time = { -- Used to store and call date functions and statistics
 				cmonth = tstart, -- Timestamp for the first day of the current month.
 				clength = (nstart - tstart) / 86400, -- Number of days in the current month.
 				plength = tonumber(os.date('%d', tstart - 86400)), -- Number of days in the previous month.
-				startday = LeadingZero(tonumber(os.date('%w', tstart))), -- Day code for the first day of the current month.
+				startday = RotateDay(tonumber(os.date('%w', tstart))), -- Day code for the first day of the current month.
 			}
 			
 			for k, v in pairs(values) do
