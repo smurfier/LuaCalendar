@@ -629,16 +629,16 @@ function Draw() -- Sets all meter properties and calculates days
 	}
 	
 	-- Week Numbers for the current month
-	local FirstWeek = os.time{day = (6 - Time.stats.startday), month = Time.show.month, year = Time.show.year}
+	local FirstWeek = os.time{day = (6 - Time.stats.startday), month = Time.show.month, year = Time.show.year, isdst = false,}
 	for i = 0, 5 do
 		local WeekName = string.format('WeekNumber%d', i + 1)
-		SkinVariables[WeekName] = math.ceil(os.date('%j', FirstWeek + i * 604800) / 7)
+		local YearDayNumber = os.date('%j', FirstWeek + i * 604800)
+		SkinVariables[WeekName] = math.ceil(YearDayNumber / 7)
 	end
 	
 	-- Parse Events table to create a list of events
 	local Current = Time.curr.all
 	if type(Events) == 'table' and Time.stats.cmonth >= os.time{day = 1, month = Current.month, year = Current.year,} then
-		ErrorSource = 'NextFormat'
 		local Evns = {}
 		
 		-- Parse through month days to keep days in order
@@ -647,7 +647,7 @@ function Draw() -- Sets all meter properties and calculates days
 				local names = {day = day, desc = table.concat(Events[day].text, ', '),}
 				
 				local line = Settings.NextFormat:gsub('{%$([^}]+)}', function(variable)
-					return names[variable:lower()] or ReturnError('', 'Invalid variable {$%s}', variable)
+					return names[variable:lower()] or ReturnError('', 'Invalid NextFormat variable {$%s}', variable)
 				end)
 				
 				table.insert(Evns, line)
@@ -810,7 +810,11 @@ Parse = {
 			return default
 		else
 			local number = SKIN:ParseFormula('(' .. line .. ')') or default
-			return tonumber(Decimals and string.format('%.' .. Decimals .. 'f', number) or number)
+			if Decimals then
+				return tonumber(string.format('%.' .. Decimals .. 'f', number))
+			else
+				return number
+			end
 		end
 	end, -- Number
 	
