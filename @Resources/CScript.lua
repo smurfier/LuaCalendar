@@ -9,7 +9,9 @@ function Initialize()
 	Settings.NextFormat = Get.Variable('NextFormat', '{$day}: {$desc}')
 	Settings.MonthNames = Delim(Get.Variable('MonthLabels', ''))
 	Settings.MoonPhases = Get.NumberVariable('ShowMoonPhases') > 0
-	Settings.MoonColor = Parse.Color(Get.Variable('MoonColor', ''))
+	-- Need to set Error.Source before calling Parse.Color
+	Error.Source = 'Settings'
+	Settings.MoonColor = Parse.Color(Get.Variable('MoonColor', ''), 'MoonColor', true)
 	Settings.ShowEvents = Get.NumberVariable('ShowEvents') > 0
 	Settings.DisableScroll = Get.NumberVariable('DisableScroll') > 0
 	-- Weekday labels text
@@ -21,10 +23,12 @@ end -- Initialize
 function Update()
 	CombineScroll(0)
 	
-	-- If in the current month or if browsing and Month changes to that month, set to Real Time
 	local Current = Time.curr.all
-	local NewMonth = Time.stats.inmonth and Time.show.month ~= Current.month
-	local BrowsingMonth = (not Time.stats.inmonth) and Time.show.month == Current.month and Time.show.year == Current.year
+	
+	-- If in the current month or if browsing and Month changes to that month, set to Real Time
+	local NewMonth = (Time.stats.inmonth and Time.show.month ~= Current.month)
+	local BrowsingMonth = (Time.show.month == Current.month and Time.show.year == Current.year and not Time.stats.inmonth)
+	
 	if NewMonth or BrowsingMonth then
 		Move()
 	end
@@ -35,12 +39,14 @@ function Update()
 		Time.stats() -- Set all Time.stats values for the current month.
 		ParseEvents()
 		Draw()
-	elseif Time.curr.day ~= Time.old.day and Time.stats.inmonth then -- Redraw if Today changes
-		Time.old.day = Time.curr.day
+	
+	-- Redraw if Today changes
+	elseif Current.day ~= Time.old.day and Time.stats.inmonth then
+		Time.old.day = Current.day
 		Draw()
 	end
 	
-	return ReturnErrorMessage()
+	return Error.Log()
 end -- Update
 
 function CombineScroll(input)
@@ -76,21 +82,21 @@ Settings = setmetatable(
 		},
 		-- Use __newindex to validate setting values.
 		__newindex = function(t, key, value)
-			ErrorSource = key
+			Error.Source = key
+			
 			local tbl = getmetatable(Settings).__index
 			if tbl[key] == nil then
-				CreateError('Setting does not exist: %s', key)
+				Error.Create('Setting does not exist.')
 			elseif type(value) == type(tbl[key]) then
 				rawset(t, key, value)
 			else
-				CreateError('Invalid Setting type. Expected %s, received %s instead.', key, type(tbl[key]), type(value))
+				Error.Create('Invalid Setting type. Expected %s, received %s instead.', key, type(tbl[key]), type(value))
 			end
 		end,
 	}
 ) -- Settings
 
--- Set meter names/formats here.
-Meters = {
+Meters = { -- Set meter names/formats here.
 	Labels = { -- Week Day Labels
 		Name = 'l%d', -- Use %d to denote the number (0-6) of the meter.
 		Styles = {
@@ -116,72 +122,130 @@ Meters = {
 } -- Meters
 
 Time = { -- Used to store and call date functions and statistics
-	curr = setmetatable({}, {__index = function(_, index)
-		local tbl = os.date('*t')
-		return index == 'all' and tbl or tbl[index]
-	end,}),
-	old = {day = 0, month = 0, year = 0,},
+	curr = setmetatable(
+		{},
+		{
+			__index = function(_, index)
+				local tbl = os.date('*t')
+				if index == 'all' then
+					return tbl
+				else
+					return tbl[index]
+				end
+			end,
+		}
+	),
+	old = {
+		day = 0,
+		month = 0,
+		year = 0,
+	},
 	show = os.date('*t'), -- Needs to be initialized with current values.
-	stats = setmetatable({inmonth = true,},
-		{__call = function(t, index)
-			local tstart = os.time{day = 1, month = Time.show.month, year = Time.show.year, isdst = false,}
-			local NextMonth = os.date('*t', tstart + 31 * 86400) -- Date table for 31 days after the current month
-			local nstart = os.time{day = 1, month = NextMonth.month, year = NextMonth.year, isdst = false,}
-			
-			local values = {
-				nmonth = nstart, -- Timestamp for the first day of the following month.
-				cmonth = tstart, -- Timestamp for the first day of the current month.
-				clength = (nstart - tstart) / 86400, -- Number of days in the current month.
-				plength = tonumber(os.date('%d', tstart - 86400)), -- Number of days in the previous month.
-				startday = RotateDay(tonumber(os.date('%w', tstart))), -- Day code for the first day of the current month.
-			}
-			
-			for k, v in pairs(values) do
-				rawset(t, k, v)
-			end
-		end,}
+	stats = setmetatable(
+		{
+			inmonth = true,
+		},
+		{
+			__call = function(tbl, index)
+				local tstart = os.time{
+					day = 1,
+					month = Time.show.month,
+					year = Time.show.year,
+					isdst = false,
+				}
+				
+				-- Date table for 31 days after the current month
+				local NextMonth = os.date('*t', tstart + 31 * 86400)
+				
+				local nstart = os.time{
+					day = 1,
+					month = NextMonth.month,
+					year = NextMonth.year,
+					isdst = false,
+				}
+				
+				local values = {
+					nmonth = nstart, -- Timestamp for the first day of the following month.
+					cmonth = tstart, -- Timestamp for the first day of the current month.
+					clength = (nstart - tstart) / 86400, -- Number of days in the current month.
+					plength = tonumber(os.date('%d', tstart - 86400)), -- Number of days in the previous month.
+					startday = RotateDay(tonumber(os.date('%w', tstart))), -- Day code for the first day of the current month.
+				}
+				
+				for Name, Value in pairs(values) do
+					rawset(tbl, Name, Value)
+				end
+			end,
+		}
 	),
 } -- Time
 
 Range = setmetatable( -- Makes allowance for either Month or Week ranges
 	{
 		month = {
-			formula = function(input) return input - Time.stats.startday end,
-			adjustment = function(input) return input end,
+			formula = function(input)
+				return input - Time.stats.startday
+			end,
+			adjustment = function(input)
+				return input
+			end,
 			days = 42,
-			week = function() return math.ceil((Time.curr.day + Time.stats.startday) / 7) end,
+			week = function()
+				return math.ceil((Time.curr.day + Time.stats.startday) / 7)
+			end,
 		},
 		week = {
-			formula = function(input) return Time.curr.day + ((input - 1) - RotateDay(Time.curr.wday - 1)) end,
-			adjustment = function(input) local num = input % 7; return num == 0 and 7 or num end,
+			formula = function(input)
+				local Current = Time.curr.all
+				return Current.day + ((input - 1) - RotateDay(Current.wday - 1))
+			end,
+			adjustment = function(input)
+				local num = input % 7
+				return num == 0 and 7 or num
+			end,
 			days = 7,
-			week = function() return 1 end,
+			week = function()
+				return 1
+			end,
 			nomove = true,
 		},
 	},
 	{
-		__index = function(tbl, index) return ReturnError(tbl.month, 'Invalid Range: %s', index) end,
+		__index = function(tbl, index)
+			Error.Source = 'Range'
+			Error.Create('Invalid range type: %s', index)
+			return tbl.month
+		end,
 	}
 ) -- Range
 
 function Delim(input, Separator) -- Separates an input string by a delimiter
-	ErrorSource = 'Delim'
+	Error.Source = 'Delim'
+	
 	local tbl = {}
-	if TestError(type(input) == 'string', 'Input must be a string. Received %s instead', type(input)) then
+	if type(input) == 'string' then
 		if not MultiType(Separator, 'nil|string') then
-			Separator = ReturnError('|', 'Input #2 must be a string. Received %s instead. Using default value.', type(Separator))
+			Error.Create('Input #2 must be a string. Received %s instead. Using default value.', type(Separator))
+			Separator = '|'
 		end
-		for word in input:gmatch('[^' .. (Separator or '|') .. ']+') do
+		
+		local MatchPattern = string.format('[^%s]+', Separator or '|')
+		
+		for word in input:gmatch(MatchPattern) do
 			table.insert(tbl, word:match('^%s*(.-)%s*$'))
 		end
+	else
+		Error.Create('Input must be a string. Received %s instead', type(input))
 	end
 	return tbl
 end -- Delim
 
 function ExpandFolder(input) -- Makes allowance for when the first value in a table represents the folder containing all objects.
-	ErrorSource = 'ExpandFolder'
+	Error.Source = 'ExpandFolder'
+	
 	if type(input) ~= 'table' then
-		return ReturnError({}, 'Input must be a table. Received %s instead.', type(input))
+		Error.Create('Input must be a table. Received %s instead.', type(input))
+		return {}
 	else
 		if #input > 1 then
 			local FolderPath = table.remove(input, 1):match('(.-)[/\\]-$') .. '\\'
@@ -194,10 +258,12 @@ function ExpandFolder(input) -- Makes allowance for when the first value in a ta
 end -- ExpandFolder
 
 function SetLabels(tbl) -- Sets weekday label text
-	ErrorSource = 'SetLabels'
-	if TestError(type(tbl) == 'table', 'Input must be a table. Received %s instead.', type(tbl)) then
+	Error.Source = 'SetLabels'
+	
+	if type(tbl) == 'table' then
 		if #tbl ~= 7 then
-			tbl = ReturnError({'S', 'M', 'T', 'W', 'T', 'F', 'S'}, 'Input must be a table with seven indicies. Using default table instead.')
+			Error.Create('Input must be a table with seven indicies. Using default table instead.')
+			tbl = {'S', 'M', 'T', 'W', 'T', 'F', 'S'}
 		end
 		if Settings.StartOnMonday then
 			table.insert(tbl, table.remove(tbl, 1))
@@ -205,21 +271,24 @@ function SetLabels(tbl) -- Sets weekday label text
 		for Label, Text in ipairs(tbl) do
 			SKIN:Bang('!SetOption', Meters.Labels.Name:format(Label - 1), 'Text', Text)
 		end
+	else
+		Error.Create('Input must be a table. Received %s instead.', type(tbl))
 	end
 end -- SetLabels
 
 function LoadEvents(FileTable)
-	ErrorSource = 'LoadEvents'
+	Error.Source = 'LoadEvents'
+	
 	if not Settings.ShowEvents then
 		FileTable = {}
 	elseif type(FileTable) ~= 'table' then
-		FileTable = ReturnError({}, 'Input must be a table. Received %s instead.', type(FileTable))
+		Error.Create('Input must be a table. Received %s instead.', type(FileTable))
+		FileTable = {}
 	end
 	
 	EventsData = {}
 	
-	-- Define valid key names
-	local KeyNames = {
+	local KeyNames = { -- Define valid key names
 		'month',
 		'day',
 		'year',
@@ -236,11 +305,36 @@ function LoadEvents(FileTable)
 		'finish',
 	}
 	
-	local ParseKeys = function(line, default)
-		local tbl, escape = default or {}, {quot = '"', amp = '&', lt = '<', gt = '>', apos = "'",}
+	local Escape = { -- Escape characters as needed by the XML structure
+		quot = '"',
+		amp = '&',
+		lt = '<',
+		gt = '>',
+		apos = "'",
+	}
+	
+	local ParseEscape = function(line)
+		local temp = function(var)
+			local dec = var:match('#(%d+)')
+			local hex = var:match('#[xX](%x+)')
+			
+			if dec then
+				return string.char(tonumber(dec))
+			elseif hex then
+				return string.char(tonumber(hex, 16))
+			else
+				return Escape[var:lower()]
+			end
+		end
 		
-		for key, value in line:gmatch('(%a+)="([^"]+)"') do
-			tbl[key:lower()] = value:gsub('&([^;]+);', escape):gsub('\r?\n', ' '):match('^%s*(.-)%s*$')
+		return line:gsub('&([^;]+);', temp):gsub('\r?\n', ' ')
+	end -- ParseEscape
+	
+	local ParseKeys = function(line, default)
+		local tbl = default or {}
+		
+		for key, value in line:gmatch('(%a+)="%s*(.-)%s*"') do
+			tbl[key:lower()] = ParseEscape(value)
 		end
 		
 		return tbl
@@ -248,7 +342,7 @@ function LoadEvents(FileTable)
 	
 	for _, FilePath in ipairs(FileTable) do
 		local FileName = FilePath:match('[^/\\]+$')
-		local FileHandle = TestError(io.open(FilePath, 'r'), 'File read error: %s', FileName)
+		local FileHandle = io.open(FilePath, 'r')
 		
 		local OpenTag, FileContent, CloseTag = '', '', ''
 		if FileHandle then
@@ -258,12 +352,15 @@ function LoadEvents(FileTable)
 			-- Validate XML structure, part 1
 			OpenTag, FileContent, CloseTag = FileText:match('^.-<([^>]+)>(.+)<([^>]+)>[^>]*$')
 			FileHandle:close()
+		else
+			Error.Create('File read error: %s', FileName)
 		end
 		
 		-- Validate XML structure, part 2
 		if (OpenTag or ''):match('%S*'):lower() ~= 'eventfile' or (CloseTag or ''):lower() ~= '/eventfile' then
+			Error.Create('Invalid event file: %s', FileName)
 			-- Set FileContent to empty in order to skip the tag iterator
-			FileContent = ReturnError('', 'Invalid event file: %s', FileName)
+			FileContent = ''
 		end
 		
 		local eFile, SetTags, ContentQueue = ParseKeys(OpenTag or ''), {}
@@ -284,36 +381,46 @@ function LoadEvents(FileTable)
 			table.insert(EventsData, tbl)
 		end -- AddEvent
 		
+		local ParseContents = function(TempKeys, TempContents)
+			if TempKeys:match('/%s-$') then
+				AddEvent(ParseKeys(TempKeys))
+			elseif TempContents:gsub('[\t\n\r%s]', '') ~= '' then
+				ContentQueue = {
+					KeyLine = TempKeys,
+					Contents = ParseEscape(TempContents),
+				}
+			else
+				Error.Create('Event tag detected without contents. File: %s', FileName)
+			end
+		end -- ParseContents
+		
 		-- Tag Iterator
 		for TagName, KeyLine, Contents in FileContent:gmatch('<%s-([^%s>]+)([^>]*)>([^<]*)') do
 			TagName, Contents = TagName:lower(), Contents:gsub('%s+', ' ')
 			
-			local ParseContents = function()
-				if KeyLine:match('/%s-$') then
-					AddEvent(ParseKeys(KeyLine))
-				elseif Contents:gsub('[\t\n\r%s]', '') ~= '' then
-					ContentQueue = {KeyLine = KeyLine, Contents = Contents:gsub('\r?\n', ' '),}
-				else
-					CreateError('Event tag detected without contents. File: %s', FileName)
-				end
-			end
-			
 			if ContentQueue then
 				local CloseTag, name = TagName:match('(/?)(.+)')
+				-- Add the currently queued event
 				AddEvent(ParseKeys(ContentQueue.KeyLine, {description = ContentQueue.Contents,}))
+				-- Check for errors
 				if CloseTag == '' and name == 'event' then
-					ParseContents()
-					CreateError('Unmatched Event tag detected. File: %s', FileName)
+					-- Don't clear the queue if you want to keep the next tag
+					ParseContents(KeyLine, Contents)
+					Error.Create('Unmatched Event tag detected. File: %s', FileName)
 				else
 					if CloseTag == '' then
-						CreateError('Event tags may not have nested tags. File: %s', FileName)
+						Error.Create('Event tags may not have nested tags. File: %s', FileName)
 					elseif CloseTag == '/' and name ~= 'event' then
-						CreateError('Unmatched Event tag detected. File: %s', FileName)
+						Error.Create('Unmatched Event tag detected. File: %s', FileName)
 					end
 					ContentQueue = nil
 				end
 			elseif TagName == 'variable' then
-				local Temp = Keys(KeyLine)
+				if not KeyLine:match('/%s-$') then
+					Error.Create('Open Variable tag detected. File: %s', FileName)
+				end
+				
+				local Temp = ParseKeys(KeyLine)
 				
 				if not Variables then
 					Variables = {[FileName] = {[Temp.name:lower()] = Temp.select,},}
@@ -322,32 +429,40 @@ function LoadEvents(FileTable)
 				else
 					Variables[FileName][Temp.name:lower()] = Temp.select
 				end
-			elseif TagName == 'set' then
+			elseif TagName == 'set' then				
 				table.insert(SetTags, ParseKeys(KeyLine))
 			elseif TagName == '/set' then
-				if TestError(#SetTags > 0, 'Unmatched /Set tag detected. File: %s', FileName) then
+				if #SetTags > 0 then
 					table.remove(SetTags)
+				else
+					Error.Create('Unmatched /Set tag detected. File: %s', FileName)
 				end
 			elseif TagName == 'event' then
-				ParseContents()
+				ParseContents(KeyLine, Contents)
 			else
-				CreateError('Invalid Tag <%s> in %s', TagName, FileName)
+				Error.Create('Invalid Tag <%s> in %s', TagName, FileName)
 			end
 		end
 		
 		if ContentQueue or #SetTags > 0 then
-			CreateError('Unmatched Event or Set tag detected. File: %s', FileName)
+			Error.Create('Unmatched Event or Set tag detected. File: %s', FileName)
 		end
 	end
 end -- LoadEvents
 
 function ParseEvents() -- Parse Events table.
-	ErrorSource = 'ParseEvents'
+	Error.Source = 'ParseEvents'
+	
 	Events = {}
 	
 	-- Helper Functions
 	local tstamp = function(d, m, y)
-		return os.time{day = d, month = m or Time.show.month, year = y or Time.show.year, isdst = false}
+		return os.time{
+			day = d,
+			month = m or Time.show.month,
+			year = y or Time.show.year,
+			isdst = false,
+		}
 	end -- tstamp
 	
 	-- Requires a matrix for use.
@@ -355,14 +470,21 @@ function ParseEvents() -- Parse Events table.
 	local TestRequirements = function(tbl)
 		local State = true
 		for k, v in ipairs(tbl) do
-			State = State and TestError(unpack(v))
+			local test = table.remove(v, 1)
+			if not v then
+				Error.Create(unpack(v))
+			end
+			State = State and test
 		end
 		return State
 	end -- TestRequirements
 	
 	local DefineEvent = function(EventDay, EventDescription, EventColor)
 		if not Events[EventDay] then
-			Events[EventDay] = {text = {EventDescription}, color = {EventColor},}
+			Events[EventDay] = {
+				text = {EventDescription},
+				color = {EventColor},
+			}
 		else
 			table.insert(Events[EventDay].text, EventDescription)
 			table.insert(Events[EventDay].color, EventColor)
@@ -385,9 +507,15 @@ function ParseEvents() -- Parse Events table.
 				if EventStamp then				
 					temp = os.date('*t', EventStamp)
 				else				
+					local day = Parse.Number(event.day, false, event.fname)
+					if not day then
+						Error.Create('Invalid Day %s in %s', event.day, event.description)
+						day = 0
+					end
+					
 					temp = {
 						month = Parse.Number(event.month, false, event.fname),
-						day = Parse.Number(event.day, false, event.fname) or ReturnError(0, 'Invalid Day %s in %s', event.day, event.description),
+						day =  day,
 						year = Parse.Number(event.year, false, event.fname),
 					}
 				end
@@ -397,36 +525,8 @@ function ParseEvents() -- Parse Events table.
 			end
 			
 			local AddEvent = function(EventDay, AnniversaryNumber)
-				local EventDescription = Parse.String(event.description, false, event.fname, true) or ReturnError('', 'Event detected with no Description.')
-				local UseAnniversary =  Parse.Boolean(event.anniversary, false, event.fname) and AnniversaryNumber
-				local EventTitle = Parse.String(event.title, false, event.fname, true)
-				
-				if UseAnniversary and EventTitle then
-					EventDescription = string.format('%s (%s) -%s', EventDescription, AnniversaryNumber, EventTitle)
-				elseif UseAnniversary then
-					EventDescription = string.format('%s (%s)', EventDescription, AnniversaryNumber)
-				elseif EventTitle then
-					EventDescription = string.format('%s -%s', EventDescription, EventTitle)
-				end
-				
-				local case = Parse.List(event.case, 'none', event.fname, 'none|lower|upper|title|sentence')
-				if case == 'lower' then
-					EventDescription = EventDescription:lower()
-				elseif case == 'upper' then
-					EventDescription = EventDescription:upper()
-				elseif case == 'title' then
-					EventDescription = EventDescription:gsub('(%S)(%S*)', function(first, rest) return first:upper() .. rest:lower() end)
-				elseif case == 'sentence' then
-					EventDescription = EventDescription:gsub('[^.!?]+', function(sentence)
-						local space, first, rest = sentence:match('(%s*)(.)(.*)')	
-						return space .. first:upper() .. rest:lower():gsub("%si([%s'])", ' I%1')
-					end)
-				end
-				
-				local EventColor = Parse.Color(event.color, event.fname)
-				
 				local NotSkip = true
-				if event.stamp ~= '' then
+				if event.skip ~= '' then
 					local CurrentStamp, temp = tstamp(EventDay, Time.show.month, Time.show.year), Delim(event.skip)
 					for _, DateCode in ipairs(temp) do
 						NotSkip = NotSkip and Parse.Date(DateCode, 0, event.fname) ~= CurrentStamp
@@ -434,6 +534,42 @@ function ParseEvents() -- Parse Events table.
 				end
 				
 				if NotSkip then
+					local EventDescription = Parse.String(event.description, false, event.fname, true)
+					if not EventDescription then
+						Error.Create('Event detected with no Description.')
+						EventDescription = ''
+					end
+					local UseAnniversary =  Parse.Boolean(event.anniversary, false, event.fname) and AnniversaryNumber
+					local EventTitle = Parse.String(event.title, false, event.fname, true)
+					
+					if UseAnniversary and EventTitle then
+						EventDescription = string.format('%s (%s) -%s', EventDescription, AnniversaryNumber, EventTitle)
+					elseif UseAnniversary then
+						EventDescription = string.format('%s (%s)', EventDescription, AnniversaryNumber)
+					elseif EventTitle then
+						EventDescription = string.format('%s -%s', EventDescription, EventTitle)
+					end
+					
+					local case = Parse.List(event.case, 'none', event.fname, 'none|lower|upper|title|sentence')
+					if case == 'lower' then
+						EventDescription = EventDescription:lower()
+					elseif case == 'upper' then
+						EventDescription = EventDescription:upper()
+					elseif case == 'title' then
+						local temp = function(first, rest)
+							return first:upper() .. rest:lower()
+						end
+						EventDescription = EventDescription:gsub('(%S)(%S*)', temp)
+					elseif case == 'sentence' then
+						local temp = function(sentence)
+							local space, first, rest = sentence:match('(%s*)(.)(.*)')	
+							return space .. first:upper() .. rest:lower():gsub("%si([%s'])", ' I%1')
+						end
+						EventDescription = EventDescription:gsub('[^.!?]+', temp)
+					end
+					
+					local EventColor = Parse.Color(event.color, event.fname)
+					
 					DefineEvent(EventDay, EventDescription, EventColor)
 				end
 			end -- AddEvent
@@ -442,9 +578,14 @@ function ParseEvents() -- Parse Events table.
 				local start = tstamp(DateTable.day, DateTable.month, DateTable.year)
 				
 				if Time.stats.nmonth >= start then
-					local first = Time.stats.cmonth > start and (Time.stats.cmonth + (period - ((Time.stats.cmonth - start) % period))) or start
+					local first = start
+					if Time.stats.cmonth > start then
+						first = Time.stats.cmonth + (period - ((Time.stats.cmonth - start) % period))
+					end
 					
-					for i = first, (DateTable.finish < Time.stats.nmonth and DateTable.finish or Time.stats.nmonth), period do
+					local stop = DateTable.finish < Time.stats.nmonth and DateTable.finish or Time.stats.nmonth
+					
+					for i = first, stop, period do
 						AddEvent(tonumber(os.date('%d', i)), (i - start) / period + 1)
 					end
 				end
@@ -492,9 +633,9 @@ function ParseEvents() -- Parse Events table.
 				end
 				
 			elseif DateTable.erepeat == 'month' then
-				local Results = TestError(DateTable.day, 'Day must be specified in %s when using Month repeat.', event.description)
-				
-				if not Results and tstamp(DateTable.day, DateTable.month, DateTable.year) <= DateTable.finish then
+				if not DateTable.day then
+					Error.Create('Day must be specified in %s when using Month repeat.', event.description)
+				elseif not tstamp(DateTable.day, DateTable.month, DateTable.year) <= DateTable.finish then
 					-- Do Nothing
 				elseif not DateTable.month and DateTable.year then
 					AddEvent(DateTable.day)
@@ -545,7 +686,7 @@ function ParseEvents() -- Parse Events table.
 end -- ParseEvents
 
 function Draw() -- Sets all meter properties and calculates days
-	local HideLastWeek = Settings.HideLastWeek and math.ceil((Time.stats.startday + Time.stats.clength) / 7) or 6
+	Error.Source = 'Draw'
 	
 	-- Set Weekday Labels styles
 	local CurrentWeekDay = RotateDay(Time.curr.wday - 1)
@@ -561,6 +702,7 @@ function Draw() -- Sets all meter properties and calculates days
 	end
 	
 	-- Calculate and set day meters
+	local HideLastWeek = Settings.HideLastWeek and math.ceil((Time.stats.startday + Time.stats.clength) / 7) or 6
 	local CurrentDayMeter = Range[Settings.Range].adjustment(Time.curr.day + Time.stats.startday)
 	for MeterNumber = 1, Range[Settings.Range].days do
 		local Styles, day, EventText, EventColor = {Meters.Days.Styles.Normal}, Range[Settings.Range].formula(MeterNumber)
@@ -629,7 +771,12 @@ function Draw() -- Sets all meter properties and calculates days
 	}
 	
 	-- Week Numbers for the current month
-	local FirstWeek = os.time{day = (6 - Time.stats.startday), month = Time.show.month, year = Time.show.year, isdst = false,}
+	local FirstWeek = os.time{
+		day = (6 - Time.stats.startday),
+		month = Time.show.month,
+		year = Time.show.year,
+		isdst = false,
+	}
 	for i = 0, 5 do
 		local WeekName = string.format('WeekNumber%d', i + 1)
 		local YearDayNumber = os.date('%j', FirstWeek + i * 604800)
@@ -638,16 +785,25 @@ function Draw() -- Sets all meter properties and calculates days
 	
 	-- Parse Events table to create a list of events
 	local Current = Time.curr.all
-	if type(Events) == 'table' and Time.stats.cmonth >= os.time{day = 1, month = Current.month, year = Current.year,} then
+	if type(Events) == 'table' and Time.stats.cmonth >= os.time{day = 1, month = Current.month, year = Current.year, isdst = false,} then
 		local Evns = {}
 		
 		-- Parse through month days to keep days in order
 		for day = Time.stats.inmonth and Time.curr.day or 1, Time.stats.clength do
 			if Events[day] then
-				local names = {day = day, desc = table.concat(Events[day].text, ', '),}
+				local names = {
+					day = day,
+					desc = table.concat(Events[day].text, ', '),
+				}
 				
 				local line = Settings.NextFormat:gsub('{%$([^}]+)}', function(variable)
-					return names[variable:lower()] or ReturnError('', 'Invalid NextFormat variable {$%s}', variable)
+					local ReturnValue = names[variable:lower()]
+					if ReturnValue then
+						return ReturnValue
+					else
+						Error.Create('Invalid NextFormat variable {$%s}', variable)
+						return ''
+					end
 				end)
 				
 				table.insert(Evns, line)
@@ -664,25 +820,33 @@ function Draw() -- Sets all meter properties and calculates days
 end -- Draw
 
 function Move(value) -- Move calendar through the months
-	ErrorSource = 'Move'
+	Error.Source = 'Move'
+	
 	if not MultiType(value, 'nil|number') then
-		CreateError('input must be a number. Received %s instead.', type(value))
+		Error.Create('Input must be a number. Received %s instead.', type(value))
 	elseif Range[Settings.Range].nomove or not value then
 		Time.show = Time.curr.all
-	elseif TestError(math.ceil(value) == value, 'Invalid input %s', value) then -- Check that value is not a decimal
+	elseif math.ceil(value) == value then -- Check that value is not a decimal
 		local Years = math.modf(value / 12) -- Number of years without months
 		local Months = Time.show.month + value - Years * 12 -- Number of months without years
+		
 		local MonthsAdjustment
 		if value < 0 then
 			MonthsAdjustment = Months < 1 and 12 or 0
 		else
 			MonthsAdjustment = Months > 12 and -12 or 0
 		end
-		Time.show = {month = (Months + MonthsAdjustment), year = (Time.show.year + Years - MonthsAdjustment / 12),}
+		
+		Time.show = {
+			month = (Months + MonthsAdjustment),
+			year = (Time.show.year + Years - MonthsAdjustment / 12),
+		}
+	else
+		Error.Create('Invalid input %s', value)
 	end
 	
 	local Current = Time.curr.all
-	Time.stats.inmonth = Time.show.month == Current.month and Time.show.year == Current.year
+	Time.stats.inmonth = (Time.show.month == Current.month and Time.show.year == Current.year)
 	SKIN:Bang('!SetVariable', 'NotCurrentMonth', Time.stats.inmonth and 0 or 1)
 end -- Move
 
@@ -693,25 +857,42 @@ function Easter()
 	L = (32 + 2 * e + 2 * i - h - k) % 7
 	m = math.floor((a + 11 * h + 22 * L) / 451)
 	
-	return os.time{month = math.floor((h + L - 7 * m + 114) / 31), day = ((h + L - 7 * m + 114) % 31 + 1), year = Time.show.year}
+	return os.time{
+		month = math.floor((h + L - 7 * m + 114) / 31),
+		day = ((h + L - 7 * m + 114) % 31 + 1),
+		year = Time.show.year,
+	}
 end -- Easter
 
 BuiltIn = {
-	easter = function() return Easter() end,
-	goodfriday = function() return Easter() - 2 * 86400 end, -- Old style format. To be removed later
-	ashwednesday = function() return Easter() - 46 * 86400 end, -- Old style format. To be removed later
-	mardigras = function() return Easter() - 47 * 86400 end, -- Old style format. To be removed later
+	easter = function()
+		return Easter()
+	end,
+	
+	goodfriday = function() -- Old style format. To be removed later
+		return Easter() - 2 * 86400
+	end,
+	
+	ashwednesday = function() -- Old style format. To be removed later
+		return Easter() - 46 * 86400
+	end,
+	
+	mardigras = function() -- Old style format. To be removed later
+		return Easter() - 47 * 86400
+	end,
 } -- BuiltIn
 
 function ParseVariables(line, FileName, ErrorSubstitute) -- Makes allowance for {$Variables}
-	ErrorSource = 'ParseVariables'
+	Error.Source = 'ParseVariables'
+	
 	local ScriptVariables = {
 		mname = Settings.MonthNames[Time.show.month] or Time.show.month,
 		year = Time.show.year,
 		today = LeadingZero(Time.curr.day),
 		month = Time.show.month,
 	}
-	local Day, Week = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6,}, {first = 0, second = 1, third = 2, fourth = 3,}
+	local Day = {sun = 0, mon = 1, tue = 2, wed = 3, thu = 4, fri = 5, sat = 6,}
+	local Week = {first = 0, second = 1, third = 2, fourth = 3,}
 	
 	local value = function(variable)
 		local var = variable:gsub('%s', ''):lower()
@@ -758,8 +939,19 @@ function ParseVariables(line, FileName, ErrorSubstitute) -- Makes allowance for 
 		return (InputLine:gsub('%b{}', function(InputExpression)
 			local NewLine = self(InputExpression:match('^{(.-)}$'), self)
 			local name = NewLine:match('%$(.+)') or ''
+			
 			if name ~= '' then
-				return value(name) or ReturnError(ErrorSubstitute, 'Invalid Variable {$%s}', name)
+				local ReturnValue = value(name)
+				
+				if not ReturnValue then 
+					Error.Create('Invalid Variable {$%s}', name)
+					return ErrorSubstitute
+				-- Allow for variables containing variables.
+				elseif string.match(ReturnValue, '{%$.-}') then
+					return self(ReturnValue, self)
+				else
+					return ReturnValue
+				end
 			else
 				return string.format('{%s}', NewLine)
 			end
@@ -806,6 +998,7 @@ Get = {
 Parse = {
 	Number = function(line, default, FileName, Decimals)
 		line = ParseVariables(line, FileName, 0):gsub('%s', '')
+		
 		if line == '' then
 			return default
 		else
@@ -820,6 +1013,7 @@ Parse = {
 	
 	Boolean = function(line, default, FileName)
 		line = ParseVariables(line, FileName, ''):gsub('%s', ''):gsub('(%b())', function(input) return SKIN:ParseFormula(input) end)
+		
 		if line == '' then
 			return default
 		elseif tonumber(line) then
@@ -831,11 +1025,18 @@ Parse = {
 	
 	List = function(line, default, FileName, FullList)
 		line = ParseVariables(line, FileName, ''):gsub('[|%s]', ''):lower()
-		return FullList:find(line) and line or ReturnError(default, 'Invalid list option found in %s.', FileName)
+		
+		if FullList:find(line) then
+			return line
+		else
+			Error.Create('Invalid list option found in %s.', FileName)
+			return default
+		end
 	end, -- List
 	
 	String = function(line, default, FileName, AllowSpaces)
 		line = ParseVariables(line, FileName, '')
+		
 		if line == '' then
 			return default
 		elseif AllowSpaces then
@@ -845,15 +1046,20 @@ Parse = {
 		end
 	end, -- String
 	
-	Color = function(line, FileName)
-		line = ParseVariables(line, FileName, 0):gsub('%s', ''):gsub('(%b())', function(input) return SKIN:ParseFormula(input) end)
+	Color = function(line, FileName, SkipVariables)
+		if not SkipVariables then
+			line = ParseVariables(line, FileName, 0)
+		end
+		line = line:gsub('%s', ''):gsub('(%b())', function(input) return SKIN:ParseFormula(input) end)
+		
 		local tbl = {}
 		if line == '' then
 			return ''
 		elseif line:match(',') then
 			for rgb in line:gmatch('[^,]+') do
 				if not tonumber(rgb) then
-					return ReturnError('', 'Invalid RGB color code found in %s.', FileName)
+					Error.Create('Invalid RGB color code found in %s.', FileName)
+					return ''
 				else
 					table.insert(tbl, string.format('%02X', tonumber(rgb)))
 				end
@@ -861,25 +1067,33 @@ Parse = {
 		else
 			for hex in line:gmatch('%S%S') do
 				if not tonumber(hex, 16) then
-					return ReturnError('', 'Invalid HEX color code found in %s.', FileName)
+					Error.Create('Invalid HEX color code found in %s.', FileName)
+					return ''
 				else
 					table.insert(tbl, hex:upper())
 				end
 			end
 		end
+		
 		return table.concat(tbl)
 	end, -- Color
 	
 	Date = function(line, default, FileName)
-		line = ParseVariables(line, FileName, '')
+		line = ParseVariables(line, FileName, ''):gsub('%s', ''):gsub('(%b())', function(input) return SKIN:ParseFormula(input) end)
 		if line == '' then
 			return default
 		else
 			local DateTable = Delim(line, '/')
 			if #DateTable == 3 then
-				return os.time{day = DateTable[1], month = DateTable[2], year = DateTable[3], isdst = false}
+				return os.time{
+					day = DateTable[1],
+					month = DateTable[2],
+					year = DateTable[3],
+					isdst = false,
+				}
 			else
-				return ReturnError(default, 'Invalid date code found in %s.', FileName)
+				Error.Create('Invalid date code found in %s.', FileName)
+				return default
 			end
 		end
 	end, -- Date
@@ -897,55 +1111,46 @@ function MultiType(input, types) -- Test an input against multiple types
 	return types:find(type(input)) and true or false
 end -- MultiType
 
--- Begin all functions related to error checking
-function ReturnErrorMessage() -- Logs all queued error messages
-	if ErrorQueue then
-		for _, Message in ipairs(ErrorQueue) do
-			SKIN:Bang('!Log', Message, 'ERROR')
+Error = {
+	Source = '',
+	Message = 'Success!',
+	Queue = nil,
+	
+	Log = function()
+		if Error.Queue then
+			for _, Message in ipairs(Error.Queue) do
+				SKIN:Bang('!Log', Message, 'ERROR')
+			end
+			Error.Message, Error.Queue = Error.Queue[#Error.Queue], nil
 		end
-		ErrorMessage, ErrorQueue = ErrorQueue[#ErrorQueue], nil
-	end
-	return ErrorMessage or 'Success!'
-end -- ReturnErrorMessage
+		
+		return Error.Message
+	end,
 
--- Remember to set the ErrorSource variable before calling any error message function.
-function CreateError(...) -- Add error messages to queue
-	local NewMessage = ErrorSource .. ': ' .. string.format(unpack(arg))
-	if not ErrorQueue then
-		ErrorQueue = {NewMessage}
-	else
-		-- Prevent duplicate messages
-		local unique = true
-		for _, CachedMessage in ipairs(ErrorQueue) do
-			if CachedMessage == NewMessage then
-				unique = false
-				break
+	Create = function(...)
+		local NewMessage = Error.Source .. ': ' .. string.format(unpack(arg))
+		if not Error.Queue then
+			Error.Queue = {NewMessage}
+		else
+			-- Prevent duplicate messages
+			local unique = true
+			for _, CachedMessage in ipairs(Error.Queue) do
+				if CachedMessage == NewMessage then
+					unique = false
+					break
+				end
+			end
+			if unique then
+				table.insert(Error.Queue, NewMessage)
 			end
 		end
-		if unique then table.insert(ErrorQueue, NewMessage) end
-	end
-end -- CreateError
-
-function ReturnError(...) -- Create error message and return value
-	local ReturnValue = table.remove(arg, 1)
-	CreateError(unpack(arg))
-	return ReturnValue
-end -- ReturnError
-
-function TestError(...) -- Clone of assert
-	local ReturnValue = table.remove(arg, 1)
-	if not ReturnValue then
-		CreateError(unpack(arg))
-	end
-	return ReturnValue
-end -- TestError
+	end,
+} -- Error
 
 -- Function provided by Mordasius, tweaked by Smurfier
 function GetPhaseNumber(year, month, day)
-	-- Helper functions
 	local fixangle = function(a) return a % 360 end
-	-- Deg->Rad
-	local torad = function(d) return d * (math.pi / 180) end
+	local eccent = 0.016718 -- Eccentricity of Earth's orbit
 	
 	-- Convert Gregorian Date into Julian Date
 	local gregorian = year >= 1583
@@ -954,12 +1159,13 @@ function GetPhaseNumber(year, month, day)
 	end
 	local a = math.floor(year / 100)
 	local b = gregorian and (2 - a + math.floor(a / 4)) or 0
-	local Jday = math.floor(365.25 * (year + 4716)) + math.floor(30.6001 * (month + 1)) + day + b - 1524.5 + ((60 * (60 * 12)) / 86400)	
+	local Jday = math.floor(365.25 * (year + 4716)) + math.floor(30.6001 * (month + 1)) + day + b - 1524
 	
-	local eccent, Day, M, Ec, Lambdasun, ml, Ev, Ae, MM, MmP, mEc, lP
-	eccent = 0.016718 -- Eccentricity of Earth's orbit
+	local Day, M, Ec, Lambdasun, ml, Ev, Ae, MM, MmP, mEc, lP
 	Day = Jday - 2444238.5 -- Date within epoch
-	M = torad(fixangle(fixangle((360 / 365.2422) * Day) - 3.762863)) -- Convert from perigee co-ordinates to epoch 1980.0
+	
+	-- (360 / 365.2422) == 0.98564733209908
+	M = math.rad(fixangle(fixangle(0.98564733209908 * Day) - 3.762863)) -- Convert from perigee co-ordinates to epoch 1980.0
 	
 	-- Solve Kepler equation
 	local e, delta = M, - eccent * math.sin(M)
@@ -968,16 +1174,18 @@ function GetPhaseNumber(year, month, day)
 		e = e - delta / (1 - eccent * math.cos(e))
 	end
 	
-	Ec = 2 * ((math.atan(math.sqrt((1 + eccent) / (1 - eccent)) * math.tan(e / 2))) * (180 / math.pi)) -- True anomaly
+	-- math.sqrt((1 + eccent) / (1 - eccent)) == 1.0168601118216
+	Ec = 2 * math.deg(math.atan(1.0168601118216 * math.tan(e / 2))) -- True anomaly
+	
 	Lambdasun = fixangle(Ec + 282.596403) -- Sun's geocentric ecliptic Longitude
 	ml = fixangle(13.1763966 * Day + 64.975464) -- Moon's mean Longitude
 	MM = fixangle(ml - 0.1114041 * Day - 348.383063) -- Moon's mean anomaly
-	Ev = 1.2739 * math.sin(torad(2 * (ml - Lambdasun) - MM)) -- Evection
+	Ev = 1.2739 * math.sin(math.rad(2 * (ml - Lambdasun) - MM)) -- Evection
 	Ae = 0.1858 * math.sin(M) -- Annual equation
-	MmP = torad(MM + Ev - Ae - (0.37 * math.sin(M))) -- Corrected anomaly
+	MmP = math.rad(MM + Ev - Ae - (0.37 * math.sin(M))) -- Corrected anomaly
 	mEc = 6.2886 * math.sin(MmP) -- Correction for the equation of the centre
 	lP = ml + Ev + mEc - Ae + (0.214 * math.sin(2 * MmP)) -- Corrected Longitude
-	local PhaseNum = fixangle((lP + (0.6583 * math.sin(torad(2 * (lP - Lambdasun))))) - Lambdasun)
+	local PhaseNum = fixangle((lP + (0.6583 * math.sin(math.rad(2 * (lP - Lambdasun))))) - Lambdasun)
 	
 	if PhaseNum > 10 and PhaseNum <= 85 then
 		return 2 -- Waxing Crescent
@@ -996,4 +1204,4 @@ function GetPhaseNumber(year, month, day)
 	else
 		return 1 -- New Moon
 	end
-end  -- function GetPhaseNumber
+end  -- GetPhaseNumber
