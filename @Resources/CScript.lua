@@ -1082,8 +1082,17 @@ Parse = {
 		line = ParseVariables(line, FileName, ''):gsub('%s', ''):gsub('(%b())', function(input) return SKIN:ParseFormula(input) end)
 		if line == '' then
 			return default
-		else
-			local DateTable = Delim(line, '/')
+		else			
+			local DateTable = {}
+			for word in line:gsub('[^/]+') do
+				local num = tonumber(word)
+				if num then
+					table.insert(DateTable, num)
+				else
+					break
+				end
+			end
+			
 			if #DateTable == 3 then
 				return os.time{
 					day = DateTable[1],
