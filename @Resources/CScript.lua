@@ -260,19 +260,20 @@ end -- ExpandFolder
 function SetLabels(tbl) -- Sets weekday label text
 	Error.Source = 'SetLabels'
 	
-	if type(tbl) == 'table' then
-		if #tbl ~= 7 then
-			Error.Create('Input must be a table with seven indicies. Using default table instead.')
-			tbl = {'S', 'M', 'T', 'W', 'T', 'F', 'S'}
-		end
-		if Settings.StartOnMonday then
-			table.insert(tbl, table.remove(tbl, 1))
-		end
-		for Label, Text in ipairs(tbl) do
-			SKIN:Bang('!SetOption', Meters.Labels.Name:format(Label - 1), 'Text', Text)
-		end
-	else
-		Error.Create('Input must be a table. Received %s instead.', type(tbl))
+	if type(tbl) ~= 'table' then
+		Error.Create('Input must be a table. Received %s instead. Using default table.', type(tbl))
+		tbl = {'S', 'M', 'T', 'W', 'T', 'F', 'S'}
+	elseif #tbl ~= 7 then
+		Error.Create('Input must be a table with seven indicies. Using default table instead.')
+		tbl = {'S', 'M', 'T', 'W', 'T', 'F', 'S'}
+	end
+	
+	if Settings.StartOnMonday then
+		table.insert(tbl, table.remove(tbl, 1))
+	end
+	
+	for Label, Text in ipairs(tbl) do
+		SKIN:Bang('!SetOption', Meters.Labels.Name:format(Label - 1), 'Text', Text)
 	end
 end -- SetLabels
 
