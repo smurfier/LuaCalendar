@@ -246,15 +246,14 @@ function ExpandFolder(input) -- Makes allowance for when the first value in a ta
 	if type(input) ~= 'table' then
 		Error.Create('Input must be a table. Received %s instead.', type(input))
 		return {}
-	else
-		if #input > 1 then
-			local FolderPath = table.remove(input, 1):match('(.-)[/\\]-$') .. '\\'
-			for Key, FileName in ipairs(input) do
-				input[Key] = SKIN:MakePathAbsolute(FolderPath .. FileName)
-			end
+	elseif #input > 1 then
+		local FolderPath = table.remove(input, 1):match('(.-)[/\\]-$') .. '\\'
+		for Key, FileName in ipairs(input) do
+			input[Key] = SKIN:MakePathAbsolute(FolderPath .. FileName)
 		end
-		return input
 	end
+	
+	return input
 end -- ExpandFolder
 
 function SetLabels(tbl) -- Sets weekday label text
