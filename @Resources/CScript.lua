@@ -471,7 +471,7 @@ function ParseEvents() -- Parse Events table.
 		local State = true
 		for k, v in ipairs(tbl) do
 			local test = table.remove(v, 1)
-			if not v then
+			if not test then
 				Error.Create(unpack(v))
 			end
 			State = State and test
