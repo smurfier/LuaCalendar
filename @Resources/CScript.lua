@@ -897,6 +897,31 @@ BuiltIn = {
 	mardigras = function() -- Old style format. To be removed later
 		return Easter() - 47 * 86400
 	end,
+	
+	orthodoxeaster = function()
+		-- Original Source: http://www.smart.net/~mmontes/ortheast.html
+		
+		--[[local R1 = Time.show.year % 19
+		local R2 = Time.show.year % 4
+		local R3 = Time.show.year % 7
+		local RA = 19 * R1 + 16
+		local R4 = RA % 30
+		local RB = 2 * R2 + 4 * R3 + 6 * R4
+		local R5 = RB % 7
+		local RC = R4 + R5]]
+		
+		local R4 = (19 * (Time.show.year % 19) + 16) % 30
+		local RC = R4 + ((2 * (Time.show.year % 4) + 4 * (Time.show.year % 7) + 6 * R4) % 7)
+		
+		local stamp = os.time{
+			year = Time.show.year,
+			month = 4,
+			day = 3,
+			isdst = false,
+		}
+		
+		return stamp + RC * 86400
+	end,
 } -- BuiltIn
 
 function ParseVariables(line, FileName, ErrorSubstitute) -- Makes allowance for {$Variables}
