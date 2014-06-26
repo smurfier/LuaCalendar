@@ -10,8 +10,9 @@ function Initialize()
 	Settings.MonthNames = Delim(Get.Variable('MonthLabels', ''))
 	Settings.MoonPhases = Get.NumberVariable('ShowMoonPhases') > 0
 	-- Need to set Error.Source before calling Parse.Color
-	Error.Source = 'Settings'
+	Error.Open('Settings')
 	Settings.MoonColor = Parse.Color(Get.Variable('MoonColor', ''), 'MoonColor', true)
+	Error.Close()
 	Settings.ShowEvents = Get.NumberVariable('ShowEvents') > 0
 	Settings.DisableScroll = Get.NumberVariable('DisableScroll') > 0
 	-- Weekday labels text
@@ -82,7 +83,7 @@ Settings = setmetatable(
 		},
 		-- Use __newindex to validate setting values.
 		__newindex = function(t, key, value)
-			Error.Source = key
+			Error.Open(key)
 			
 			local tbl = getmetatable(Settings).__index
 			if tbl[key] == nil then
@@ -92,6 +93,8 @@ Settings = setmetatable(
 			else
 				Error.Create('Invalid Setting type. Expected %s, received %s instead.', key, type(tbl[key]), type(value))
 			end
+			
+			Error.Close()
 		end,
 	}
 ) -- Settings
@@ -212,15 +215,16 @@ Range = setmetatable( -- Makes allowance for either Month or Week ranges
 	},
 	{
 		__index = function(tbl, index)
-			Error.Source = 'Range'
+			Error.Open('Range')
 			Error.Create('Invalid range type: %s', index)
+			Error.Close()
 			return tbl.month
 		end,
 	}
 ) -- Range
 
 function Delim(input, Separator) -- Separates an input string by a delimiter
-	Error.Source = 'Delim'
+	Error.Open('Delim')
 	
 	local tbl = {}
 	if type(input) == 'string' then
@@ -237,11 +241,13 @@ function Delim(input, Separator) -- Separates an input string by a delimiter
 	else
 		Error.Create('Input must be a string. Received %s instead', type(input))
 	end
+	
+	Error.Close()
 	return tbl
 end -- Delim
 
 function ExpandFolder(input) -- Makes allowance for when the first value in a table represents the folder containing all objects.
-	Error.Source = 'ExpandFolder'
+	Error.Open('ExpandFolder')
 	
 	if type(input) ~= 'table' then
 		Error.Create('Input must be a table. Received %s instead.', type(input))
@@ -253,11 +259,12 @@ function ExpandFolder(input) -- Makes allowance for when the first value in a ta
 		end
 	end
 	
+	Error.Close()
 	return input
 end -- ExpandFolder
 
 function SetLabels(tbl) -- Sets weekday label text
-	Error.Source = 'SetLabels'
+	Error.Open('SetLabels')
 	
 	if type(tbl) ~= 'table' then
 		Error.Create('Input must be a table. Received %s instead. Using default table.', type(tbl))
@@ -274,10 +281,12 @@ function SetLabels(tbl) -- Sets weekday label text
 	for Label, Text in ipairs(tbl) do
 		SKIN:Bang('!SetOption', Meters.Labels.Name:format(Label - 1), 'Text', Text)
 	end
+	
+	Error.Close()
 end -- SetLabels
 
 function LoadEvents(FileTable)
-	Error.Source = 'LoadEvents'
+	Error.Open('LoadEvents')
 	
 	if not Settings.ShowEvents then
 		FileTable = {}
@@ -448,10 +457,12 @@ function LoadEvents(FileTable)
 			Error.Create('Unmatched Event or Set tag detected. File: %s', FileName)
 		end
 	end
+	
+	Error.Close()
 end -- LoadEvents
 
 function ParseEvents() -- Parse Events table.
-	Error.Source = 'ParseEvents'
+	Error.Open('ParseEvents')
 	
 	Events = {}
 	
@@ -683,10 +694,12 @@ function ParseEvents() -- Parse Events table.
 			DefineEvent(PhaseDay, PhaseType, Settings.MoonColor)
 		end
 	end
+	
+	Error.Close()
 end -- ParseEvents
 
 function Draw() -- Sets all meter properties and calculates days
-	Error.Source = 'Draw'
+	Error.Open('Draw')
 	
 	-- Set Weekday Labels styles
 	local CurrentWeekDay = RotateDay(Time.curr.wday - 1)
@@ -817,10 +830,12 @@ function Draw() -- Sets all meter properties and calculates days
 	for Name, Value in pairs(SkinVariables) do
 		SKIN:Bang('!SetVariable', Name, Value)
 	end
+	
+	Error.Close()
 end -- Draw
 
 function Move(value) -- Move calendar through the months
-	Error.Source = 'Move'
+	Error.Open('Move')
 	
 	if not MultiType(value, 'nil|number') then
 		Error.Create('Input must be a number. Received %s instead.', type(value))
@@ -848,6 +863,8 @@ function Move(value) -- Move calendar through the months
 	local Current = Time.curr.all
 	Time.stats.inmonth = (Time.show.month == Current.month and Time.show.year == Current.year)
 	SKIN:Bang('!SetVariable', 'NotCurrentMonth', Time.stats.inmonth and 0 or 1)
+	
+	Error.Close()
 end -- Move
 
 function Easter()
@@ -883,7 +900,7 @@ BuiltIn = {
 } -- BuiltIn
 
 function ParseVariables(line, FileName, ErrorSubstitute) -- Makes allowance for {$Variables}
-	Error.Source = 'ParseVariables'
+	Error.Open('ParseVariables')
 	
 	local ScriptVariables = {
 		mname = Settings.MonthNames[Time.show.month] or Time.show.month,
@@ -958,7 +975,9 @@ function ParseVariables(line, FileName, ErrorSubstitute) -- Makes allowance for 
 		end))
 	end -- NestedExpression
 	
-	return NestedExpression(line, NestedExpression)
+	local TempLine = NestedExpression(line, NestedExpression)
+	Error.Close()
+	return TempLine
 end -- ParseVariables
 
 -- Allow for existing but empty options and variables
@@ -1121,9 +1140,24 @@ function MultiType(input, types) -- Test an input against multiple types
 end -- MultiType
 
 Error = {
-	Source = '',
+	Source = {''},
 	Message = 'Success!',
 	Queue = nil,
+	
+	Open = function(input)
+		input = tostring(input)
+		if input then
+			input = input .. ': '
+		end
+		
+		table.insert(Error.Source, 1, input or '')
+	end,
+	
+	Close = function()
+		if #Error.Source > 1 then
+			table.remove(Error.Source, 1)
+		end
+	end,
 	
 	Log = function()
 		if Error.Queue then
@@ -1137,7 +1171,7 @@ Error = {
 	end,
 
 	Create = function(...)
-		local NewMessage = Error.Source .. ': ' .. string.format(unpack(arg))
+		local NewMessage = Error.Source[1] .. ': ' .. string.format(unpack(arg))
 		if not Error.Queue then
 			Error.Queue = {NewMessage}
 		else
