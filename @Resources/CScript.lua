@@ -68,14 +68,15 @@ Settings = setmetatable(
 	{
 		-- Use __index metatable to set up default settings.
 		__index = {
-			Color = 'FontColor', -- String
+			EventColor = 'FontColor', -- String
+			EventText = 'ToolTipText', -- String
 			Range = 'month', -- String
 			HideLastWeek = false, -- Boolean
 			LeadingZeroes = false, -- Boolean
 			StartOnMonday = false, -- Boolean
 			LabelFormat = '{$MName}, {$Year}', -- String
 			NextFormat = '{$day}: {$desc}', -- String
-			MonthNames = {}, -- Table
+			MonthNames = {}, -- Table (of strings)
 			MoonPhases = false, -- Boolean
 			MoonColor = '', -- String
 			ShowEvents = true, -- Boolean
@@ -763,8 +764,8 @@ function Draw() -- Sets all meter properties and calculates days
 		local MeterProperties = {
 			Text = LeadingZero(day),
 			MeterStyle = table.concat(Styles, '|'),
-			ToolTipText = EventText or '',
-			[Settings.Color or 'FontColor'] = EventColor or '',
+			[Settings.EventText or 'ToolTipText'] = EventText or '',
+			[Settings.EventColor or 'FontColor'] = EventColor or '',
 		}
 		for Option, Value in pairs(MeterProperties) do
 			SKIN:Bang('!SetOption', MeterName, Option, Value)
