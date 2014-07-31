@@ -503,180 +503,194 @@ function ParseEvents() -- Parse Events table.
 		end
 	end -- DefineEvent
 	
-	for _, event in ipairs(EventsData or {}) do
-		-- Parse necessary options
-		local DateTable = {
-			multip = Parse.Number(event.multiplier, 1, event.fname, 0),
-			erepeat = Parse.List(event['repeat'], 'none', event.fname, 'none|week|year|month|custom'),
-			finish = Parse.Date(event.finish, Time.stats.nmonth, event.fname),
-		}
-		
-		-- Find matching events
-		if DateTable.finish >= Time.stats.cmonth and not Parse.Boolean(event.inactive, false, event.fname) then
-			-- More necessary options
-			if true then -- Used to force the use of a local variable only in this context
-				local EventStamp, temp = Parse.Number(event.timestamp, false, event.fname)
-				if EventStamp then				
-					temp = os.date('*t', EventStamp)
-				else				
-					local day = Parse.Number(event.day, false, event.fname)
-					if not day then
-						Error.Create('Invalid Day %s in %s', event.day, event.description)
-						day = 0
-					end
-					
-					temp = {
-						month = Parse.Number(event.month, false, event.fname),
-						day =  day,
-						year = Parse.Number(event.year, false, event.fname),
-					}
+	local iterator = function(input)
+		local i = 0
+		return function()
+			i = i + 1
+			if i > #input then
+				-- Force the function to terminate
+				return nil
+			end
+			
+			-- Need to copy the table items individually else we just get the address to the original table
+			-- which would corrupt the data in the original table.
+			local temp = {}
+			for k, v in pairs(input[i]) do
+				temp[k] = v
+			end
+			
+			temp.finish = Parse.Date(input[i].finish, Time.stats.nmonth, input[i].fname)
+			temp.inactive = Parse.Boolean(input[i].inactive, false, input[i].fname)
+			
+			if temp.finish < Time.stats.cmonth or temp.inactive then
+				-- Force the function to terminate
+				return nil
+			end
+			
+			temp.multip = Parse.Number(input[i].multiplier, 1, input[i].fname, 0)
+			temp.erepeat = Parse.List(input[i]['repeat'], 'none', input[i].fname, 'none|week|year|month|custom')
+			
+			local EventStamp = Parse.Number(input[i].timestamp, false, input[i].fname)
+			if EventStamp then				
+				local dates = os.date('*t', EventStamp)
+				
+				temp.month = dates.month
+				temp.day = dates.day
+				temp.year = dates.year
+			else			
+				local day = Parse.Number(input[i].day, false, input[i].fname)
+				if not day then
+					Error.Create('Invalid Day %s in %s', input[i].day, input[i].description)
 				end
-				for k, v in pairs(temp) do
-					DateTable[k] = v
+				
+				temp.month = Parse.Number(input[i].month, false, input[i].fname)
+				temp.day = day or 0
+				temp.year = Parse.Number(input[i].year, false, input[i].fname)
+			end
+			
+			return temp
+		end
+	end -- iterator
+	
+	for event in iterator(EventsData or {}) do
+		local AddEvent = function(EventDay, AnniversaryNumber)
+			local CurrentStamp, temp = tstamp(EventDay, Time.show.month, Time.show.year), Delim(event.skip)
+			for _, DateCode in ipairs(temp) do
+				if Parse.Date(DateCode, 0, event.fname) == CurrentStamp then
+					-- Force the function to terminate
+					return nil
 				end
 			end
 			
-			local AddEvent = function(EventDay, AnniversaryNumber)
-				local NotSkip = true
-				if event.skip ~= '' then
-					local CurrentStamp, temp = tstamp(EventDay, Time.show.month, Time.show.year), Delim(event.skip)
-					for _, DateCode in ipairs(temp) do
-						NotSkip = NotSkip and Parse.Date(DateCode, 0, event.fname) ~= CurrentStamp
-					end
-				end
-				
-				if NotSkip then
-					local EventDescription = Parse.String(event.description, false, event.fname, true)
-					if not EventDescription then
-						Error.Create('Event detected with no Description.')
-						EventDescription = ''
-					end
-					local UseAnniversary =  Parse.Boolean(event.anniversary, false, event.fname) and AnniversaryNumber
-					local EventTitle = Parse.String(event.title, false, event.fname, true)
-					
-					if UseAnniversary and EventTitle then
-						EventDescription = string.format('%s (%s) -%s', EventDescription, AnniversaryNumber, EventTitle)
-					elseif UseAnniversary then
-						EventDescription = string.format('%s (%s)', EventDescription, AnniversaryNumber)
-					elseif EventTitle then
-						EventDescription = string.format('%s -%s', EventDescription, EventTitle)
-					end
-					
-					local case = Parse.List(event.case, 'none', event.fname, 'none|lower|upper|title|sentence')
-					if case == 'lower' then
-						EventDescription = EventDescription:lower()
-					elseif case == 'upper' then
-						EventDescription = EventDescription:upper()
-					elseif case == 'title' then
-						local temp = function(first, rest)
-							return first:upper() .. rest:lower()
-						end
-						EventDescription = EventDescription:gsub('(%S)(%S*)', temp)
-					elseif case == 'sentence' then
-						local temp = function(sentence)
-							local space, first, rest = sentence:match('(%s*)(.)(.*)')	
-							return space .. first:upper() .. rest:lower():gsub("%si([%s'])", ' I%1')
-						end
-						EventDescription = EventDescription:gsub('[^.!?]+', temp)
-					end
-					
-					local EventColor = Parse.Color(event.color, event.fname)
-					
-					DefineEvent(EventDay, EventDescription, EventColor)
-				end
-			end -- AddEvent
+			local EventDescription = Parse.String(event.description, false, event.fname, true)
+			if not EventDescription then
+				Error.Create('Event detected with no Description in %s.', event.fname)
+				EventDescription = ''
+			end
+			local UseAnniversary = Parse.Boolean(event.anniversary, false, event.fname) and AnniversaryNumber
+			local EventTitle = Parse.String(event.title, false, event.fname, true)
 			
-			local frame = function(period) -- Repeats an event based on a given number of seconds
-				local start = tstamp(DateTable.day, DateTable.month, DateTable.year)
-				
-				if Time.stats.nmonth >= start then
-					local first = start
-					if Time.stats.cmonth > start then
-						first = Time.stats.cmonth + (period - ((Time.stats.cmonth - start) % period))
-					end
-					
-					local stop = DateTable.finish < Time.stats.nmonth and DateTable.finish or Time.stats.nmonth
-					
-					for i = first, stop, period do
-						AddEvent(tonumber(os.date('%d', i)), (i - start) / period + 1)
-					end
-				end
-			end -- frame
+			if UseAnniversary and EventTitle then
+				EventDescription = string.format('%s (%s) -%s', EventDescription, AnniversaryNumber, EventTitle)
+			elseif UseAnniversary then
+				EventDescription = string.format('%s (%s)', EventDescription, AnniversaryNumber)
+			elseif EventTitle then
+				EventDescription = string.format('%s -%s', EventDescription, EventTitle)
+			end
 			
-			-- Begin testing and adding events to table
-			if DateTable.erepeat == 'custom' then
-				local Results = TestRequirements{
-					{DateTable.year, 'Year must be specified in %s when using Custom repeat.', event.description},
-					{DateTable.month, 'Month must be specified in %s when using Custom repeat.', event.description},
-					{DateTable.day, 'Day must be specified in %s when using Custom repeat.', event.description},
-					{DateTable.multip >= 86400, 'Multiplier must be greater than or equal to 86400 in %s when using Custom repeat.', event.description},
-				}
-				
-				if Results then
-					frame(DateTable.multip)
+			local case = Parse.List(event.case, 'none', event.fname, 'none|lower|upper|title|sentence')
+			if case == 'lower' then
+				EventDescription = EventDescription:lower()
+			elseif case == 'upper' then
+				EventDescription = EventDescription:upper()
+			elseif case == 'title' then
+				local temp = function(first, rest)
+					return first:upper() .. rest:lower()
+				end
+				EventDescription = EventDescription:gsub('(%S)(%S*)', temp)
+			elseif case == 'sentence' then
+				local temp = function(sentence)
+					local space, first, rest = sentence:match('(%s*)(.)(.*)')	
+					return space .. first:upper() .. rest:lower():gsub("%si([%s'])", ' I%1')
+				end
+				EventDescription = EventDescription:gsub('[^.!?]+', temp)
+			end
+			
+			local EventColor = Parse.Color(event.color, event.fname)
+			
+			DefineEvent(EventDay, EventDescription, EventColor)
+		end -- AddEvent
+		
+		local frame = function(period) -- Repeats an event based on a given number of seconds
+			local start = tstamp(event.day, event.month, event.year)
+			
+			if Time.stats.nmonth >= start then
+				local first = start
+				if Time.stats.cmonth > start then
+					first = Time.stats.cmonth + (period - ((Time.stats.cmonth - start) % period))
 				end
 				
-			elseif DateTable.erepeat == 'week' then
-				local Results = TestRequirements{
-					{DateTable.year, 'Year must be specified in %s when using Week repeat.', event.description},
-					{DateTable.month, 'Month must be specified in %s when using Week repeat.', event.description},
-					{DateTable.day, 'Day must be specified in %s when using Week repeat.', event.description},
-					{DateTable.multip >= 1, 'Multiplier must be greater than or equal to 1 in %s when using Week repeat.', event.description},
-				}
+				local stop = event.finish < Time.stats.nmonth and event.finish or Time.stats.nmonth
 				
-				if Results then
-					frame(DateTable.multip * 604800)
+				for i = first, stop, period do
+					AddEvent(tonumber(os.date('%d', i)), (i - start) / period + 1)
+				end
+			end
+		end -- frame
+		
+		-- Begin testing and adding events to table
+		if event.erepeat == 'custom' then
+			local Results = TestRequirements{
+				{event.year, 'Year must be specified in %s when using Custom repeat.', event.description},
+				{event.month, 'Month must be specified in %s when using Custom repeat.', event.description},
+				{event.day, 'Day must be specified in %s when using Custom repeat.', event.description},
+				{event.multip >= 86400, 'Multiplier must be greater than or equal to 86400 in %s when using Custom repeat.', event.description},
+			}
+			
+			if Results then
+				frame(event.multip)
+			end
+			
+		elseif event.erepeat == 'week' then
+			local Results = TestRequirements{
+				{event.year, 'Year must be specified in %s when using Week repeat.', event.description},
+				{event.month, 'Month must be specified in %s when using Week repeat.', event.description},
+				{event.day, 'Day must be specified in %s when using Week repeat.', event.description},
+				{event.multip >= 1, 'Multiplier must be greater than or equal to 1 in %s when using Week repeat.', event.description},
+			}
+			
+			if Results then
+				frame(event.multip * 604800)
+			end
+			
+		elseif event.erepeat == 'year' then
+			local Results = TestRequirements{
+				{event.day, 'Day must be specified in %s when using Year repeat.', event.description},
+				{event.month, 'Month must be specified in %s when using Year repeat.', event.description},
+			}
+			
+			if Results and tstamp(event.day, event.month, Time.show.year) <= event.finish then
+				local TestYear = 0
+				if event.year and event.multip > 1 then
+					TestYear = (Time.show.year - event.year) % event.multip
+				end
+				if event.month == Time.show.month and TestYear == 0 then
+					AddEvent(event.day, event.year and Time.show.year - event.year / event.multip)
+				end
+			end
+			
+		elseif event.erepeat == 'month' then
+			if not event.day then
+				Error.Create('Day must be specified in %s when using Month repeat.', event.description)
+			elseif not tstamp(event.day, event.month, event.year) <= event.finish then
+				-- Do Nothing
+			elseif not event.month and event.year then
+				AddEvent(event.day)
+			elseif Time.show.year >= event.year then
+				local ydiff = Time.show.year - event.year - 1
+				local mdiff
+				if ydiff == -1 then
+					mdiff = Time.show.month - event.month
+				else
+					mdiff = (12 - event.month) + Time.show.month + ydiff * 12
 				end
 				
-			elseif DateTable.erepeat == 'year' then
-				local Results = TestRequirements{
-					{DateTable.day, 'Day must be specified in %s when using Year repeat.', event.description},
-					{DateTable.month, 'Month must be specified in %s when using Year repeat.', event.description},
-				}
-				
-				if Results and tstamp(DateTable.day, DateTable.month, Time.show.year) <= DateTable.finish then
-					local TestYear = 0
-					if DateTable.year and DateTable.multip > 1 then
-						TestYear = (Time.show.year - DateTable.year) % DateTable.multip
-					end
-					if DateTable.month == Time.show.month and TestYear == 0 then
-						AddEvent(DateTable.day, DateTable.year and Time.show.year - DateTable.year / DateTable.multip)
-					end
+				if (mdiff % event.multip) == 0 and Time.stats.cmonth >= tstamp(1, event.month, event.year) then
+					AddEvent(event.day, mdiff / event.multip + 1)
 				end
-				
-			elseif DateTable.erepeat == 'month' then
-				if not DateTable.day then
-					Error.Create('Day must be specified in %s when using Month repeat.', event.description)
-				elseif not tstamp(DateTable.day, DateTable.month, DateTable.year) <= DateTable.finish then
-					-- Do Nothing
-				elseif not DateTable.month and DateTable.year then
-					AddEvent(DateTable.day)
-				elseif Time.show.year >= DateTable.year then
-					local ydiff = Time.show.year - DateTable.year - 1
-					local mdiff
-					if ydiff == -1 then
-						mdiff = Time.show.month - DateTable.month
-					else
-						mdiff = (12 - DateTable.month) + Time.show.month + ydiff * 12
-					end
-					
-					if (mdiff % DateTable.multip) == 0 and Time.stats.cmonth >= tstamp(1, DateTable.month, DateTable.year) then
-						AddEvent(DateTable.day, mdiff / DateTable.multip + 1)
-					end
-				end
-				
-			elseif DateTable.erepeat =='none' then
-				local Results = TestRequirements{
-					{DateTable.year, 'Year must be specified in %s.', event.description},
-					{DateTable.month, 'Month must be specified in %s.', event.description},
-					{DateTable.day, 'Day must be specified in %s.', event.description},
-				}
-				
-				if not Results then
-					-- Do Nothing
-				elseif DateTable.year == Time.show.year and DateTable.month == Time.show.month then
-					AddEvent(DateTable.day)
-				end
+			end
+			
+		elseif event.erepeat =='none' then
+			local Results = TestRequirements{
+				{event.year, 'Year must be specified in %s.', event.description},
+				{event.month, 'Month must be specified in %s.', event.description},
+				{event.day, 'Day must be specified in %s.', event.description},
+			}
+			
+			if not Results then
+				-- Do Nothing
+			elseif event.year == Time.show.year and event.month == Time.show.month then
+				AddEvent(event.day)
 			end
 		end
 	end
@@ -1071,7 +1085,9 @@ Parse = {
 	List = function(line, default, FileName, FullList)
 		line = ParseVariables(line, FileName, ''):gsub('[|%s]', ''):lower()
 		
-		if FullList:find(line) then
+		if line == '' then
+			return default
+		elseif FullList:find(line) then
 			return line
 		else
 			Error.Create('Invalid list option found in %s.', FileName)
@@ -1124,12 +1140,13 @@ Parse = {
 	end, -- Color
 	
 	Date = function(line, default, FileName)
+		local TrueLine = line
 		line = ParseVariables(line, FileName, ''):gsub('%s', ''):gsub('(%b())', function(input) return SKIN:ParseFormula(input) end)
 		if line == '' then
 			return default
 		else			
 			local DateTable = {}
-			for word in line:gsub('[^/]+') do
+			for word in line:gmatch('[^/]+') do
 				local num = tonumber(word)
 				if num then
 					table.insert(DateTable, num)
