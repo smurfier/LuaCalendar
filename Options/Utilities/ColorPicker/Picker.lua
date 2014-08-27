@@ -63,10 +63,9 @@ end -- SetRGBA
 function Draw()
 	local Red, Green, Blue = RGB(Hue, Sat, Lig)
 	local Avalue = Round(Alpha * 255)
-	local hex = function(input) return ('%02X'):format(input) end
 	for k, v in pairs{
 		RGB = Concat(',', Red, Green, Blue),
-		HEX = hex(Red) .. hex(Green) .. hex(Blue) .. hex(Avalue),
+		HEX = string.format('%02X%02X%02X%02X', Red, Green, Blue, Avalue),
 		Hue = Hue,
 		Sat = Sat,
 		Lig = Lig,
@@ -85,8 +84,7 @@ function Round(num, idp)
 end -- Round
 
 function Concat(...)
-	local delim = table.remove(arg, 1)
-	return table.concat(arg, delim)
+	return table.concat(arg, table.remove(arg, 1))
 end -- Concat
 
 function minmax(num, min, max)
@@ -131,7 +129,7 @@ function HSL(R, G, B)
 	-- RGB from 0 to 255
 	-- HSL results from 0 to 1
 	local H, S, L
-	varR, varG, varB = R / 255, G / 255, B / 255
+	local varR, varG, varB = R / 255, G / 255, B / 255
 
 	varMin = math.min(varR, varG, varB) -- Min. value of RGB
 	varMax = math.max(varR, varG, varB) -- Max. value of RGB

@@ -4,6 +4,8 @@ Scroll = {
 	Folders = {},
 }
 
+-- Double encode all variables used in values
+-- #**Variable**#
 Variables = {
 	Style = 'Default',
 	DayLabels = '',
@@ -37,46 +39,62 @@ function Update()
 	end
 end -- Update
 
-function SetColor(name, color)
-	if name == 'MoonColor' then
+function SetColor(Variable, Color)
+	if Variable == 'MoonColor' then
 		SKIN:Bang('!SetOption', 'MoonColorFill', 'LineColor', '#*MoonColor*#')
 	end
-	SKIN:Bang('!SetVariable', name, color)
+	SKIN:Bang('!SetVariable', Variable, Color)
 	SKIN:Bang('!Update')
 end -- SetColor
 
 -- ========== START SCROLLBOX ==========
 
 function DrawItems()
-	local cpos = TablePosition(Scroll.Folders, SKIN:GetVariable('Style'), function(input) return input.folder end)
+	local CurrentPosition = TablePosition(Scroll.Folders, SKIN:GetVariable('Style'), function(input) return input.folder end)
 
 	for i = 1, 4 do
 		local tpos = i - 1 + Scroll.Position
-		if tpos >= cpos then tpos = tpos + 1 end -- Skip the current style
-
-		for k, v in pairs{
+		if tpos >= CurrentPosition then -- Skip the current style
+			tpos = tpos + 1
+		end
+		
+		local MeterProperties = {
 			Text = Scroll.Folders[tpos].name,
 			ToolTipTitle = Scroll.Folders[tpos].author,
 			ToolTipText = Scroll.Folders[tpos].info,
-		} do SKIN:Bang('!SetOption', 'ScrollLine' .. i, k, v) end
+		}
+		
+		local MeterName = 'ScrollLine' .. i
+		for Option, Value in pairs(MeterProperties) do
+			SKIN:Bang('!SetOption', MeterName, Option, Value)
+		end
 	end
 
-	SKIN:Bang('!SetOption', 'StyleCurrent', 'Text', Scroll.Folders[cpos].name)
+	SKIN:Bang('!SetOption', 'StyleCurrent', 'Text', Scroll.Folders[CurrentPosition].name)
 	SKIN:Bang('!SetOption', 'TopBar', 'H', Scroll.ItemHeight * (Scroll.Position - 1))
 	SKIN:Bang('!SetOption', 'BotBar', 'H', Scroll.ItemHeight * (#Scroll.Folders - Scroll.Position - 4))
 	SKIN:Bang('!Update')
 end -- DrawItems
 
 function UnpackList(input)
-	for _, word in ipairs(delim(input)) do
-		local temp = {folder = word, name = word, author = '', info = '',}
-		local ini = ReadIni(SKIN:ReplaceVariables(('#@#Styles\\%s\\meta.txt'):format(word)))
+	local StyleList, Resources = delim(input), SKIN:GetVariable('@')
+	
+	for _, StyleName in ipairs(StyleList) do
+		local ini = ReadIni(SKIN:ReplaceVariables(string.format('%sStyles\\%s\\meta.txt', Resources, StyleName)))
+		local temp
 		if ini.metadata then
 			temp = {
-				folder = word,
-				name = ini.metadata.name or word,
+				folder = StyleName,
+				name = ini.metadata.name or StyleName,
 				author = ini.metadata.author and ('Created by ' .. ini.metadata.author) or '',
 				info = ini.metadata.info or '',
+			}
+		else
+			temp = {
+				folder = StyleName,
+				name = StyleName,
+				author = '',
+				info = '',
 			}
 		end
 		table.insert(Scroll.Folders, temp)
@@ -115,15 +133,18 @@ end -- SetStyle
 
 function Save()
 	MessageOutput()
-	file = SKIN:ReplaceVariables('#@#Settings.inc')
-	for k, _ in pairs(Variables) do
-		SKIN:Bang('!WriteKeyValue', 'Variables', k, Encode(SKIN:GetVariable(k):gsub('#([^#]+)#', '#*%1*#')), file)
+	local SettingsFile = SKIN:ReplaceVariables('#@#Settings.inc')
+	for Name, _ in pairs(Variables) do
+		local Double = SKIN:GetVariable(Name):gsub('#([^#]+)#', '#*%1*#') -- Encode existing variables to prevent them from being evaluated
+		SKIN:Bang('!WriteKeyValue', 'Variables', Name, Encode(Double), SettingsFile)
 	end
 	SKIN:Bang('!Refresh', 'LuaCalendar')
 end -- Save
 
 function Defaults()
-	for k, v in pairs(Variables) do SKIN:Bang('!SetVariable', k, v) end
+	for Variable, Value in pairs(Variables) do
+		SKIN:Bang('!SetVariable', Variable, Value)
+	end
 	MessageOutput('Click Save to confirm Defaults')
 	DrawItems()
 end -- Defaults
@@ -174,34 +195,35 @@ end -- SetEvents
 -- ========== HELPER FUNCTIONS ==========
 
 function Encode(line)
-	for _, var in ipairs{'@', 'ROOTCONFIGPATH', 'SKINSPATH'} do
-		local value = SKIN:GetVariable(var)
-		line = line:gsub(value, ('#*%s*#'):format(var))
+	local Names = {'@', 'ROOTCONFIGPATH', 'SKINSPATH'}
+	for _, Variable in ipairs(Names) do
+		local value = SKIN:GetVariable(Variable)
+		line = line:gsub(value, string.format('#*%s*#', Variable))
 	end
 
 	return line
 end -- Encode
 
-function lengthcheck(line, num, msg)
+function lengthcheck(line, num, ErrorMessage)
 	MessageOutput()
 	SKIN:Bang('!HideMeterGroup', 'Scroll')
 
 	local temp = delim(line)
-	if #temp == num or input == '' then
+	if #temp == num or line == '' then
 		MessageOutput()
 		return true
 	else
-		MessageOutput(msg)
+		MessageOutput(ErrorMessage)
 	end
 end -- lengthcheck
 
-function varcheck(input, list, msg)
+function varcheck(input, list, ErrorMessage)
 	MessageOutput()
 	SKIN:Bang('!HideMeterGroup', 'Scroll')
 	
 	for word in input:gmatch('{%$([^}]+)}') do
 		if not TablePosition(list, word:lower(), function(temp) return temp:lower() end) then
-			MessageOutput(msg:format(word))
+			MessageOutput(ErrorMessage:format(word))
 			break
 		end
 	end
@@ -223,7 +245,9 @@ end -- TablePosition
 
 function delim(input)
 	local temp = {}
-	for word in input:gmatch('[^|]+') do table.insert(temp, word) end
+	for word in input:gmatch('[^|]+') do
+		table.insert(temp, word)
+	end
 	return temp
 end -- delim
 
@@ -238,7 +262,9 @@ function ReadIni(inputfile)
 				local key, command = line:match('^([^=]+)=(.+)')
 				if line:match('^%s-%[.+%]') then
 					section = line:lower():match('^%s-%[([^%]]+)')
-					if not tbl[section] then tbl[section] = {} end
+					if not tbl[section] then
+						tbl[section] = {}
+					end
 				elseif key and command and section then
 					tbl[section][key:lower():match('^%s*(%S*)%s*$')] = command:match('^%s*(.-)%s*$')
 				elseif #line > 0 and section and not key or command then
@@ -246,7 +272,9 @@ function ReadIni(inputfile)
 				end
 			end
 		end
-		if not section then print('No sections found in ' .. inputfile) end
+		if not section then
+			print('No sections found in ' .. inputfile)
+		end
 		file:close()
 	end
 	return tbl

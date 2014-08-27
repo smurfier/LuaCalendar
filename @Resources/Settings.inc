@@ -1,8 +1,9 @@
 ; Please visit http://smurfier.github.io/LuaCalendar for detailed descriptions of the features listed below.
+; Settings file v6.0
 
 [Variables]
 ;Name of the Style Sheet
-Style=Default
+Style=Enigma
 
 ;Custom text for Weekday labels. Uses the following format: Sun|Mon|Tue|Wed|Thu|Fri|Sat
 DayLabels=
@@ -21,12 +22,12 @@ LabelText=
 LeadingZeroes=0
 
 ;Custom text for Month labels. Uses the following format: Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec
-MonthLabels=
+MonthLabels=January|February|March|April|May|June|July|August|September|October|November|December
 
 ;Set to 1 to have the week start on Monday
 StartOnMonday=0
 
-;The format for the list of upcomming events. {day} and {desc} are valid variables.
+;The format for the list of upcoming events. {$day} and {$desc} are valid variables.
 NextFormat=
 
 ;Show the Moon Phases as events

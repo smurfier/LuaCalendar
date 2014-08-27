@@ -1,9 +1,13 @@
+ <!-- Event File v6.0 -->
+ 
  <EventFile Repeat="Year">
+	<Variable Name="DayNumber" Select="86400"/>
+	
 	<!-- Built in Holidays. Add Inactive="true" to disable. -->
-	<Event TimeStamp="({$Easter:Stamp}-(2*86400))">Good Friday</Event>
+	<Event TimeStamp="({$Easter:Stamp}-2*{$DayNumber})">Good Friday</Event>
 	<Event Month="{$Easter:Month}" Day="{$Easter:Day}">Easter Sunday</Event>
-	<Event TimeStamp="({$Easter:Stamp}-(46*86400))">Ash Wednesday</Event>
-	<Event TimeStamp="({$Easter:Stamp}-(47*86400))">MardiGras</Event>
+	<Event TimeStamp="({$Easter:Stamp}-46*{$DayNumber})">Ash Wednesday</Event>
+	<Event TimeStamp="({$Easter:Stamp}-47*{$DayNumber})">MardiGras</Event>
 	
 	<!-- Normal Holidays -->
 	<Set Month="1">
