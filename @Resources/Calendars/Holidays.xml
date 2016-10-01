@@ -54,7 +54,7 @@
 		<Event Day="{$FourthThu}">Thanksgiving Day</Event>
 	</Set>
 	<Set Month="12">
-		<Event Day="7">Pearl Harbor Remembrance Day</Event>
+		<Event Day="7" Year="1941" Anniversary="true">Pearl Harbor Remembrance Day</Event>
 		<Event Day="21">Winter Solstice</Event>
 		<Event Day="24">Christmas Eve</Event>
 		<Event Day="25">Christmas Day</Event>
