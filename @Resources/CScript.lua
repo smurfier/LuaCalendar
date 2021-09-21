@@ -2,6 +2,9 @@
 -- This work is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 License.
 
 function Initialize()
+	dofile(SKIN:GetVariable('@') .. 'Utilities.lua')
+	dofile(SKIN:GetVariable('@') .. 'EventFunctions.lua')
+
 	Settings.HideLastWeek = Get.NumberVariable('HideLastWeek') > 0
 	Settings.LeadingZeroes = Get.NumberVariable('LeadingZeroes') > 0
 	Settings.StartOnMonday = Get.NumberVariable('StartOnMonday') > 0
@@ -259,29 +262,6 @@ Range = setmetatable( -- Makes allowance for either Month or Week ranges
 	}
 ) -- Range
 
-function Delim(input, Separator) -- Separates an input string by a delimiter
-	Error.Open('Delim')
-	
-	local tbl = {}
-	if type(input) == 'string' then
-		if not MultiType(Separator, 'nil|string') then
-			Error.Create('Input #2 must be a string. Received %s instead. Using default value.', type(Separator))
-			Separator = '|'
-		end
-		
-		local MatchPattern = string.format('[^%s]+', Separator or '|')
-		
-		for word in string.gmatch(input, MatchPattern) do
-			table.insert(tbl, word:match('^%s*(.-)%s*$'))
-		end
-	else
-		Error.Create('Input must be a string. Received %s instead', type(input))
-	end
-	
-	Error.Close()
-	return tbl
-end -- Delim
-
 function ExpandFolder(input) -- Makes allowance for when the first value in a table represents the folder containing all objects.
 	Error.Open('ExpandFolder')
 	
@@ -510,31 +490,6 @@ function LoadEvents(FileTable)
 	
 	Error.Close()
 end -- LoadEvents
-
-Case = {
-	lower = function(line)
-			return line:lower()
-		end;
-	upper = function(line)
-			return line:upper()
-		end;
-	title = function(line)
-			local temp = function(first, rest)
-				return first:upper() .. rest:lower()
-			end
-			return line:gsub('(%S)(%S*)', temp)
-		end;
-	sentence = function(line)
-			local temp = function(sentence)
-				local space, first, rest = sentence:match('(%s*)(.)(.*)')	
-				return space .. first:upper() .. rest:lower():gsub("%si([%s'])", ' I%1')
-			end
-			return line:gsub('[^.!?]+', temp)
-		end;
-	none = function(line)
-			return line
-		end;
-}
 
 function ParseEvents() -- Parse Events table.
 	Error.Open('ParseEvents')
@@ -972,20 +927,6 @@ function Move(value) -- Move calendar through the months
 	Error.Close()
 end -- Move
 
-function Easter()
-	local a, b, c, h, L, m = (Time.show.year % 19), math.floor(Time.show.year / 100), (Time.show.year % 100), 0, 0, 0
-	local d, e, f, i, k = math.floor(b/4), (b % 4), math.floor((b + 8) / 25), math.floor(c / 4), (c % 4)
-	h = (19 * a + b - d - math.floor((b - f + 1) / 3) + 15) % 30
-	L = (32 + 2 * e + 2 * i - h - k) % 7
-	m = math.floor((a + 11 * h + 22 * L) / 451)
-	
-	return os.time{
-		month = math.floor((h + L - 7 * m + 114) / 31),
-		day = ((h + L - 7 * m + 114) % 31 + 1),
-		year = Time.show.year,
-	}
-end -- Easter
-
 BuiltIn = {
 	easter = function()
 		return Easter()
@@ -1099,40 +1040,6 @@ function ParseVariables(line, FileName, ErrorSubstitute) -- Makes allowance for 
 	Error.Close()
 	return TempLine
 end -- ParseVariables
-
--- Allow for existing but empty options and variables
-Get = {
-	Option = function(option, default)
-		local input = SELF:GetOption(option)
-		if input == '' then
-			return default or ''
-		else
-			return input
-		end
-	end, -- GetOption
-	
-	NumberOption = function(option, default)
-		return tonumber(SELF:GetOption(option)) or default or 0
-	end, -- GetNumberOption
-	
-	Variable = function(option, default)
-		local input = SKIN:GetVariable(option) or ''
-		if input == '' then
-			return default or ''
-		else
-			return input
-		end
-	end, -- GetVariable
-	
-	NumberVariable = function(option, default)
-		local input = SKIN:GetVariable(option) or ''
-		if input == '' then
-			return default or 0
-		else
-			return SKIN:ParseFormula(input) or default or 0
-		end
-	end, -- GetNumberVariable
-}
 
 Parse = {
 	Number = function(line, default, FileName, Decimals)
@@ -1274,22 +1181,6 @@ function LeadingZero(value) -- Makes allowance for LeadingZeros
 	end
 end -- LeadingZero
 
-function MultiType(input, types) -- Test an input against multiple types
-	return not not types:find(type(input))
-	--return types:find(type(input)) and true or false
-end -- MultiType
-
-function inTable(t, value) -- Search a table for the first instance of a value
-	for key, item in pairs(t) do
-		if type(item) ~= type(value) then
-			-- Do Nothing
-		elseif item == value then
-			return key
-		end
-	end
-	return false
-end -- inTable
-
 Error = {
 	Source = {''},
 	Message = 'Success!',
@@ -1325,67 +1216,8 @@ Error = {
 		local NewMessage = Error.Source[1] .. ': ' .. string.format(unpack(arg))
 		if not Error.Queue then
 			Error.Queue = {NewMessage}
-		elseif not inTable(Error.Queue, NewMessage) then
+		elseif not includes(Error.Queue, NewMessage) then
 			table.insert(Error.Queue, NewMessage)
 		end
 	end,
 } -- Error
-
--- Function provided by Mordasius, tweaked by Smurfier
-function GetPhaseNumber(year, month, day)
-	local fixangle = function(a) return a % 360 end
-	local eccent = 0.016718 -- Eccentricity of Earth's orbit
-	
-	-- Convert Gregorian Date into Julian Date
-	local gregorian = year >= 1583
-	if month == 1 or month == 2 then
-		year, month = (year - 1), (month + 12)
-	end
-	local a = math.floor(year / 100)
-	local b = gregorian and (2 - a + math.floor(a / 4)) or 0
-	local Jday = math.floor(365.25 * (year + 4716)) + math.floor(30.6001 * (month + 1)) + day + b - 1524
-	
-	local Day, M, Ec, Lambdasun, ml, Ev, Ae, MM, MmP, mEc, lP
-	Day = Jday - 2444238.5 -- Date within epoch
-	
-	-- (360 / 365.2422) == 0.98564733209908
-	M = math.rad(fixangle(fixangle(0.98564733209908 * Day) - 3.762863)) -- Convert from perigee co-ordinates to epoch 1980.0
-	
-	-- Solve Kepler equation
-	local e, delta = M, - eccent * math.sin(M)
-	while math.abs(delta) > 1E-6 do
-		delta = e - eccent * math.sin(e) - M
-		e = e - delta / (1 - eccent * math.cos(e))
-	end
-	
-	-- math.sqrt((1 + eccent) / (1 - eccent)) == 1.0168601118216
-	Ec = 2 * math.deg(math.atan(1.0168601118216 * math.tan(e / 2))) -- True anomaly
-	
-	Lambdasun = fixangle(Ec + 282.596403) -- Sun's geocentric ecliptic Longitude
-	ml = fixangle(13.1763966 * Day + 64.975464) -- Moon's mean Longitude
-	MM = fixangle(ml - 0.1114041 * Day - 348.383063) -- Moon's mean anomaly
-	Ev = 1.2739 * math.sin(math.rad(2 * (ml - Lambdasun) - MM)) -- Evection
-	Ae = 0.1858 * math.sin(M) -- Annual equation
-	MmP = math.rad(MM + Ev - Ae - (0.37 * math.sin(M))) -- Corrected anomaly
-	mEc = 6.2886 * math.sin(MmP) -- Correction for the equation of the centre
-	lP = ml + Ev + mEc - Ae + (0.214 * math.sin(2 * MmP)) -- Corrected Longitude
-	local PhaseNum = fixangle((lP + (0.6583 * math.sin(math.rad(2 * (lP - Lambdasun))))) - Lambdasun)
-	
-	if PhaseNum > 10 and PhaseNum <= 85 then
-		return 2 -- Waxing Crescent
-	elseif PhaseNum > 85 and PhaseNum <= 95 then
-		return 3 -- First Quarter
-	elseif PhaseNum > 95 and PhaseNum <= 170 then
-		return 4 -- Waxing Gibbous
-	elseif PhaseNum > 170 and PhaseNum <= 190 then
-		return 5 -- Full Moon
-	elseif PhaseNum > 190 and PhaseNum <= 265 then
-		return 6 -- Waning Gibbous
-	elseif PhaseNum > 265 and PhaseNum <= 275 then
-		return 7 -- Last Quarter
-	elseif PhaseNum > 275 and PhaseNum <= 350 then
-		return 8 -- Waning Crescent
-	else
-		return 1 -- New Moon
-	end
-end  -- GetPhaseNumber
